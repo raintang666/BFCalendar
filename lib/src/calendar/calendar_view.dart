@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import 'calendar_controller.dart';
@@ -37,52 +35,55 @@ class CalendarView extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
+        final focusedMonth = DateTime(
+          controller.focusedDay.year,
+          controller.focusedDay.month,
+          1,
+        );
         final monthDays = CalendarDateUtils.visibleMonthDays(
-          controller.focusedDay,
+          focusedMonth,
           firstWeekday: controller.firstWeekday,
         );
         final weekDays = CalendarDateUtils.visibleWeekDays(
           controller.focusedDay,
           firstWeekday: controller.firstWeekday,
         );
-        final monthRows = _buildMonthRows(monthDays);
-        final visibleMonthRows = _visibleMonthRows(monthRows);
-        final showingMonthGrid =
-            controller.displayMode == CalendarDisplayMode.month ||
-            previewExpandFromWeek;
+        final monthLineCount = CalendarDateUtils.visibleMonthRowCount(
+          focusedMonth,
+          firstWeekday: controller.firstWeekday,
+          onlyCurrentMonth: controller.onlyCurrentMonth,
+        );
+        final selectedLine = CalendarDateUtils.weekIndexInMonth(
+          controller.focusedDay,
+          firstWeekday: controller.firstWeekday,
+        ).clamp(0, monthLineCount - 1);
         final collapseProgress =
             collapsePreviewProgress ??
             (controller.displayMode == CalendarDisplayMode.week ? 1.0 : 0.0);
-        final monthRowCount = visibleMonthRows.length;
-        final monthBodyHeight = calendarHeight * monthRowCount;
-        final displayHeight = lerpDouble(
-          monthBodyHeight,
-          calendarHeight,
-          collapseProgress,
-        )!;
-        final height = monthHeaderHeight + weekBarHeight + displayHeight;
-        final selectedRow = _selectedRow(visibleMonthRows);
+        final monthBodyHeight = monthLineCount * calendarHeight;
+        final weekBodyHeight = calendarHeight;
+        final showWeekOnly =
+            controller.displayMode == CalendarDisplayMode.week &&
+            !previewExpandFromWeek &&
+            collapseProgress >= 1;
+        final bodyHeight = showWeekOnly ? weekBodyHeight : monthBodyHeight;
+        final monthTranslation = selectedLine * calendarHeight * collapseProgress;
+        final shouldShowMonthBody =
+            controller.displayMode == CalendarDisplayMode.month ||
+            previewExpandFromWeek ||
+            collapseProgress < 1;
 
         return AnimatedContainer(
           duration: _isInteractivePreview
               ? Duration.zero
               : const Duration(milliseconds: 260),
           curve: Curves.easeOutCubic,
-          height: height,
+          height: monthHeaderHeight + weekBarHeight + bodyHeight,
           child: Column(
             children: [
-              SizedBox(
+              _MonthHeader(
+                month: controller.focusedDay.month,
                 height: monthHeaderHeight,
-                child: Center(
-                  child: Text(
-                    '${controller.focusedDay.month}月',
-                    style: const TextStyle(
-                      color: Color(0xFF333333),
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
               ),
               _WeekBar(
                 firstWeekday: controller.firstWeekday,
@@ -94,49 +95,37 @@ class CalendarView extends StatelessWidget {
                     : const Duration(milliseconds: 260),
                 curve: Curves.easeOutCubic,
                 child: SizedBox(
-                  height: displayHeight,
+                  height: bodyHeight,
                   child: ClipRect(
-                    child: Transform.translate(
-                      offset: showingMonthGrid
-                          ? Offset(
-                              0,
-                              -selectedRow.clamp(0, monthRowCount - 1) *
-                                  calendarHeight *
-                                  collapseProgress,
-                            )
-                          : Offset.zero,
-                      child: SizedBox(
-                        height: showingMonthGrid
-                            ? monthBodyHeight
-                            : calendarHeight,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Column(
-                            children: showingMonthGrid
-                                ? visibleMonthRows
-                                      .map(
-                                        (row) => _CalendarRow(
-                                          dates: row,
-                                          height: calendarHeight,
-                                          focusedMonth: controller.focusedDay,
-                                          controller: controller,
-                                          onDaySelected: onDaySelected,
-                                        ),
-                                      )
-                                      .toList()
-                                : [
-                                    _CalendarRow(
-                                      dates: weekDays,
-                                      height: calendarHeight,
-                                      focusedMonth: controller.focusedDay,
-                                      controller: controller,
-                                      onDaySelected: onDaySelected,
-                                    ),
-                                  ],
+                    child: shouldShowMonthBody
+                        ? Transform.translate(
+                            offset: Offset(0, -monthTranslation),
+                            child: SizedBox(
+                              height: monthBodyHeight,
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 10),
+                                child: _MonthGrid(
+                                  days: monthDays,
+                                  lineCount: monthLineCount,
+                                  focusedMonth: focusedMonth,
+                                  controller: controller,
+                                  onDaySelected: onDaySelected,
+                                  rowHeight: calendarHeight,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: _WeekGrid(
+                              days: weekDays,
+                              focusedMonth: focusedMonth,
+                              controller: controller,
+                              onDaySelected: onDaySelected,
+                              rowHeight: calendarHeight,
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -146,74 +135,122 @@ class CalendarView extends StatelessWidget {
       },
     );
   }
-
-  List<List<DateTime>> _buildMonthRows(List<DateTime> monthDays) {
-    final rows = <List<DateTime>>[];
-    for (var i = 0; i < monthDays.length; i += 7) {
-      rows.add(monthDays.sublist(i, i + 7));
-    }
-    return rows;
-  }
-
-  List<List<DateTime>> _visibleMonthRows(List<List<DateTime>> monthRows) {
-    if (!controller.onlyCurrentMonth) {
-      return monthRows;
-    }
-    return monthRows
-        .where(
-          (row) => row.any(
-            (day) => CalendarDateUtils.isSameMonth(day, controller.focusedDay),
-          ),
-        )
-        .toList();
-  }
-
-  int _selectedRow(List<List<DateTime>> monthRows) {
-    for (var rowIndex = 0; rowIndex < monthRows.length; rowIndex++) {
-      if (monthRows[rowIndex].any(
-        (day) => CalendarDateUtils.isSameDay(day, controller.focusedDay),
-      )) {
-        return rowIndex;
-      }
-    }
-    return 0;
-  }
 }
 
-class _CalendarRow extends StatelessWidget {
-  const _CalendarRow({
-    required this.dates,
-    required this.height,
-    required this.focusedMonth,
-    required this.controller,
-    required this.onDaySelected,
-  });
+class _MonthHeader extends StatelessWidget {
+  const _MonthHeader({required this.month, required this.height});
 
-  final List<DateTime> dates;
+  final int month;
   final double height;
-  final DateTime focusedMonth;
-  final CalendarController controller;
-  final ValueChanged<DateTime> onDaySelected;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: height,
+      child: Center(
+        child: Text(
+          '$month月',
+          style: const TextStyle(
+            color: Color(0xFF333333),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MonthGrid extends StatelessWidget {
+  const _MonthGrid({
+    required this.days,
+    required this.lineCount,
+    required this.focusedMonth,
+    required this.controller,
+    required this.onDaySelected,
+    required this.rowHeight,
+  });
+
+  final List<DateTime> days;
+  final int lineCount;
+  final DateTime focusedMonth;
+  final CalendarController controller;
+  final ValueChanged<DateTime> onDaySelected;
+  final double rowHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List.generate(lineCount, (rowIndex) {
+        final rowDays = days.skip(rowIndex * 7).take(7).toList();
+        return SizedBox(
+          height: rowHeight,
+          child: Row(
+            children: List.generate(7, (columnIndex) {
+              final date = rowDays[columnIndex];
+              final shouldHide =
+                  controller.onlyCurrentMonth &&
+                  !CalendarDateUtils.isSameMonth(date, focusedMonth);
+              return Expanded(
+                child: shouldHide
+                    ? const SizedBox.expand()
+                    : _CalendarDayCell(
+                        date: date,
+                        focusedMonth: focusedMonth,
+                        markers: controller.markers[date] ?? const [],
+                        lunarText: LunarService.metadataForDate(date).lunarText,
+                        isToday: CalendarDateUtils.isSameDay(
+                          date,
+                          CalendarDateUtils.stripTime(DateTime.now()),
+                        ),
+                        isSelected: controller.isSelected(date),
+                        isDisabled: controller.isDisabled(date),
+                        showBottomDivider: rowIndex < lineCount - 1,
+                        onTap: () => onDaySelected(date),
+                      ),
+              );
+            }),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _WeekGrid extends StatelessWidget {
+  const _WeekGrid({
+    required this.days,
+    required this.focusedMonth,
+    required this.controller,
+    required this.onDaySelected,
+    required this.rowHeight,
+  });
+
+  final List<DateTime> days;
+  final DateTime focusedMonth;
+  final CalendarController controller;
+  final ValueChanged<DateTime> onDaySelected;
+  final double rowHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: rowHeight,
       child: Row(
-        children: dates.map((date) {
-          final lunar = LunarService.metadataForDate(date);
+        children: days.map((date) {
           return Expanded(
             child: _CalendarDayCell(
               date: date,
               focusedMonth: focusedMonth,
               markers: controller.markers[date] ?? const [],
-              lunarText: lunar.lunarText,
+              lunarText: LunarService.metadataForDate(date).lunarText,
               isToday: CalendarDateUtils.isSameDay(
                 date,
                 CalendarDateUtils.stripTime(DateTime.now()),
               ),
               isSelected: controller.isSelected(date),
               isDisabled: controller.isDisabled(date),
+              showBottomDivider: false,
               onTap: () => onDaySelected(date),
             ),
           );
@@ -271,6 +308,7 @@ class _CalendarDayCell extends StatelessWidget {
     required this.isToday,
     required this.isSelected,
     required this.isDisabled,
+    required this.showBottomDivider,
     required this.onTap,
   });
 
@@ -281,6 +319,7 @@ class _CalendarDayCell extends StatelessWidget {
   final bool isToday;
   final bool isSelected;
   final bool isDisabled;
+  final bool showBottomDivider;
   final VoidCallback onTap;
 
   @override
@@ -314,6 +353,7 @@ class _CalendarDayCell extends StatelessWidget {
 
     return GestureDetector(
       onTap: isDisabled ? null : onTap,
+      behavior: HitTestBehavior.opaque,
       child: CustomPaint(
         painter: _CellPainter(
           isToday: isToday,
@@ -325,6 +365,7 @@ class _CalendarDayCell extends StatelessWidget {
           lunarText: lunarText,
           dayColor: dayColor,
           lunarColor: lunarColor,
+          showBottomDivider: showBottomDivider,
         ),
       ),
     );
@@ -342,6 +383,7 @@ class _CellPainter extends CustomPainter {
     required this.lunarText,
     required this.dayColor,
     required this.lunarColor,
+    required this.showBottomDivider,
   });
 
   final bool isToday;
@@ -353,6 +395,7 @@ class _CellPainter extends CustomPainter {
   final String lunarText;
   final Color dayColor;
   final Color lunarColor;
+  final bool showBottomDivider;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -382,11 +425,13 @@ class _CellPainter extends CustomPainter {
     final radius =
         (size.width < size.height ? size.width : size.height) / 11 * 2.2;
 
-    canvas.drawLine(
-      Offset(0, size.height - 1),
-      Offset(size.width, size.height - 1),
-      linePaint,
-    );
+    if (showBottomDivider) {
+      canvas.drawLine(
+        Offset(0, size.height - 1),
+        Offset(size.width, size.height - 1),
+        linePaint,
+      );
+    }
 
     if (isSelected) {
       canvas.drawCircle(Offset(centerX, top), radius, selectedPaint);
@@ -449,6 +494,7 @@ class _CellPainter extends CustomPainter {
         oldDelegate.dayText != dayText ||
         oldDelegate.lunarText != lunarText ||
         oldDelegate.dayColor != dayColor ||
-        oldDelegate.lunarColor != lunarColor;
+        oldDelegate.lunarColor != lunarColor ||
+        oldDelegate.showBottomDivider != showBottomDivider;
   }
 }

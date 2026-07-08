@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../calendar/calendar_controller.dart';
@@ -16,6 +18,8 @@ class CalendarDemoPage extends StatefulWidget {
 
 class _CalendarDemoPageState extends State<CalendarDemoPage> {
   static const double _calendarRowHeight = 62;
+  static const double _weekBarHeight = 46;
+  static const double _monthHeaderHeight = 60;
 
   late final CalendarController _controller;
   final ScrollController _listController = ScrollController();
@@ -69,32 +73,8 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
   Map<DateTime, List<CalendarMarker>> _buildMarkers(int year, int month) {
     final specs = <(int, int, String)>[
       (1, 0xFF40DB25, '假'),
-      (2, 0xFFE69138, '游'),
-      (3, 0xFFDF1356, '事'),
-      (4, 0xFFAACC44, '车'),
-      (5, 0xFFBC13F0, '驾'),
-      (6, 0xFF542261, '记'),
-      (7, 0xFF4A4BD2, '会'),
-      (8, 0xFFE69138, '车'),
-      (9, 0xFF542261, '考'),
-      (10, 0xFF87AF5A, '记'),
-      (11, 0xFF40DB25, '会'),
-      (12, 0xFFCDA1AF, '游'),
-      (13, 0xFF95AF1A, '事'),
-      (14, 0xFF33AADD, '学'),
-      (15, 0xFF1AFF1A, '码'),
-      (16, 0xFF22ACAF, '驾'),
-      (17, 0xFF99A6FA, '校'),
-      (18, 0xFFE69138, '车'),
       (19, 0xFF40DB25, '码'),
-      (20, 0xFFE69138, '火'),
-      (21, 0xFF40DB25, '假'),
-      (22, 0xFF99A6FA, '记'),
-      (23, 0xFF33AADD, '假'),
-      (24, 0xFF40DB25, '校'),
-      (25, 0xFF1AFF1A, '假'),
       (26, 0xFF40DB25, '议'),
-      (27, 0xFF95AF1A, '假'),
       (28, 0xFF40DB25, '码'),
     ];
 
@@ -124,6 +104,32 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
       onlyCurrentMonth: _controller.onlyCurrentMonth,
     );
     return _calendarRowHeight * (rowCount - 1);
+  }
+
+  int get _monthRowCount {
+    return CalendarDateUtils.visibleMonthRowCount(
+      _controller.focusedDay,
+      firstWeekday: _controller.firstWeekday,
+      onlyCurrentMonth: _controller.onlyCurrentMonth,
+    );
+  }
+
+  double get _expandedCalendarHeight {
+    return _monthHeaderHeight +
+        _weekBarHeight +
+        (_calendarRowHeight * _monthRowCount);
+  }
+
+  double get _collapsedCalendarHeight {
+    return _monthHeaderHeight + _weekBarHeight + _calendarRowHeight;
+  }
+
+  double get _listTopOffset {
+    return lerpDouble(
+      _expandedCalendarHeight,
+      _collapsedCalendarHeight,
+      _collapsePreviewProgress,
+    )!;
   }
 
   ScrollPhysics get _listPhysics {
@@ -173,66 +179,82 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
                   children: [
                     Column(
                       children: [
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onVerticalDragStart: (_) {
-                            _dragAccumulated = 0;
-                            _isCalendarAreaDragging = true;
-                            _dragSourceMode = _controller.displayMode;
-                          },
-                          onVerticalDragUpdate: (details) {
-                            _dragAccumulated += details.delta.dy;
-                            _updateCollapsePreview();
-                          },
-                          onVerticalDragEnd: (details) {
-                            _commitVerticalDrag(details.primaryVelocity ?? 0);
-                          },
-                          onVerticalDragCancel: _resetDragState,
-                          child: CalendarView(
-                            controller: _controller,
-                            onDaySelected: (day) {
-                              if (_controller.isDisabled(day)) {
-                                _showMessage('${_formatDate(day)}拦截不可点击');
-                                return;
-                              }
-                              _controller.selectDay(day);
-                              _showMessage(_calendarToastText(day));
-                            },
-                            collapsePreviewProgress: _collapsePreviewProgress,
-                            previewExpandFromWeek:
-                                _dragSourceMode == CalendarDisplayMode.week &&
-                                _controller.displayMode ==
-                                    CalendarDisplayMode.week &&
-                                _collapsePreviewProgress < 1,
-                            calendarHeight: 62,
-                            weekBarHeight: 46,
-                            monthHeaderHeight: 60,
-                          ),
-                        ),
                         Expanded(
-                          child: ClipRect(
-                            child: Listener(
-                              behavior: HitTestBehavior.translucent,
-                              onPointerDown: _handleListPointerDown,
-                              onPointerMove: _handleListPointerMove,
-                              onPointerUp: _handleListPointerEnd,
-                              onPointerCancel: _handleListPointerCancel,
-                              child: ListView.separated(
-                                controller: _listController,
-                                physics: _listPhysics,
-                                padding: const EdgeInsets.only(bottom: 12),
-                                itemCount: demoEntries.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(height: 12),
-                                itemBuilder: (context, index) {
-                                  final entry = demoEntries[index];
-                                  return _DemoCard(
-                                    entry: entry,
-                                    onTap: () => _handleDemoTap(entry),
+                          child: Stack(
+                            children: [
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onVerticalDragStart: (_) {
+                                  _dragAccumulated = 0;
+                                  _isCalendarAreaDragging = true;
+                                  _dragSourceMode = _controller.displayMode;
+                                },
+                                onVerticalDragUpdate: (details) {
+                                  _dragAccumulated += details.delta.dy;
+                                  _updateCollapsePreview();
+                                },
+                                onVerticalDragEnd: (details) {
+                                  _commitVerticalDrag(
+                                    details.primaryVelocity ?? 0,
                                   );
                                 },
+                                onVerticalDragCancel: _resetDragState,
+                                child: CalendarView(
+                                  controller: _controller,
+                                  onDaySelected: (day) {
+                                    if (_controller.isDisabled(day)) {
+                                      _showMessage(
+                                        '${_formatDate(day)}拦截不可点击',
+                                      );
+                                      return;
+                                    }
+                                    _controller.selectDay(day);
+                                    _showMessage(_calendarToastText(day));
+                                  },
+                                  collapsePreviewProgress:
+                                      _collapsePreviewProgress,
+                                  previewExpandFromWeek:
+                                      _dragSourceMode ==
+                                          CalendarDisplayMode.week &&
+                                      _controller.displayMode ==
+                                          CalendarDisplayMode.week &&
+                                      _collapsePreviewProgress < 1,
+                                  calendarHeight: _calendarRowHeight,
+                                  weekBarHeight: _weekBarHeight,
+                                  monthHeaderHeight: _monthHeaderHeight,
+                                ),
                               ),
-                            ),
+                              Positioned.fill(
+                                top: _listTopOffset,
+                                child: ClipRect(
+                                  child: Listener(
+                                    behavior: HitTestBehavior.translucent,
+                                    onPointerDown: _handleListPointerDown,
+                                    onPointerMove: _handleListPointerMove,
+                                    onPointerUp: _handleListPointerEnd,
+                                    onPointerCancel: _handleListPointerCancel,
+                                    child: ListView.separated(
+                                      controller: _listController,
+                                      physics: _listPhysics,
+                                      padding: const EdgeInsets.only(
+                                        top: 12,
+                                        bottom: 12,
+                                      ),
+                                      itemCount: demoEntries.length,
+                                      separatorBuilder: (_, _) =>
+                                          const SizedBox(height: 12),
+                                      itemBuilder: (context, index) {
+                                        final entry = demoEntries[index];
+                                        return _DemoCard(
+                                          entry: entry,
+                                          onTap: () => _handleDemoTap(entry),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

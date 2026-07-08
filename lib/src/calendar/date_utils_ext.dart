@@ -72,27 +72,52 @@ class CalendarDateUtils {
     int firstWeekday = DateTime.sunday,
     bool onlyCurrentMonth = false,
   }) {
-    final days = visibleMonthDays(month, firstWeekday: firstWeekday);
     if (!onlyCurrentMonth) {
       return 6;
     }
-    var firstIndex = -1;
-    var lastIndex = -1;
-    for (var i = 0; i < days.length; i++) {
-      if (isSameMonth(days[i], month)) {
-        firstIndex = i;
-        break;
-      }
-    }
-    for (var i = days.length - 1; i >= 0; i--) {
-      if (isSameMonth(days[i], month)) {
-        lastIndex = i;
-        break;
-      }
-    }
-    if (firstIndex < 0 || lastIndex < 0) {
-      return 6;
-    }
-    return ((lastIndex ~/ 7) - (firstIndex ~/ 7)) + 1;
+    final preDiff = monthViewStartDiff(month, firstWeekday: firstWeekday);
+    final monthDayCount = daysInMonth(month);
+    final nextDiff = monthViewEndDiff(
+      month,
+      firstWeekday: firstWeekday,
+      monthDayCount: monthDayCount,
+    );
+    return (preDiff + monthDayCount + nextDiff) ~/ 7;
+  }
+
+  static int monthViewStartDiff(
+    DateTime month, {
+    int firstWeekday = DateTime.sunday,
+  }) {
+    final first = firstDayOfMonth(month);
+    return (first.weekday - firstWeekday + 7) % 7;
+  }
+
+  static int monthViewEndDiff(
+    DateTime month, {
+    int firstWeekday = DateTime.sunday,
+    int? monthDayCount,
+  }) {
+    final dayCount = monthDayCount ?? daysInMonth(month);
+    final last = DateTime(month.year, month.month, dayCount);
+    final weekIndex = last.weekday % 7;
+    final startWeekday = firstWeekday % 7;
+    return (startWeekday + 6 - weekIndex + 7) % 7;
+  }
+
+  static int daysInMonth(DateTime month) {
+    return lastDayOfMonth(month).day;
+  }
+
+  static int weekIndexInMonth(
+    DateTime day, {
+    int firstWeekday = DateTime.sunday,
+  }) {
+    final normalized = stripTime(day);
+    final preDiff = monthViewStartDiff(
+      normalized,
+      firstWeekday: firstWeekday,
+    );
+    return ((normalized.day + preDiff - 1) ~/ 7);
   }
 }
