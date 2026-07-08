@@ -143,11 +143,11 @@ class _CalendarViewState extends State<CalendarView> {
             (widget.controller.displayMode == CalendarDisplayMode.week
                 ? 1.0
                 : 0.0);
-        final activeBaseDate = _activeBaseDate;
-        final bodyHeight = widget.pageOrientation ==
-                CalendarPageOrientation.horizontal
-            ? _buildHorizontalBodyHeight(collapseProgress)
-            : _buildVerticalBodyHeight(collapseProgress);
+        final useVerticalPaging = _useVerticalPaging(collapseProgress);
+        final activeBaseDate = _activeBaseDate(useVerticalPaging);
+        final bodyHeight = useVerticalPaging
+            ? _buildVerticalBodyHeight(collapseProgress)
+            : _buildHorizontalBodyHeight(collapseProgress);
         final totalHeight =
             widget.monthHeaderHeight + widget.weekBarHeight + bodyHeight;
         _reportDisplayedHeight(totalHeight);
@@ -170,14 +170,13 @@ class _CalendarViewState extends State<CalendarView> {
               ),
               SizedBox(
                 height: bodyHeight,
-                child: widget.pageOrientation ==
-                        CalendarPageOrientation.horizontal
-                    ? _buildHorizontalPager(
+                child: useVerticalPaging
+                    ? _buildVerticalPager(
                         collapseProgress: collapseProgress,
                         shouldShowMonthBody: shouldShowMonthBody,
                         bodyHeight: bodyHeight,
                       )
-                    : _buildVerticalPager(
+                    : _buildHorizontalPager(
                         collapseProgress: collapseProgress,
                         shouldShowMonthBody: shouldShowMonthBody,
                         bodyHeight: bodyHeight,
@@ -322,13 +321,20 @@ class _CalendarViewState extends State<CalendarView> {
     return pageBodyHeights[1];
   }
 
+  bool _useVerticalPaging(double collapseProgress) {
+    return widget.pageOrientation == CalendarPageOrientation.vertical &&
+        widget.controller.displayMode == CalendarDisplayMode.month &&
+        collapseProgress <= 0.0001;
+  }
+
   DateTime get _horizontalBaseDate =>
       _transitionAnchorDate ?? widget.controller.focusedDay;
 
-  DateTime get _activeBaseDate => widget.pageOrientation ==
-          CalendarPageOrientation.horizontal
-      ? _horizontalBaseDate
-      : _verticalPageDateForIndex(_verticalCurrentPage);
+  DateTime _activeBaseDate(bool useVerticalPaging) {
+    return useVerticalPaging
+        ? _verticalPageDateForIndex(_verticalCurrentPage)
+        : _horizontalBaseDate;
+  }
 
   DateTime _verticalPageDateForIndex(int index) {
     final relative = index - _verticalInitialPage;
