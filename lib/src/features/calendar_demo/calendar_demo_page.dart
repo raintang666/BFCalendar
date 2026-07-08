@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 
 import '../../calendar/calendar_controller.dart';
 import '../../calendar/calendar_models.dart';
@@ -16,12 +17,19 @@ class CalendarDemoPage extends StatefulWidget {
   State<CalendarDemoPage> createState() => _CalendarDemoPageState();
 }
 
-class _CalendarDemoPageState extends State<CalendarDemoPage> {
+class _CalendarDemoPageState extends State<CalendarDemoPage>
+    with SingleTickerProviderStateMixin {
   static const double _calendarRowHeight = 62;
   static const double _weekBarHeight = 46;
   static const double _monthHeaderHeight = 60;
+  static const _settleSpring = SpringDescription(
+    mass: 1,
+    stiffness: 220,
+    damping: 24,
+  );
 
   late final CalendarController _controller;
+  late final AnimationController _settleController;
   final ScrollController _listController = ScrollController();
   bool _yearMode = false;
   int _yearPanelYear = DateTime.now().year;
@@ -58,6 +66,23 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
   @override
   void initState() {
     super.initState();
+    _settleController = AnimationController(
+      vsync: this,
+      lowerBound: 0,
+      upperBound: 1,
+      value: _collapsePreviewProgress,
+    )..addListener(() {
+      if (!mounted) {
+        return;
+      }
+      final next = _settleController.value.clamp(0.0, 1.0);
+      if (next == _collapsePreviewProgress) {
+        return;
+      }
+      setState(() {
+        _collapsePreviewProgress = next;
+      });
+    });
     final now = CalendarDateUtils.stripTime(DateTime.now());
     _controller = CalendarController(
       focusedDay: now,
@@ -95,6 +120,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
   void _syncPreviewToMode() {
     _collapsePreviewProgress =
         _controller.displayMode == CalendarDisplayMode.week ? 1 : 0;
+    _settleController.value = _collapsePreviewProgress;
   }
 
   double get _collapseTravel {
@@ -143,6 +169,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
 
   @override
   void dispose() {
+    _settleController.dispose();
     _listController.dispose();
     _controller.dispose();
     super.dispose();
@@ -185,6 +212,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
                               GestureDetector(
                                 behavior: HitTestBehavior.opaque,
                                 onVerticalDragStart: (_) {
+                                  _stopSettleAnimation();
                                   _dragAccumulated = 0;
                                   _isCalendarAreaDragging = true;
                                   _dragSourceMode = _controller.displayMode;
@@ -529,31 +557,32 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
     }
     if (_dragSourceMode == CalendarDisplayMode.month) {
       final shouldShrink = _collapsePreviewProgress > 0.45 || velocity < -450;
-      setState(() {
-        _controller.setDisplayMode(
-          shouldShrink ? CalendarDisplayMode.week : CalendarDisplayMode.month,
-        );
-        _syncPreviewToMode();
-      });
+      _animateCollapseSettle(
+        targetProgress: shouldShrink ? 1 : 0,
+        targetMode: shouldShrink
+            ? CalendarDisplayMode.week
+            : CalendarDisplayMode.month,
+        velocity: velocity,
+      );
     } else if (_dragSourceMode == CalendarDisplayMode.week) {
       final shouldExpand =
           (_collapsePreviewProgress < 0.55 &&
               (_isCalendarAreaDragging || _isListAtTop())) ||
           velocity > 450;
-      setState(() {
-        _controller.setDisplayMode(
-          shouldExpand ? CalendarDisplayMode.month : CalendarDisplayMode.week,
-        );
-        _syncPreviewToMode();
-      });
       if (shouldExpand &&
           _listController.hasClients &&
           _listController.position.pixels != 0) {
         _listController.jumpTo(0);
       }
+      _animateCollapseSettle(
+        targetProgress: shouldExpand ? 0 : 1,
+        targetMode: shouldExpand
+            ? CalendarDisplayMode.month
+            : CalendarDisplayMode.week,
+        velocity: velocity,
+      );
     }
     _dragAccumulated = 0;
-    _resetDragState();
   }
 
   bool _isListAtTop() {
@@ -580,6 +609,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
   }
 
   void _handleListPointerDown(PointerDownEvent event) {
+    _stopSettleAnimation();
     _listPointerId = event.pointer;
     _listPointerStartY = event.position.dy;
     _isCalendarAreaDragging = false;
@@ -673,6 +703,53 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
     _isCalendarAreaDragging = false;
     _isListCollapseDragging = false;
     _isListPullExpanding = false;
+  }
+
+  void _stopSettleAnimation() {
+    if (_settleController.isAnimating) {
+      _settleController.stop();
+    }
+    _settleController.value = _collapsePreviewProgress;
+  }
+
+  void _animateCollapseSettle({
+    required double targetProgress,
+    required CalendarDisplayMode targetMode,
+    required double velocity,
+  }) {
+    _stopSettleAnimation();
+    final currentProgress = _collapsePreviewProgress;
+    if ((currentProgress - targetProgress).abs() < 0.0001) {
+      setState(() {
+        _controller.setDisplayMode(targetMode);
+        _collapsePreviewProgress = targetProgress;
+        _settleController.value = targetProgress;
+        _resetDragState();
+      });
+      return;
+    }
+
+    final progressVelocity = (-velocity / _collapseTravel).clamp(-8.0, 8.0);
+    final simulation = SpringSimulation(
+      _settleSpring,
+      currentProgress,
+      targetProgress,
+      progressVelocity,
+    );
+
+    _settleController
+        .animateWith(simulation)
+        .whenCompleteOrCancel(() {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _controller.setDisplayMode(targetMode);
+            _collapsePreviewProgress = targetProgress;
+            _settleController.value = targetProgress;
+            _resetDragState();
+          });
+        });
   }
 
   void _handleDemoTap(DemoEntry entry) {
