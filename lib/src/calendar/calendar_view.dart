@@ -27,11 +27,6 @@ class CalendarView extends StatelessWidget {
   final double weekBarHeight;
   final double monthHeaderHeight;
 
-  bool get _isInteractivePreview =>
-      collapsePreviewProgress != null &&
-      collapsePreviewProgress! > 0 &&
-      collapsePreviewProgress! < 1;
-
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -75,11 +70,7 @@ class CalendarView extends StatelessWidget {
             previewExpandFromWeek ||
             collapseProgress < 1;
 
-        return AnimatedContainer(
-          duration: _isInteractivePreview
-              ? Duration.zero
-              : const Duration(milliseconds: 260),
-          curve: Curves.easeOutCubic,
+        return SizedBox(
           height: monthHeaderHeight + weekBarHeight + bodyHeight,
           child: Column(
             children: [
@@ -91,16 +82,15 @@ class CalendarView extends StatelessWidget {
                 firstWeekday: controller.firstWeekday,
                 height: weekBarHeight,
               ),
-              AnimatedSize(
-                duration: _isInteractivePreview
-                    ? Duration.zero
-                    : const Duration(milliseconds: 260),
-                curve: Curves.easeOutCubic,
-                child: SizedBox(
-                  height: bodyHeight,
-                  child: ClipRect(
-                    child: shouldShowMonthBody
-                        ? Transform.translate(
+              SizedBox(
+                height: bodyHeight,
+                child: ClipRect(
+                  child: shouldShowMonthBody
+                      ? OverflowBox(
+                          alignment: Alignment.topCenter,
+                          minHeight: monthBodyHeight,
+                          maxHeight: monthBodyHeight,
+                          child: Transform.translate(
                             offset: Offset(0, -monthTranslation),
                             child: SizedBox(
                               height: monthBodyHeight,
@@ -117,18 +107,18 @@ class CalendarView extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: _WeekGrid(
-                              days: weekDays,
-                              focusedMonth: focusedMonth,
-                              controller: controller,
-                              onDaySelected: onDaySelected,
-                              rowHeight: calendarHeight,
-                            ),
                           ),
-                  ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: _WeekGrid(
+                            days: weekDays,
+                            focusedMonth: focusedMonth,
+                            controller: controller,
+                            onDaySelected: onDaySelected,
+                            rowHeight: calendarHeight,
+                          ),
+                        ),
                 ),
               ),
             ],
