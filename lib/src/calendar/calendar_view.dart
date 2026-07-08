@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import 'calendar_controller.dart';
@@ -62,11 +64,11 @@ class CalendarView extends StatelessWidget {
             (controller.displayMode == CalendarDisplayMode.week ? 1.0 : 0.0);
         final monthBodyHeight = monthLineCount * calendarHeight;
         final weekBodyHeight = calendarHeight;
-        final showWeekOnly =
-            controller.displayMode == CalendarDisplayMode.week &&
-            !previewExpandFromWeek &&
-            collapseProgress >= 1;
-        final bodyHeight = showWeekOnly ? weekBodyHeight : monthBodyHeight;
+        final bodyHeight = lerpDouble(
+          monthBodyHeight,
+          weekBodyHeight,
+          collapseProgress,
+        )!;
         final monthTranslation = selectedLine * calendarHeight * collapseProgress;
         final shouldShowMonthBody =
             controller.displayMode == CalendarDisplayMode.month ||
