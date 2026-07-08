@@ -7,11 +7,13 @@ import 'calendar_models.dart';
 import 'date_utils_ext.dart';
 import 'lunar_service.dart';
 
-class CalendarView extends StatelessWidget {
+class CalendarView extends StatefulWidget {
   const CalendarView({
     super.key,
     required this.controller,
     required this.onDaySelected,
+    this.onPageChanged,
+    this.onDisplayedHeightChanged,
     this.collapsePreviewProgress,
     this.previewExpandFromWeek = false,
     this.calendarHeight = 62,
@@ -21,6 +23,8 @@ class CalendarView extends StatelessWidget {
 
   final CalendarController controller;
   final ValueChanged<DateTime> onDaySelected;
+  final ValueChanged<DateTime>? onPageChanged;
+  final ValueChanged<double>? onDisplayedHeightChanged;
   final double? collapsePreviewProgress;
   final bool previewExpandFromWeek;
   final double calendarHeight;
@@ -28,103 +32,293 @@ class CalendarView extends StatelessWidget {
   final double monthHeaderHeight;
 
   @override
+  State<CalendarView> createState() => _CalendarViewState();
+}
+
+class _CalendarViewState extends State<CalendarView> {
+  late final PageController _pageController;
+  double _pageOffset = 0;
+  double? _lastReportedHeight;
+  DateTime? _transitionAnchorDate;
+  bool _isResettingPage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 1)
+      ..addListener(_handlePageScroll);
+  }
+
+  @override
+  void dispose() {
+    _pageController
+      ..removeListener(_handlePageScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handlePageScroll() {
+    if (!_pageController.hasClients || _isResettingPage) {
+      return;
+    }
+    final page = _pageController.page;
+    if (page == null) {
+      return;
+    }
+    final nextOffset = (page - 1).clamp(-1.0, 1.0);
+    if ((nextOffset - _pageOffset).abs() < 0.0001) {
+      return;
+    }
+    setState(() {
+      _pageOffset = nextOffset;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: widget.controller,
       builder: (context, _) {
-        final focusedMonth = DateTime(
-          controller.focusedDay.year,
-          controller.focusedDay.month,
-          1,
-        );
-        final monthDays = CalendarDateUtils.visibleMonthDays(
-          focusedMonth,
-          firstWeekday: controller.firstWeekday,
-        );
-        final weekDays = CalendarDateUtils.visibleWeekDays(
-          controller.focusedDay,
-          firstWeekday: controller.firstWeekday,
-        );
-        final monthLineCount = CalendarDateUtils.visibleMonthRowCount(
-          focusedMonth,
-          firstWeekday: controller.firstWeekday,
-          onlyCurrentMonth: controller.onlyCurrentMonth,
-        );
-        final selectedLine = CalendarDateUtils.weekIndexInMonth(
-          controller.focusedDay,
-          firstWeekday: controller.firstWeekday,
-        ).clamp(0, monthLineCount - 1);
         final collapseProgress =
-            collapsePreviewProgress ??
-            (controller.displayMode == CalendarDisplayMode.week ? 1.0 : 0.0);
-        final monthBodyHeight = monthLineCount * calendarHeight;
-        final weekBodyHeight = calendarHeight;
-        final bodyHeight = lerpDouble(
-          monthBodyHeight,
-          weekBodyHeight,
-          collapseProgress,
-        )!;
-        final monthTranslation = selectedLine * calendarHeight * collapseProgress;
+            widget.collapsePreviewProgress ??
+            (widget.controller.displayMode == CalendarDisplayMode.week
+                ? 1.0
+                : 0.0);
+        final pageDates = <DateTime>[
+          _pageDateForRelative(-1),
+          _pageDateForRelative(0),
+          _pageDateForRelative(1),
+        ];
+        final pageBodyHeights = pageDates
+            .map((date) => _pageBodyHeight(date, collapseProgress))
+            .toList();
+        final bodyHeight = _interpolatedBodyHeight(pageBodyHeights);
+        final totalHeight =
+            widget.monthHeaderHeight + widget.weekBarHeight + bodyHeight;
+        _reportDisplayedHeight(totalHeight);
         final shouldShowMonthBody =
-            controller.displayMode == CalendarDisplayMode.month ||
-            previewExpandFromWeek ||
+            widget.controller.displayMode == CalendarDisplayMode.month ||
+            widget.previewExpandFromWeek ||
             collapseProgress < 1;
 
         return SizedBox(
-          height: monthHeaderHeight + weekBarHeight + bodyHeight,
+          height: totalHeight,
           child: Column(
             children: [
               _MonthHeader(
-                month: controller.focusedDay.month,
-                height: monthHeaderHeight,
+                month: _effectiveBaseDate.month,
+                height: widget.monthHeaderHeight,
               ),
               _WeekBar(
-                firstWeekday: controller.firstWeekday,
-                height: weekBarHeight,
+                firstWeekday: widget.controller.firstWeekday,
+                height: widget.weekBarHeight,
               ),
               SizedBox(
                 height: bodyHeight,
-                child: ClipRect(
-                  child: shouldShowMonthBody
-                      ? OverflowBox(
-                          alignment: Alignment.topCenter,
-                          minHeight: monthBodyHeight,
-                          maxHeight: monthBodyHeight,
-                          child: Transform.translate(
-                            offset: Offset(0, -monthTranslation),
-                            child: SizedBox(
-                              height: monthBodyHeight,
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 10),
-                                child: _MonthGrid(
-                                  days: monthDays,
-                                  lineCount: monthLineCount,
-                                  focusedMonth: focusedMonth,
-                                  controller: controller,
-                                  onDaySelected: onDaySelected,
-                                  rowHeight: calendarHeight,
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: _WeekGrid(
-                            days: weekDays,
-                            focusedMonth: focusedMonth,
-                            controller: controller,
-                            onDaySelected: onDaySelected,
-                            rowHeight: calendarHeight,
-                          ),
-                        ),
+                child: NotificationListener<ScrollEndNotification>(
+                  onNotification: (notification) {
+                    _handlePageScrollEnd();
+                    return false;
+                  },
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: pageDates.length,
+                    itemBuilder: (context, index) {
+                      final pageDate = pageDates[index];
+                      return _CalendarPage(
+                        anchorDate: pageDate,
+                        controller: widget.controller,
+                        onDaySelected: widget.onDaySelected,
+                        collapseProgress: collapseProgress,
+                        showMonthBody: shouldShowMonthBody,
+                        rowHeight: widget.calendarHeight,
+                        bodyHeight: bodyHeight,
+                      );
+                    },
+                  ),
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  DateTime _pageDateForRelative(int relative) {
+    final base = _effectiveBaseDate;
+    if (relative == 0) {
+      return base;
+    }
+    if (widget.controller.displayMode == CalendarDisplayMode.month) {
+      return CalendarDateUtils.addMonths(base, relative);
+    }
+    return base.add(Duration(days: 7 * relative));
+  }
+
+  double _pageBodyHeight(DateTime date, double collapseProgress) {
+    final monthLineCount = CalendarDateUtils.visibleMonthRowCount(
+      DateTime(date.year, date.month, 1),
+      firstWeekday: widget.controller.firstWeekday,
+      onlyCurrentMonth: widget.controller.onlyCurrentMonth,
+    );
+    final monthBodyHeight = monthLineCount * widget.calendarHeight;
+    return lerpDouble(monthBodyHeight, widget.calendarHeight, collapseProgress)!;
+  }
+
+  double _interpolatedBodyHeight(List<double> pageBodyHeights) {
+    final offset = _pageOffset;
+    if (offset > 0) {
+      return lerpDouble(pageBodyHeights[1], pageBodyHeights[2], offset)!;
+    }
+    if (offset < 0) {
+      return lerpDouble(pageBodyHeights[1], pageBodyHeights[0], -offset)!;
+    }
+    return pageBodyHeights[1];
+  }
+
+  DateTime get _effectiveBaseDate =>
+      _transitionAnchorDate ?? widget.controller.focusedDay;
+
+  void _reportDisplayedHeight(double height) {
+    if (widget.onDisplayedHeightChanged == null) {
+      return;
+    }
+    if (_lastReportedHeight != null &&
+        (_lastReportedHeight! - height).abs() < 0.0001) {
+      return;
+    }
+    _lastReportedHeight = height;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      widget.onDisplayedHeightChanged?.call(height);
+    });
+  }
+
+  void _handlePageScrollEnd() {
+    if (!_pageController.hasClients || _isResettingPage) {
+      return;
+    }
+    final page = _pageController.page;
+    if (page == null) {
+      return;
+    }
+    final index = page.round().clamp(0, 2);
+    if (index == 1) {
+      if (_pageOffset == 0) {
+        return;
+      }
+      setState(() {
+        _pageOffset = 0;
+      });
+      return;
+    }
+    final targetDate = _pageDateForRelative(index == 0 ? -1 : 1);
+    setState(() {
+      _isResettingPage = true;
+      _transitionAnchorDate = targetDate;
+      _pageOffset = 0;
+    });
+    _pageController.jumpToPage(1);
+    if (index == 0) {
+      widget.controller.previousPage();
+    } else if (index == 2) {
+      widget.controller.nextPage();
+    }
+    widget.onPageChanged?.call(widget.controller.focusedDay);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _transitionAnchorDate = null;
+      _isResettingPage = false;
+    });
+  }
+}
+
+class _CalendarPage extends StatelessWidget {
+  const _CalendarPage({
+    required this.anchorDate,
+    required this.controller,
+    required this.onDaySelected,
+    required this.collapseProgress,
+    required this.showMonthBody,
+    required this.rowHeight,
+    required this.bodyHeight,
+  });
+
+  final DateTime anchorDate;
+  final CalendarController controller;
+  final ValueChanged<DateTime> onDaySelected;
+  final double collapseProgress;
+  final bool showMonthBody;
+  final double rowHeight;
+  final double bodyHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final focusedMonth = DateTime(anchorDate.year, anchorDate.month, 1);
+    final monthDays = CalendarDateUtils.visibleMonthDays(
+      focusedMonth,
+      firstWeekday: controller.firstWeekday,
+    );
+    final weekDays = CalendarDateUtils.visibleWeekDays(
+      anchorDate,
+      firstWeekday: controller.firstWeekday,
+    );
+    final monthLineCount = CalendarDateUtils.visibleMonthRowCount(
+      focusedMonth,
+      firstWeekday: controller.firstWeekday,
+      onlyCurrentMonth: controller.onlyCurrentMonth,
+    );
+    final monthBodyHeight = monthLineCount * rowHeight;
+    final selectedLine = CalendarDateUtils.weekIndexInMonth(
+      anchorDate,
+      firstWeekday: controller.firstWeekday,
+    ).clamp(0, monthLineCount - 1);
+    final monthTranslation = selectedLine * rowHeight * collapseProgress;
+
+    return ClipRect(
+      child: showMonthBody
+          ? OverflowBox(
+              alignment: Alignment.topCenter,
+              minHeight: monthBodyHeight,
+              maxHeight: monthBodyHeight,
+              child: Transform.translate(
+                offset: Offset(0, -monthTranslation),
+                child: SizedBox(
+                  height: monthBodyHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: _MonthGrid(
+                      days: monthDays,
+                      lineCount: monthLineCount,
+                      focusedMonth: focusedMonth,
+                      controller: controller,
+                      visibleAnchorDate: anchorDate,
+                      onDaySelected: onDaySelected,
+                      rowHeight: rowHeight,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : SizedBox(
+              height: bodyHeight,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: _WeekGrid(
+                  days: weekDays,
+                  focusedMonth: focusedMonth,
+                  controller: controller,
+                  visibleAnchorDate: anchorDate,
+                  onDaySelected: onDaySelected,
+                  rowHeight: rowHeight,
+                ),
+              ),
+            ),
     );
   }
 }
@@ -159,6 +353,7 @@ class _MonthGrid extends StatelessWidget {
     required this.lineCount,
     required this.focusedMonth,
     required this.controller,
+    required this.visibleAnchorDate,
     required this.onDaySelected,
     required this.rowHeight,
   });
@@ -167,6 +362,7 @@ class _MonthGrid extends StatelessWidget {
   final int lineCount;
   final DateTime focusedMonth;
   final CalendarController controller;
+  final DateTime visibleAnchorDate;
   final ValueChanged<DateTime> onDaySelected;
   final double rowHeight;
 
@@ -195,7 +391,10 @@ class _MonthGrid extends StatelessWidget {
                           date,
                           CalendarDateUtils.stripTime(DateTime.now()),
                         ),
-                        isSelected: controller.isSelected(date),
+                        isSelected: CalendarDateUtils.isSameDay(
+                          date,
+                          visibleAnchorDate,
+                        ),
                         isDisabled: controller.isDisabled(date),
                         showBottomDivider: rowIndex < lineCount - 1,
                         onTap: () => onDaySelected(date),
@@ -214,6 +413,7 @@ class _WeekGrid extends StatelessWidget {
     required this.days,
     required this.focusedMonth,
     required this.controller,
+    required this.visibleAnchorDate,
     required this.onDaySelected,
     required this.rowHeight,
   });
@@ -221,6 +421,7 @@ class _WeekGrid extends StatelessWidget {
   final List<DateTime> days;
   final DateTime focusedMonth;
   final CalendarController controller;
+  final DateTime visibleAnchorDate;
   final ValueChanged<DateTime> onDaySelected;
   final double rowHeight;
 
@@ -240,7 +441,10 @@ class _WeekGrid extends StatelessWidget {
                 date,
                 CalendarDateUtils.stripTime(DateTime.now()),
               ),
-              isSelected: controller.isSelected(date),
+              isSelected: CalendarDateUtils.isSameDay(
+                date,
+                visibleAnchorDate,
+              ),
               isDisabled: controller.isDisabled(date),
               showBottomDivider: false,
               onTap: () => onDaySelected(date),

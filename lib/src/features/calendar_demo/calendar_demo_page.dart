@@ -41,6 +41,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
   double _listPointerStartY = 0;
   bool _isListCollapseDragging = false;
   bool _isListPullExpanding = false;
+  double? _displayedCalendarHeight;
 
   static const _moreActions = <String>[
     '周日为周起始',
@@ -151,11 +152,12 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
   }
 
   double get _listTopOffset {
-    return lerpDouble(
-      _expandedCalendarHeight,
-      _collapsedCalendarHeight,
-      _collapsePreviewProgress,
-    )!;
+    return _displayedCalendarHeight ??
+        lerpDouble(
+          _expandedCalendarHeight,
+          _collapsedCalendarHeight,
+          _collapsePreviewProgress,
+        )!;
   }
 
   ScrollPhysics get _listPhysics {
@@ -238,6 +240,22 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
                                     }
                                     _controller.selectDay(day);
                                     _showMessage(_calendarToastText(day));
+                                  },
+                                  onPageChanged: (_) {
+                                    _rebuildMarkersForFocusedMonth();
+                                    setState(() {
+                                      _yearPanelYear = _controller.focusedDay.year;
+                                    });
+                                  },
+                                  onDisplayedHeightChanged: (height) {
+                                    if (_displayedCalendarHeight != null &&
+                                        (_displayedCalendarHeight! - height).abs() <
+                                            0.0001) {
+                                      return;
+                                    }
+                                    setState(() {
+                                      _displayedCalendarHeight = height;
+                                    });
                                   },
                                   collapsePreviewProgress:
                                       _collapsePreviewProgress,
