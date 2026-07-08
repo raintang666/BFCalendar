@@ -351,150 +351,125 @@ class _CalendarDayCell extends StatelessWidget {
       lunarColor = const Color(0xFF128C4B);
     }
 
+    final schemeColor = markers.isEmpty ? null : markers.first.color;
+    final schemeText = markers.isEmpty ? null : markers.first.label;
+
     return GestureDetector(
       onTap: isDisabled ? null : onTap,
       behavior: HitTestBehavior.opaque,
-      child: CustomPaint(
-        painter: _CellPainter(
-          isToday: isToday,
-          isSelected: isSelected,
-          hasScheme: markers.isNotEmpty,
-          schemeColor: markers.isEmpty ? null : markers.first.color,
-          schemeText: markers.isEmpty ? null : markers.first.label,
-          dayText: '${date.day}',
-          lunarText: lunarText,
-          dayColor: dayColor,
-          lunarColor: lunarColor,
-          showBottomDivider: showBottomDivider,
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cellWidth = constraints.maxWidth;
+          final circleSize = (cellWidth).clamp(36.0, 42.0);
+          final circleTop = 6.0;
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (isSelected || isToday)
+                Positioned(
+                  top: circleTop,
+                  left: (cellWidth - circleSize) / 2,
+                  child: Container(
+                    width: circleSize,
+                    height: circleSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isSelected
+                          ? const Color(0x80CFCFCF)
+                          : const Color(0xFFEAEAEA),
+                    ),
+                  ),
+                ),
+              if (schemeText != null && schemeColor != null)
+                Positioned(
+                  top: 4,
+                  right: 0,
+                  child: SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          schemeText,
+                          style: TextStyle(
+                            fontSize: 8,
+                            color: schemeColor,
+                            fontWeight: FontWeight.bold,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              Positioned(
+                top: 10,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Text(
+                    '${date.day}',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: dayColor,
+                      fontWeight: FontWeight.bold,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 33,
+                left: 2,
+                right: 2,
+                child: Center(
+                  child: Text(
+                    lunarText,
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: lunarColor,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+              if (showBottomDivider)
+                const Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 5,
+                  child: Divider(
+                    height: 0.3,
+                    thickness: 0.3,
+                    color: Color(0xFFE5E5E5),
+                  ),
+                ),
+              // if (markers.isNotEmpty)
+              //   Positioned(
+              //     left: 0,
+              //     right: 0,
+              //     bottom: 0.8,
+              //     child: Center(
+              //       child: Container(
+              //         width: 4,
+              //         height: 4,
+              //         decoration: BoxDecoration(
+              //           color: isSelected ? Colors.white : Colors.grey,
+              //           shape: BoxShape.circle,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+            ],
+          );
+        },
       ),
     );
-  }
-}
-
-class _CellPainter extends CustomPainter {
-  _CellPainter({
-    required this.isToday,
-    required this.isSelected,
-    required this.hasScheme,
-    required this.schemeColor,
-    required this.schemeText,
-    required this.dayText,
-    required this.lunarText,
-    required this.dayColor,
-    required this.lunarColor,
-    required this.showBottomDivider,
-  });
-
-  final bool isToday;
-  final bool isSelected;
-  final bool hasScheme;
-  final Color? schemeColor;
-  final String? schemeText;
-  final String dayText;
-  final String lunarText;
-  final Color dayColor;
-  final Color lunarColor;
-  final bool showBottomDivider;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.3
-      ..color = const Color(0xFFE5E5E5);
-    final pointPaint = Paint()
-      ..isAntiAlias = true
-      ..style = PaintingStyle.fill
-      ..color = isSelected ? Colors.white : Colors.grey;
-    final currentDayPaint = Paint()
-      ..isAntiAlias = true
-      ..style = PaintingStyle.fill
-      ..color = const Color(0xFFEAEAEA);
-    final selectedPaint = Paint()
-      ..isAntiAlias = true
-      ..style = PaintingStyle.fill
-      ..color = const Color(0x80CFCFCF);
-    final schemeBgPaint = Paint()
-      ..isAntiAlias = true
-      ..style = PaintingStyle.fill
-      ..color = Colors.white;
-
-    final centerX = size.width / 2;
-    const top = 22.0;
-    final radius =
-        (size.width < size.height ? size.width : size.height) / 11 * 2.2;
-
-    if (showBottomDivider) {
-      canvas.drawLine(
-        Offset(0, size.height - 1),
-        Offset(size.width, size.height - 1),
-        linePaint,
-      );
-    }
-
-    if (isSelected) {
-      canvas.drawCircle(Offset(centerX, top), radius, selectedPaint);
-    } else if (isToday) {
-      canvas.drawCircle(Offset(centerX, top), radius, currentDayPaint);
-    }
-
-    if (hasScheme) {
-      canvas.drawCircle(Offset(size.width - 6.5, top), 7, schemeBgPaint);
-      final schemeTextPainter = TextPainter(
-        text: TextSpan(
-          text: schemeText,
-          style: TextStyle(
-            fontSize: 8,
-            color: schemeColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      schemeTextPainter.paint(
-        canvas,
-        Offset(size.width - 10.5 - schemeTextPainter.width / 2, 4),
-      );
-    }
-
-    final dayPainter = TextPainter(
-      text: TextSpan(
-        text: dayText,
-        style: TextStyle(
-          fontSize: 15,
-          color: dayColor,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    dayPainter.paint(canvas, Offset(centerX - dayPainter.width / 2, 12));
-
-    final lunarPainter = TextPainter(
-      text: TextSpan(
-        text: lunarText,
-        style: TextStyle(fontSize: 10, color: lunarColor),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: size.width - 4);
-    lunarPainter.paint(canvas, Offset(centerX - lunarPainter.width / 2, 36));
-
-    if (hasScheme) {
-      canvas.drawCircle(Offset(centerX, size.height - 9), 2, pointPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CellPainter oldDelegate) {
-    return oldDelegate.isToday != isToday ||
-        oldDelegate.isSelected != isSelected ||
-        oldDelegate.hasScheme != hasScheme ||
-        oldDelegate.schemeText != schemeText ||
-        oldDelegate.dayText != dayText ||
-        oldDelegate.lunarText != lunarText ||
-        oldDelegate.dayColor != dayColor ||
-        oldDelegate.lunarColor != lunarColor ||
-        oldDelegate.showBottomDivider != showBottomDivider;
   }
 }
