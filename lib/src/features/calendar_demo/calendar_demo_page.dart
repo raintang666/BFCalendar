@@ -42,6 +42,8 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
   bool _isListCollapseDragging = false;
   bool _isListPullExpanding = false;
   double? _displayedCalendarHeight;
+  CalendarPageOrientation _pageOrientation =
+      CalendarPageOrientation.horizontal;
 
   static const _moreActions = <String>[
     '周日为周起始',
@@ -169,6 +171,9 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
     return const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics());
   }
 
+  bool get _isHorizontalCalendarPaging =>
+      _pageOrientation == CalendarPageOrientation.horizontal;
+
   @override
   void dispose() {
     _settleController.dispose();
@@ -213,22 +218,31 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
                             children: [
                               GestureDetector(
                                 behavior: HitTestBehavior.opaque,
-                                onVerticalDragStart: (_) {
-                                  _stopSettleAnimation();
-                                  _dragAccumulated = 0;
-                                  _isCalendarAreaDragging = true;
-                                  _dragSourceMode = _controller.displayMode;
-                                },
-                                onVerticalDragUpdate: (details) {
-                                  _dragAccumulated += details.delta.dy;
-                                  _updateCollapsePreview();
-                                },
-                                onVerticalDragEnd: (details) {
-                                  _commitVerticalDrag(
-                                    details.primaryVelocity ?? 0,
-                                  );
-                                },
-                                onVerticalDragCancel: _resetDragState,
+                                onVerticalDragStart: _isHorizontalCalendarPaging
+                                    ? (_) {
+                                        _stopSettleAnimation();
+                                        _dragAccumulated = 0;
+                                        _isCalendarAreaDragging = true;
+                                        _dragSourceMode =
+                                            _controller.displayMode;
+                                      }
+                                    : null,
+                                onVerticalDragUpdate: _isHorizontalCalendarPaging
+                                    ? (details) {
+                                        _dragAccumulated += details.delta.dy;
+                                        _updateCollapsePreview();
+                                      }
+                                    : null,
+                                onVerticalDragEnd: _isHorizontalCalendarPaging
+                                    ? (details) {
+                                        _commitVerticalDrag(
+                                          details.primaryVelocity ?? 0,
+                                        );
+                                      }
+                                    : null,
+                                onVerticalDragCancel: _isHorizontalCalendarPaging
+                                    ? _resetDragState
+                                    : null,
                                 child: CalendarView(
                                   controller: _controller,
                                   onDaySelected: (day) {
@@ -257,6 +271,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
                                       _displayedCalendarHeight = height;
                                     });
                                   },
+                                  pageOrientation: _pageOrientation,
                                   collapsePreviewProgress:
                                       _collapsePreviewProgress,
                                   previewExpandFromWeek:
@@ -343,7 +358,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
 
   Widget _buildToolbar() {
     final orientationAsset =
-        _controller.displayMode == CalendarDisplayMode.month
+        _isHorizontalCalendarPaging
         ? 'assets/icons/ic_horizontal.png'
         : 'assets/icons/ic_vertical.png';
     return SizedBox(
@@ -369,8 +384,11 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
                 return;
               }
               setState(() {
-                _controller.toggleDisplayMode();
-                _syncPreviewToMode();
+                _pageOrientation =
+                    _isHorizontalCalendarPaging
+                    ? CalendarPageOrientation.vertical
+                    : CalendarPageOrientation.horizontal;
+                _resetDragState();
               });
             },
           ),
@@ -533,7 +551,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
   }
 
   void _updateCollapsePreview() {
-    if (_dragSourceMode == null || _yearMode) {
+    if (_dragSourceMode == null || _yearMode || !_isHorizontalCalendarPaging) {
       return;
     }
     if (_dragSourceMode == CalendarDisplayMode.month) {
@@ -863,10 +881,9 @@ class _ToolbarIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(36),
-      child: Ink(
+      child: Container(
         width: 40,
         height: 40,
         decoration: BoxDecoration(
