@@ -6,6 +6,8 @@ enum CalendarDisplayMode { month, week }
 
 enum CalendarPageOrientation { horizontal, vertical }
 
+enum MonthViewShowMode { allMonth, onlyCurrentMonth, fitMonth }
+
 @immutable
 class CalendarMarker {
   const CalendarMarker({required this.label, required this.color});

@@ -26,7 +26,7 @@ class CalendarController extends ChangeNotifier {
   );
   Map<DateTime, List<CalendarMarker>> _markers;
   final Set<DateTime> _disabledDates;
-  bool _onlyCurrentMonth = true;
+  MonthViewShowMode _monthViewShowMode = MonthViewShowMode.onlyCurrentMonth;
   bool _interceptBlocked = true;
 
   final DateTime? minDate;
@@ -39,7 +39,9 @@ class CalendarController extends ChangeNotifier {
   CalendarSelectionState get selection => _selection;
   DateRangeValue get rangeSelection => _selection.range;
   Map<DateTime, List<CalendarMarker>> get markers => _markers;
-  bool get onlyCurrentMonth => _onlyCurrentMonth;
+  MonthViewShowMode get monthViewShowMode => _monthViewShowMode;
+  bool get onlyCurrentMonth =>
+      _monthViewShowMode == MonthViewShowMode.onlyCurrentMonth;
   bool get interceptBlocked => _interceptBlocked;
 
   void setDisplayMode(CalendarDisplayMode mode) {
@@ -67,10 +69,18 @@ class CalendarController extends ChangeNotifier {
   }
 
   void setOnlyCurrentMonth(bool value) {
-    if (_onlyCurrentMonth == value) {
+    setMonthViewShowMode(
+      value
+          ? MonthViewShowMode.onlyCurrentMonth
+          : MonthViewShowMode.allMonth,
+    );
+  }
+
+  void setMonthViewShowMode(MonthViewShowMode mode) {
+    if (_monthViewShowMode == mode) {
       return;
     }
-    _onlyCurrentMonth = value;
+    _monthViewShowMode = mode;
     notifyListeners();
   }
 

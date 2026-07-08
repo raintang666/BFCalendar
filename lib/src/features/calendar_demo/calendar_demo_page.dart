@@ -130,7 +130,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
     final rowCount = CalendarDateUtils.visibleMonthRowCount(
       _controller.focusedDay,
       firstWeekday: _controller.firstWeekday,
-      onlyCurrentMonth: _controller.onlyCurrentMonth,
+      monthViewShowMode: _controller.monthViewShowMode,
     );
     return _calendarRowHeight * (rowCount - 1);
   }
@@ -139,7 +139,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
     return CalendarDateUtils.visibleMonthRowCount(
       _controller.focusedDay,
       firstWeekday: _controller.firstWeekday,
-      onlyCurrentMonth: _controller.onlyCurrentMonth,
+      monthViewShowMode: _controller.monthViewShowMode,
     );
   }
 
@@ -504,13 +504,15 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
           _showMessage('热插拔更换周月视图待继续还原');
           break;
         case 5:
-          _controller.setOnlyCurrentMonth(false);
+          _controller.setMonthViewShowMode(MonthViewShowMode.allMonth);
           break;
         case 6:
-          _controller.setOnlyCurrentMonth(true);
+          _controller.setMonthViewShowMode(
+            MonthViewShowMode.onlyCurrentMonth,
+          );
           break;
         case 7:
-          _showMessage('自动填充模式待继续还原');
+          _controller.setMonthViewShowMode(MonthViewShowMode.fitMonth);
           break;
       }
     });

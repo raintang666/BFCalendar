@@ -1,3 +1,5 @@
+import 'calendar_models.dart';
+
 class CalendarDateUtils {
   const CalendarDateUtils._();
 
@@ -32,12 +34,23 @@ class CalendarDateUtils {
   static List<DateTime> visibleMonthDays(
     DateTime month, {
     int firstWeekday = DateTime.sunday,
+    MonthViewShowMode monthViewShowMode = MonthViewShowMode.allMonth,
   }) {
     final first = firstDayOfMonth(month);
     final offset = (first.weekday - firstWeekday + 7) % 7;
     final gridStart = first.subtract(Duration(days: offset));
+    final itemCount = switch (monthViewShowMode) {
+      MonthViewShowMode.allMonth => 42,
+      MonthViewShowMode.onlyCurrentMonth || MonthViewShowMode.fitMonth =>
+        visibleMonthRowCount(
+          month,
+          firstWeekday: firstWeekday,
+          monthViewShowMode: monthViewShowMode,
+        ) *
+            7,
+    };
     return List<DateTime>.generate(
-      42,
+      itemCount,
       (index) => stripTime(gridStart.add(Duration(days: index))),
     );
   }
@@ -70,9 +83,9 @@ class CalendarDateUtils {
   static int visibleMonthRowCount(
     DateTime month, {
     int firstWeekday = DateTime.sunday,
-    bool onlyCurrentMonth = false,
+    MonthViewShowMode monthViewShowMode = MonthViewShowMode.allMonth,
   }) {
-    if (!onlyCurrentMonth) {
+    if (monthViewShowMode == MonthViewShowMode.allMonth) {
       return 6;
     }
     final preDiff = monthViewStartDiff(month, firstWeekday: firstWeekday);

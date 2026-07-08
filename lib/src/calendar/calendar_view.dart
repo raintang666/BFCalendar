@@ -269,7 +269,7 @@ class _CalendarViewState extends State<CalendarView> {
     final monthLineCount = CalendarDateUtils.visibleMonthRowCount(
       DateTime(date.year, date.month, 1),
       firstWeekday: widget.controller.firstWeekday,
-      onlyCurrentMonth: widget.controller.onlyCurrentMonth,
+      monthViewShowMode: widget.controller.monthViewShowMode,
     );
     final monthBodyHeight = monthLineCount * widget.calendarHeight;
     return lerpDouble(monthBodyHeight, widget.calendarHeight, collapseProgress)!;
@@ -490,6 +490,7 @@ class _CalendarPage extends StatelessWidget {
     final monthDays = CalendarDateUtils.visibleMonthDays(
       focusedMonth,
       firstWeekday: controller.firstWeekday,
+      monthViewShowMode: controller.monthViewShowMode,
     );
     final weekDays = CalendarDateUtils.visibleWeekDays(
       anchorDate,
@@ -498,7 +499,7 @@ class _CalendarPage extends StatelessWidget {
     final monthLineCount = CalendarDateUtils.visibleMonthRowCount(
       focusedMonth,
       firstWeekday: controller.firstWeekday,
-      onlyCurrentMonth: controller.onlyCurrentMonth,
+      monthViewShowMode: controller.monthViewShowMode,
     );
     final monthBodyHeight = monthLineCount * rowHeight;
     final selectedLine = CalendarDateUtils.weekIndexInMonth(
@@ -604,7 +605,8 @@ class _MonthGrid extends StatelessWidget {
             children: List.generate(7, (columnIndex) {
               final date = rowDays[columnIndex];
               final shouldHide =
-                  controller.onlyCurrentMonth &&
+                  controller.monthViewShowMode ==
+                      MonthViewShowMode.onlyCurrentMonth &&
                   !CalendarDateUtils.isSameMonth(date, focusedMonth);
               return Expanded(
                 child: shouldHide
