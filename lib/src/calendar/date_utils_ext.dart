@@ -24,9 +24,9 @@ class CalendarDateUtils {
   }
 
   static DateTime addMonths(DateTime date, int delta) {
-    final monthIndex = date.month + delta;
-    final targetYear = date.year + ((monthIndex - 1) ~/ 12);
-    final targetMonth = ((monthIndex - 1) % 12 + 12) % 12 + 1;
+    final totalMonths = (date.year * 12) + (date.month - 1) + delta;
+    final targetYear = totalMonths ~/ 12;
+    final targetMonth = (totalMonths % 12) + 1;
     final lastDay = DateTime(targetYear, targetMonth + 1, 0).day;
     return DateTime(targetYear, targetMonth, date.day.clamp(1, lastDay));
   }
@@ -132,5 +132,12 @@ class CalendarDateUtils {
       firstWeekday: firstWeekday,
     );
     return ((normalized.day + preDiff - 1) ~/ 7);
+  }
+
+  static String formatIsoDate(DateTime date) {
+    final normalized = stripTime(date);
+    return '${normalized.year.toString().padLeft(4, '0')}-'
+        '${normalized.month.toString().padLeft(2, '0')}-'
+        '${normalized.day.toString().padLeft(2, '0')}';
   }
 }

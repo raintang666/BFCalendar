@@ -9,6 +9,30 @@ enum CalendarPageOrientation { horizontal, vertical }
 enum MonthViewShowMode { allMonth, onlyCurrentMonth, fitMonth }
 
 @immutable
+class CalendarBounds {
+  const CalendarBounds({this.min, this.max});
+
+  final DateTime? min;
+  final DateTime? max;
+
+  bool get hasLowerBound => min != null;
+  bool get hasUpperBound => max != null;
+  bool get isUnbounded => min == null && max == null;
+
+  CalendarBounds copyWith({
+    DateTime? min,
+    DateTime? max,
+    bool clearMin = false,
+    bool clearMax = false,
+  }) {
+    return CalendarBounds(
+      min: clearMin ? null : (min ?? this.min),
+      max: clearMax ? null : (max ?? this.max),
+    );
+  }
+}
+
+@immutable
 class CalendarMarker {
   const CalendarMarker({required this.label, required this.color});
 

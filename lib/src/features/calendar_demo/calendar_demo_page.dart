@@ -381,10 +381,12 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
           _yearPanelYear = _controller.focusedDay.year;
           break;
         case 5:
-          _showMessage('限制日期范围已在控制器中启用 0001-9999');
+          _controller.setRange(2018, 7, 1, 2019, 11, 28);
+          _rebuildMarkersForFocusedMonth();
+          _yearPanelYear = _controller.focusedDay.year;
           break;
         case 6:
-          _showMessage('Calendar Range: 0001-01-01 —— 9999-12-31');
+          _showMessage(_controller.rangeDescription);
           break;
       }
     });

@@ -6,31 +6,44 @@ import 'date_utils_ext.dart';
 class CalendarController extends ChangeNotifier {
   CalendarController({
     DateTime? focusedDay,
-    this.minDate,
-    this.maxDate,
+    DateTime? minDate,
+    DateTime? maxDate,
     Map<DateTime, List<CalendarMarker>> markers = const {},
     Set<DateTime> disabledDates = const {},
-  }) : _focusedDay = CalendarDateUtils.stripTime(focusedDay ?? DateTime.now()),
+  }) : _minDate = _normalizeNullableDate(minDate),
+       _maxDate = _normalizeNullableDate(maxDate),
+       _focusedDay = CalendarDateUtils.stripTime(focusedDay ?? DateTime.now()),
        _markers = {
          for (final entry in markers.entries)
            CalendarDateUtils.stripTime(entry.key): entry.value,
        },
-       _disabledDates = disabledDates.map(CalendarDateUtils.stripTime).toSet();
+       _disabledDates = disabledDates.map(CalendarDateUtils.stripTime).toSet() {
+    if (_minDate != null &&
+        _maxDate != null &&
+        _minDate!.isAfter(_maxDate!)) {
+      throw ArgumentError('minDate must be on or before maxDate');
+    }
+    _focusedDay = _snapDateToRangeStart(
+      _focusedDay,
+      minDate: _minDate,
+      maxDate: _maxDate,
+      fallback: _focusedDay,
+    );
+    _selection = CalendarSelectionState(single: _focusedDay);
+  }
 
   DateTime _focusedDay;
   CalendarDisplayMode _displayMode = CalendarDisplayMode.month;
   CalendarSelectionMode _selectionMode = CalendarSelectionMode.single;
   int _firstWeekday = DateTime.sunday;
-  CalendarSelectionState _selection = CalendarSelectionState(
-    single: CalendarDateUtils.stripTime(DateTime.now()),
-  );
+  CalendarSelectionState _selection = const CalendarSelectionState();
   Map<DateTime, List<CalendarMarker>> _markers;
   final Set<DateTime> _disabledDates;
   MonthViewShowMode _monthViewShowMode = MonthViewShowMode.onlyCurrentMonth;
   bool _interceptBlocked = true;
 
-  final DateTime? minDate;
-  final DateTime? maxDate;
+  DateTime? _minDate;
+  DateTime? _maxDate;
 
   DateTime get focusedDay => _focusedDay;
   CalendarDisplayMode get displayMode => _displayMode;
@@ -43,6 +56,78 @@ class CalendarController extends ChangeNotifier {
   bool get onlyCurrentMonth =>
       _monthViewShowMode == MonthViewShowMode.onlyCurrentMonth;
   bool get interceptBlocked => _interceptBlocked;
+  DateTime? get minDate => _minDate;
+  DateTime? get maxDate => _maxDate;
+  DateTime? get minRangeCalendar => _minDate;
+  DateTime? get maxRangeCalendar => _maxDate;
+  CalendarBounds get calendarRange => CalendarBounds(min: _minDate, max: _maxDate);
+
+  String get rangeDescription {
+    final minText = _minDate == null
+        ? 'unbounded'
+        : CalendarDateUtils.formatIsoDate(_minDate!);
+    final maxText = _maxDate == null
+        ? 'unbounded'
+        : CalendarDateUtils.formatIsoDate(_maxDate!);
+    return 'Calendar Range: $minText —— $maxText';
+  }
+
+  bool setCalendarRange({
+    DateTime? minDate,
+    DateTime? maxDate,
+    bool clampFocusedDay = true,
+    bool adjustSelection = true,
+  }) {
+    final normalizedMin = _normalizeNullableDate(minDate);
+    final normalizedMax = _normalizeNullableDate(maxDate);
+    if (normalizedMin != null &&
+        normalizedMax != null &&
+        normalizedMin.isAfter(normalizedMax)) {
+      return false;
+    }
+    final sameMin =
+        (normalizedMin == null && _minDate == null) ||
+        (normalizedMin != null &&
+            _minDate != null &&
+            CalendarDateUtils.isSameDay(normalizedMin, _minDate!));
+    final sameMax =
+        (normalizedMax == null && _maxDate == null) ||
+        (normalizedMax != null &&
+            _maxDate != null &&
+            CalendarDateUtils.isSameDay(normalizedMax, _maxDate!));
+    if (sameMin && sameMax) {
+      return true;
+    }
+    _minDate = normalizedMin;
+    _maxDate = normalizedMax;
+    if (clampFocusedDay) {
+      _focusedDay = _snapDateToRangeStart(
+        _focusedDay,
+        minDate: _minDate,
+        maxDate: _maxDate,
+        fallback: _rangeAnchorDate,
+      );
+    }
+    if (adjustSelection) {
+      _selection = _adjustSelectionToBounds(_selection);
+    }
+    notifyListeners();
+    return true;
+  }
+
+  bool setRange(
+    int minYear,
+    int minYearMonth,
+    int minYearDay,
+    int maxYear,
+    int maxYearMonth,
+    int maxYearDay,
+  ) {
+    return setCalendarRange(
+      minDate: DateTime(minYear, minYearMonth, minYearDay),
+      maxDate: DateTime(maxYear, maxYearMonth, maxYearDay),
+    );
+  }
 
   void setDisplayMode(CalendarDisplayMode mode) {
     if (_displayMode == mode) {
@@ -120,26 +205,39 @@ class CalendarController extends ChangeNotifier {
 
   void jumpToMonth(DateTime month) {
     final normalized = DateTime(month.year, month.month, 1);
-    if (_isOutOfBounds(normalized)) {
+    if (!canShowMonth(normalized)) {
       return;
     }
-    _focusedDay = normalized;
+    _focusedDay = _clampDate(
+      normalized,
+      minDate: _minDate,
+      maxDate: _maxDate,
+      fallback: _focusedDay,
+    );
     notifyListeners();
   }
 
   void nextPage() {
+    final target = resolvedPageAnchorForRelative(1);
+    if (target == null) {
+      return;
+    }
     if (_displayMode == CalendarDisplayMode.month) {
-      jumpToMonth(CalendarDateUtils.addMonths(_focusedDay, 1));
+      jumpToMonth(target);
     } else {
-      jumpToDay(_focusedDay.add(const Duration(days: 7)));
+      jumpToDay(target);
     }
   }
 
   void previousPage() {
+    final target = resolvedPageAnchorForRelative(-1);
+    if (target == null) {
+      return;
+    }
     if (_displayMode == CalendarDisplayMode.month) {
-      jumpToMonth(CalendarDateUtils.addMonths(_focusedDay, -1));
+      jumpToMonth(target);
     } else {
-      jumpToDay(_focusedDay.subtract(const Duration(days: 7)));
+      jumpToDay(target);
     }
   }
 
@@ -251,15 +349,178 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool canNavigateToPreviousPage({
+    DateTime? referenceDay,
+    CalendarDisplayMode? displayMode,
+  }) {
+    return resolvedPageAnchorForRelative(
+          -1,
+          referenceDay: referenceDay,
+          displayMode: displayMode,
+        ) !=
+        null;
+  }
+
+  bool canNavigateToNextPage({
+    DateTime? referenceDay,
+    CalendarDisplayMode? displayMode,
+  }) {
+    return resolvedPageAnchorForRelative(
+          1,
+          referenceDay: referenceDay,
+          displayMode: displayMode,
+        ) !=
+        null;
+  }
+
+  DateTime? resolvedPageAnchorForRelative(
+    int relative, {
+    DateTime? referenceDay,
+    CalendarDisplayMode? displayMode,
+  }) {
+    final mode = displayMode ?? _displayMode;
+    final anchor = CalendarDateUtils.stripTime(referenceDay ?? _focusedDay);
+    if (mode == CalendarDisplayMode.month) {
+      final targetMonthAnchor = CalendarDateUtils.addMonths(anchor, relative);
+      if (!canShowMonth(targetMonthAnchor)) {
+        return null;
+      }
+      return _clampDate(
+        targetMonthAnchor,
+        minDate: _minDate,
+        maxDate: _maxDate,
+        fallback: anchor,
+      );
+    }
+    final targetWeekAnchor = anchor.add(Duration(days: 7 * relative));
+    if (!canShowWeek(targetWeekAnchor)) {
+      return null;
+    }
+    return _clampDate(
+      targetWeekAnchor,
+      minDate: _minDate,
+      maxDate: _maxDate,
+      fallback: anchor,
+    );
+  }
+
+  bool canShowMonth(DateTime month) {
+    final normalizedMonth = DateTime(month.year, month.month, 1);
+    final monthStart = normalizedMonth;
+    final monthEnd = CalendarDateUtils.lastDayOfMonth(normalizedMonth);
+    if (_minDate != null && monthEnd.isBefore(_minDate!)) {
+      return false;
+    }
+    if (_maxDate != null && monthStart.isAfter(_maxDate!)) {
+      return false;
+    }
+    return true;
+  }
+
+  bool canShowWeek(DateTime anchorDay) {
+    final weekDays = CalendarDateUtils.visibleWeekDays(
+      anchorDay,
+      firstWeekday: _firstWeekday,
+    );
+    final weekStart = weekDays.first;
+    final weekEnd = weekDays.last;
+    if (_minDate != null && weekEnd.isBefore(_minDate!)) {
+      return false;
+    }
+    if (_maxDate != null && weekStart.isAfter(_maxDate!)) {
+      return false;
+    }
+    return true;
+  }
+
   bool _isOutOfBounds(DateTime date) {
-    if (minDate != null &&
-        date.isBefore(CalendarDateUtils.stripTime(minDate!))) {
+    if (_minDate != null &&
+        date.isBefore(CalendarDateUtils.stripTime(_minDate!))) {
       return true;
     }
-    if (maxDate != null &&
-        date.isAfter(CalendarDateUtils.stripTime(maxDate!))) {
+    if (_maxDate != null &&
+        date.isAfter(CalendarDateUtils.stripTime(_maxDate!))) {
       return true;
     }
     return false;
+  }
+
+  DateTime get _rangeAnchorDate => _minDate ?? _maxDate ?? _focusedDay;
+
+  CalendarSelectionState _adjustSelectionToBounds(CalendarSelectionState selection) {
+    return switch (_selectionMode) {
+      CalendarSelectionMode.single => _adjustSingleSelectionToBounds(selection),
+      CalendarSelectionMode.range => _adjustRangeSelectionToBounds(selection),
+      CalendarSelectionMode.multi => _adjustMultiSelectionToBounds(selection),
+    };
+  }
+
+  CalendarSelectionState _adjustSingleSelectionToBounds(
+    CalendarSelectionState selection,
+  ) {
+    final single = selection.single;
+    if (single == null || !_isOutOfBounds(single)) {
+      return selection;
+    }
+    return selection.copyWith(single: _rangeAnchorDate);
+  }
+
+  CalendarSelectionState _adjustRangeSelectionToBounds(
+    CalendarSelectionState selection,
+  ) {
+    final start = selection.range.start;
+    final end = selection.range.end;
+    if ((start != null && _isOutOfBounds(start)) ||
+        (end != null && _isOutOfBounds(end))) {
+      return selection.copyWith(range: const DateRangeValue());
+    }
+    return selection;
+  }
+
+  CalendarSelectionState _adjustMultiSelectionToBounds(
+    CalendarSelectionState selection,
+  ) {
+    final next = selection.multi.where((date) => !_isOutOfBounds(date)).toSet();
+    if (next.length == selection.multi.length) {
+      return selection;
+    }
+    return selection.copyWith(multi: next);
+  }
+
+  static DateTime? _normalizeNullableDate(DateTime? date) {
+    if (date == null) {
+      return null;
+    }
+    return CalendarDateUtils.stripTime(date);
+  }
+
+  static DateTime _clampDate(
+    DateTime date, {
+    required DateTime? minDate,
+    required DateTime? maxDate,
+    required DateTime fallback,
+  }) {
+    final normalized = CalendarDateUtils.stripTime(date);
+    if (minDate != null && normalized.isBefore(minDate)) {
+      return minDate;
+    }
+    if (maxDate != null && normalized.isAfter(maxDate)) {
+      return maxDate;
+    }
+    return normalized;
+  }
+
+  static DateTime _snapDateToRangeStart(
+    DateTime date, {
+    required DateTime? minDate,
+    required DateTime? maxDate,
+    required DateTime fallback,
+  }) {
+    final normalized = CalendarDateUtils.stripTime(date);
+    if ((minDate != null && normalized.isBefore(minDate)) ||
+        (maxDate != null && normalized.isAfter(maxDate))) {
+      return minDate ?? maxDate ?? fallback;
+    }
+    return normalized;
   }
 }

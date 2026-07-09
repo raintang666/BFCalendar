@@ -7,6 +7,101 @@ import 'calendar_models.dart';
 import 'date_utils_ext.dart';
 import 'lunar_service.dart';
 
+class _DirectionalPagePhysics extends ScrollPhysics {
+  const _DirectionalPagePhysics({
+    required this.lockedPage,
+    required this.allowPrevious,
+    required this.allowNext,
+    super.parent,
+  });
+
+  final double lockedPage;
+  final bool allowPrevious;
+  final bool allowNext;
+
+  static const double _pixelTolerance = 0.5;
+
+  double _lockedPixels(ScrollMetrics position) {
+    return lockedPage * position.viewportDimension;
+  }
+
+  @override
+  _DirectionalPagePhysics applyTo(ScrollPhysics? ancestor) {
+    return _DirectionalPagePhysics(
+      lockedPage: lockedPage,
+      allowPrevious: allowPrevious,
+      allowNext: allowNext,
+      parent: buildParent(ancestor),
+    );
+  }
+
+  @override
+  bool shouldAcceptUserOffset(ScrollMetrics position) {
+    if (!allowPrevious && !allowNext) {
+      return false;
+    }
+    return super.shouldAcceptUserOffset(position);
+  }
+
+  @override
+  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
+    final lockedPixels = _lockedPixels(position);
+    final pixels = position.pixels;
+    final isDraggingTowardPrevious =
+        offset < 0 && pixels <= lockedPixels + _pixelTolerance;
+    final isDraggingTowardNext =
+        offset > 0 && pixels >= lockedPixels - _pixelTolerance;
+    if (!allowPrevious && isDraggingTowardPrevious) {
+      return 0;
+    }
+    if (!allowNext && isDraggingTowardNext) {
+      return 0;
+    }
+    return super.applyPhysicsToUserOffset(position, offset);
+  }
+
+  @override
+  double applyBoundaryConditions(ScrollMetrics position, double value) {
+    final lockedPixels = _lockedPixels(position);
+    if (!allowPrevious && value < lockedPixels) {
+      return value - lockedPixels;
+    }
+    if (!allowNext && value > lockedPixels) {
+      return value - lockedPixels;
+    }
+    return super.applyBoundaryConditions(position, value);
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    final lockedPixels = _lockedPixels(position);
+    final pixels = position.pixels;
+    final blockedPrevious =
+        !allowPrevious &&
+        (velocity < 0 || pixels < lockedPixels - _pixelTolerance);
+    final blockedNext =
+        !allowNext &&
+        (velocity > 0 || pixels > lockedPixels + _pixelTolerance);
+    if (blockedPrevious || blockedNext) {
+      if ((pixels - lockedPixels).abs() <= _pixelTolerance &&
+          velocity.abs() <= toleranceFor(position).velocity) {
+        return null;
+      }
+      return ScrollSpringSimulation(
+        spring,
+        pixels,
+        lockedPixels,
+        velocity,
+        tolerance: toleranceFor(position),
+      );
+    }
+    return super.createBallisticSimulation(position, velocity);
+  }
+}
+
 class CalendarView extends StatefulWidget {
   const CalendarView({
     super.key,
@@ -42,12 +137,14 @@ class CalendarView extends StatefulWidget {
 class _CalendarViewState extends State<CalendarView> {
   static const int _verticalInitialPage = 10000;
 
-  late final PageController _pageController;
+  late PageController _pageController;
   late final PageController _verticalPageController;
   double _pageOffset = 0;
   double _verticalPageOffset = 0;
   double? _lastReportedHeight;
   DateTime? _transitionAnchorDate;
+  String? _lastHorizontalPagerSignature;
+  int? _pendingHorizontalPageJump;
   late DateTime _verticalReferenceDate;
   int _verticalCurrentPage = _verticalInitialPage;
   bool _isResettingPage = false;
@@ -55,11 +152,22 @@ class _CalendarViewState extends State<CalendarView> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: 1)
-      ..addListener(_handlePageScroll);
+    _createHorizontalPageController(initialPage: _horizontalCurrentPageIndex);
     _verticalReferenceDate = widget.controller.focusedDay;
     _verticalPageController = PageController(initialPage: _verticalCurrentPage)
       ..addListener(_handleVerticalPageScroll);
+  }
+
+  void _createHorizontalPageController({required int initialPage}) {
+    _pageController = PageController(initialPage: initialPage)
+      ..addListener(_handlePageScroll);
+  }
+
+  void _resetHorizontalPageController({required int initialPage}) {
+    final oldController = _pageController;
+    oldController.removeListener(_handlePageScroll);
+    _createHorizontalPageController(initialPage: initialPage);
+    oldController.dispose();
   }
 
   @override
@@ -89,7 +197,7 @@ class _CalendarViewState extends State<CalendarView> {
     if (page == null) {
       return;
     }
-    final nextOffset = (page - 1).clamp(-1.0, 1.0);
+    final nextOffset = (page - _horizontalCurrentPageIndex).clamp(-1.0, 1.0);
     if ((nextOffset - _pageOffset).abs() < 0.0001) {
       return;
     }
@@ -122,7 +230,7 @@ class _CalendarViewState extends State<CalendarView> {
       _transitionAnchorDate = null;
       _pageOffset = 0;
       if (_pageController.hasClients) {
-        _pageController.jumpToPage(1);
+        _pageController.jumpToPage(_horizontalCurrentPageIndex);
       }
       return;
     }
@@ -140,6 +248,7 @@ class _CalendarViewState extends State<CalendarView> {
       animation: widget.controller,
       builder: (context, _) {
         _syncPagerAnchorFromController();
+        _syncHorizontalPagerIndexIfNeeded();
         final collapseProgress =
             widget.collapsePreviewProgress ??
             (widget.controller.displayMode == CalendarDisplayMode.week
@@ -196,19 +305,20 @@ class _CalendarViewState extends State<CalendarView> {
     required bool shouldShowMonthBody,
     required double bodyHeight,
   }) {
-    final pageDates = <DateTime>[
-      _pageDateForRelative(-1),
-      _pageDateForRelative(0),
-      _pageDateForRelative(1),
-    ];
+    final relativePages = _horizontalRelativePages;
+    final currentPageIndex = _horizontalCurrentPageIndex;
+    final pageDates = relativePages.map(_pageDateForRelative).toList();
     return NotificationListener<ScrollEndNotification>(
       onNotification: (notification) {
         _handlePageScrollEnd();
         return false;
       },
       child: PageView.builder(
-        key: const ValueKey('calendar-horizontal-pager'),
+        key: ValueKey(
+          'calendar-horizontal-pager-${relativePages.join(",")}-$currentPageIndex',
+        ),
         controller: _pageController,
+        physics: const PageScrollPhysics(),
         itemCount: pageDates.length,
         itemBuilder: (context, index) {
           final pageDate = pageDates[index];
@@ -232,6 +342,15 @@ class _CalendarViewState extends State<CalendarView> {
     required bool shouldShowMonthBody,
     required double bodyHeight,
   }) {
+    final visibleDate = _verticalPageDateForIndex(_verticalCurrentPage);
+    final canGoPrevious = widget.controller.canNavigateToPreviousPage(
+      referenceDay: visibleDate,
+      displayMode: CalendarDisplayMode.month,
+    );
+    final canGoNext = widget.controller.canNavigateToNextPage(
+      referenceDay: visibleDate,
+      displayMode: CalendarDisplayMode.month,
+    );
     return NotificationListener<ScrollEndNotification>(
       onNotification: (notification) {
         _handleVerticalPageScrollEnd();
@@ -241,6 +360,12 @@ class _CalendarViewState extends State<CalendarView> {
         key: const ValueKey('calendar-vertical-pager'),
         controller: _verticalPageController,
         scrollDirection: Axis.vertical,
+        physics: _DirectionalPagePhysics(
+          lockedPage: _verticalCurrentPage.toDouble(),
+          allowPrevious: canGoPrevious,
+          allowNext: canGoNext,
+          parent: const PageScrollPhysics(),
+        ),
         itemBuilder: (context, index) {
           final pageDate = _verticalPageDateForIndex(index);
           return _CalendarPage(
@@ -259,14 +384,12 @@ class _CalendarViewState extends State<CalendarView> {
   }
 
   DateTime _pageDateForRelative(int relative) {
-    final base = _horizontalBaseDate;
-    if (relative == 0) {
-      return base;
-    }
-    if (widget.controller.displayMode == CalendarDisplayMode.month) {
-      return CalendarDateUtils.addMonths(base, relative);
-    }
-    return base.add(Duration(days: 7 * relative));
+    return widget.controller.resolvedPageAnchorForRelative(
+          relative,
+          referenceDay: _horizontalBaseDate,
+          displayMode: widget.controller.displayMode,
+        ) ??
+        _horizontalBaseDate;
   }
 
   double _pageBodyHeight(DateTime date, double collapseProgress) {
@@ -289,15 +412,14 @@ class _CalendarViewState extends State<CalendarView> {
   }
 
   double _buildHorizontalBodyHeight(double collapseProgress) {
-    final pageDates = <DateTime>[
-      _pageDateForRelative(-1),
-      _pageDateForRelative(0),
-      _pageDateForRelative(1),
-    ];
+    final pageDates = _horizontalRelativePages.map(_pageDateForRelative).toList();
     final pageBodyHeights = pageDates
         .map((date) => _pageBodyHeight(date, collapseProgress))
         .toList();
-    return _interpolatedBodyHeight(pageBodyHeights);
+    return _interpolatedBodyHeight(
+      pageBodyHeights,
+      currentPageIndex: _horizontalCurrentPageIndex,
+    );
   }
 
   double _buildVerticalBodyHeight(double collapseProgress) {
@@ -323,15 +445,31 @@ class _CalendarViewState extends State<CalendarView> {
     return currentHeight;
   }
 
-  double _interpolatedBodyHeight(List<double> pageBodyHeights) {
+  double _interpolatedBodyHeight(
+    List<double> pageBodyHeights, {
+    required int currentPageIndex,
+  }) {
     final offset = _pageOffset;
     if (offset > 0) {
-      return lerpDouble(pageBodyHeights[1], pageBodyHeights[2], offset)!;
+      final nextIndex = (currentPageIndex + 1).clamp(0, pageBodyHeights.length - 1);
+      return lerpDouble(
+        pageBodyHeights[currentPageIndex],
+        pageBodyHeights[nextIndex],
+        offset,
+      )!;
     }
     if (offset < 0) {
-      return lerpDouble(pageBodyHeights[1], pageBodyHeights[0], -offset)!;
+      final previousIndex = (currentPageIndex - 1).clamp(
+        0,
+        pageBodyHeights.length - 1,
+      );
+      return lerpDouble(
+        pageBodyHeights[currentPageIndex],
+        pageBodyHeights[previousIndex],
+        -offset,
+      )!;
     }
-    return pageBodyHeights[1];
+    return pageBodyHeights[currentPageIndex];
   }
 
   bool _useVerticalPaging(double collapseProgress) {
@@ -342,6 +480,45 @@ class _CalendarViewState extends State<CalendarView> {
 
   DateTime get _horizontalBaseDate =>
       _transitionAnchorDate ?? widget.controller.focusedDay;
+
+  List<int> get _horizontalRelativePages {
+    return _horizontalRelativePagesForBase(_horizontalBaseDate);
+  }
+
+  List<int> _horizontalRelativePagesForBase(DateTime baseDate) {
+    final canGoPrevious = widget.controller.canNavigateToPreviousPage(
+      referenceDay: baseDate,
+      displayMode: widget.controller.displayMode,
+    );
+    final canGoNext = widget.controller.canNavigateToNextPage(
+      referenceDay: baseDate,
+      displayMode: widget.controller.displayMode,
+    );
+    if (canGoPrevious && canGoNext) {
+      return const [-1, 0, 1];
+    }
+    if (canGoPrevious) {
+      return const [-1, 0];
+    }
+    if (canGoNext) {
+      return const [0, 1];
+    }
+    return const [0];
+  }
+
+  int get _horizontalCurrentPageIndex {
+    final relativePages = _horizontalRelativePages;
+    return relativePages.indexOf(0);
+  }
+
+  int _horizontalCurrentPageIndexForBase(DateTime baseDate) {
+    final relativePages = _horizontalRelativePagesForBase(baseDate);
+    return relativePages.indexOf(0);
+  }
+
+  String get _horizontalPagerSignature {
+    return '${_horizontalRelativePages.join(",")}|$_horizontalCurrentPageIndex';
+  }
 
   DateTime _activeBaseDate(bool useVerticalPaging) {
     return useVerticalPaging
@@ -355,10 +532,12 @@ class _CalendarViewState extends State<CalendarView> {
     if (relative == 0) {
       return base;
     }
-    if (widget.controller.displayMode == CalendarDisplayMode.month) {
-      return CalendarDateUtils.addMonths(base, relative);
-    }
-    return base.add(Duration(days: 7 * relative));
+    return widget.controller.resolvedPageAnchorForRelative(
+          relative,
+          referenceDay: base,
+          displayMode: widget.controller.displayMode,
+        ) ??
+        base;
   }
 
   void _syncPagerAnchorFromController() {
@@ -380,6 +559,67 @@ class _CalendarViewState extends State<CalendarView> {
         return;
       }
       _verticalPageController.jumpToPage(_verticalCurrentPage);
+    });
+  }
+
+  void _syncHorizontalPagerIndexIfNeeded() {
+    if (widget.pageOrientation != CalendarPageOrientation.horizontal) {
+      return;
+    }
+    if (!_pageController.hasClients) {
+      return;
+    }
+    final pendingPage = _pendingHorizontalPageJump;
+    if (pendingPage != null) {
+      _pendingHorizontalPageJump = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_pageController.hasClients) {
+          return;
+        }
+        _pageController.jumpToPage(pendingPage);
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _pageOffset = 0;
+          _isResettingPage = false;
+        });
+      });
+      return;
+    }
+    final signature = _horizontalPagerSignature;
+    final structureChanged = _lastHorizontalPagerSignature != signature;
+    _lastHorizontalPagerSignature = signature;
+    if (!structureChanged && _pageOffset.abs() > 0.0001) {
+      return;
+    }
+    final desiredPage = _horizontalCurrentPageIndex;
+    final currentPage = _pageController.page?.round() ?? _pageController.initialPage;
+    if (currentPage == desiredPage) {
+      if (structureChanged && (_pageOffset != 0 || _isResettingPage)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _pageOffset = 0;
+            _isResettingPage = false;
+          });
+        });
+      }
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageController.hasClients) {
+        return;
+      }
+      if (_pageOffset != 0 || _isResettingPage) {
+        setState(() {
+          _pageOffset = 0;
+          _isResettingPage = false;
+        });
+      }
+      _pageController.jumpToPage(desiredPage);
     });
   }
 
@@ -408,8 +648,9 @@ class _CalendarViewState extends State<CalendarView> {
     if (page == null) {
       return;
     }
-    final index = page.round().clamp(0, 2);
-    if (index == 1) {
+    final currentPageIndex = _horizontalCurrentPageIndex;
+    final index = page.round().clamp(0, _horizontalRelativePages.length - 1);
+    if (index == currentPageIndex) {
       if (_pageOffset == 0) {
         return;
       }
@@ -418,24 +659,32 @@ class _CalendarViewState extends State<CalendarView> {
       });
       return;
     }
-    final targetDate = _pageDateForRelative(index == 0 ? -1 : 1);
+    final relative = _horizontalRelativePages[index];
+    final targetDate = _pageDateForRelative(relative);
+    final targetPageIndex = _horizontalCurrentPageIndexForBase(targetDate);
     setState(() {
       _isResettingPage = true;
       _transitionAnchorDate = targetDate;
       _pageOffset = 0;
+      _pendingHorizontalPageJump = targetPageIndex;
     });
-    _pageController.jumpToPage(1);
-    if (index == 0) {
+    _pageController.jumpToPage(_horizontalCurrentPageIndex);
+    if (relative < 0) {
       widget.controller.previousPage();
-    } else if (index == 2) {
+    } else if (relative > 0) {
       widget.controller.nextPage();
     }
     widget.onPageChanged?.call(widget.controller.focusedDay);
+    _resetHorizontalPageController(
+      initialPage: _horizontalCurrentPageIndexForBase(widget.controller.focusedDay),
+    );
     if (!mounted) {
       return;
     }
     setState(() {
       _transitionAnchorDate = null;
+      _pendingHorizontalPageJump = null;
+      _pageOffset = 0;
       _isResettingPage = false;
     });
   }
