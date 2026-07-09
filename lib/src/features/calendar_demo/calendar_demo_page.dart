@@ -1,11 +1,7 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 
-import '../../calendar/calendar_controller.dart';
-import '../../calendar/calendar_models.dart';
-import '../../calendar/calendar_view.dart';
+import 'package:calendarview_flutter/calendarview_flutter.dart';
+
 import '../../calendar/date_utils_ext.dart';
 import '../range/range_page.dart';
 import 'demo_entries.dart';
@@ -17,39 +13,15 @@ class CalendarDemoPage extends StatefulWidget {
   State<CalendarDemoPage> createState() => _CalendarDemoPageState();
 }
 
-class _CalendarDemoPageState extends State<CalendarDemoPage>
-    with TickerProviderStateMixin {
+class _CalendarDemoPageState extends State<CalendarDemoPage> {
+  late final CalendarController _controller;
+  final CalendarInteractiveController _interactiveController =
+      CalendarInteractiveController();
+  bool _yearMode = false;
+  int _yearPanelYear = DateTime.now().year;
   static const double _calendarRowHeight = 62;
   static const double _weekBarHeight = 46;
   static const double _monthHeaderHeight = 60;
-  static const _settleSpring = SpringDescription(
-    mass: 1,
-    stiffness: 220,
-    damping: 24,
-  );
-
-  late final CalendarController _controller;
-  late final AnimationController _settleController;
-  late final AnimationController _fullScreenController;
-  final ScrollController _listController = ScrollController();
-  bool _yearMode = false;
-  int _yearPanelYear = DateTime.now().year;
-  double _dragAccumulated = 0;
-  double _collapsePreviewProgress = 0;
-  CalendarDisplayMode? _dragSourceMode;
-  bool _isCalendarAreaDragging = false;
-  int? _listPointerId;
-  double _listPointerStartY = 0;
-  bool _isListCollapseDragging = false;
-  bool _isListPullExpanding = false;
-  bool _isListFullScreenDragging = false;
-  bool _isCalendarFullScreenDragging = false;
-  double? _displayedCalendarHeight;
-  double? _monthBodyHeightOverride;
-  double _fullScreenDragStartBodyHeight = 0;
-  double _calendarViewportHeight = 0;
-  CalendarPageOrientation _pageOrientation =
-      CalendarPageOrientation.horizontal;
 
   static const _moreActions = <String>[
     '周日为周起始',
@@ -75,27 +47,6 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
   @override
   void initState() {
     super.initState();
-    _settleController = AnimationController(
-      vsync: this,
-      lowerBound: 0,
-      upperBound: 1,
-      value: _collapsePreviewProgress,
-    )..addListener(() {
-      if (!mounted) {
-        return;
-      }
-      final next = _settleController.value.clamp(0.0, 1.0);
-      if (next == _collapsePreviewProgress) {
-        return;
-      }
-      setState(() {
-        _collapsePreviewProgress = next;
-      });
-    });
-    _fullScreenController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 280),
-    );
     final now = CalendarDateUtils.stripTime(DateTime.now());
     _controller = CalendarController(
       focusedDay: now,
@@ -105,7 +56,6 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
     );
     _controller.setWeekStart(DateTime.sunday);
     _yearPanelYear = now.year;
-    _syncPreviewToMode();
   }
 
   Map<DateTime, List<CalendarMarker>> _buildMarkers(int year, int month) {
@@ -130,92 +80,9 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
     );
   }
 
-  void _syncPreviewToMode() {
-    _collapsePreviewProgress =
-        _controller.displayMode == CalendarDisplayMode.week ? 1 : 0;
-    if (!_canGestureToFullScreen) {
-      _monthBodyHeightOverride = null;
-    }
-    _settleController.value = _collapsePreviewProgress;
-  }
-
-  double get _collapseTravel {
-    final rowCount = CalendarDateUtils.visibleMonthRowCount(
-      _controller.focusedDay,
-      firstWeekday: _controller.firstWeekday,
-      monthViewShowMode: _controller.monthViewShowMode,
-    );
-    return _calendarRowHeight * (rowCount - 1);
-  }
-
-  int get _monthRowCount {
-    return CalendarDateUtils.visibleMonthRowCount(
-      _controller.focusedDay,
-      firstWeekday: _controller.firstWeekday,
-      monthViewShowMode: _controller.monthViewShowMode,
-    );
-  }
-
-  double get _expandedCalendarHeight {
-    return _monthHeaderHeight +
-        _weekBarHeight +
-        _effectiveMonthBodyHeight;
-  }
-
-  double get _collapsedCalendarHeight {
-    return _monthHeaderHeight + _weekBarHeight + _calendarRowHeight;
-  }
-
-  double get _listTopOffset {
-    return _displayedCalendarHeight ??
-        lerpDouble(
-          _expandedCalendarHeight,
-          _collapsedCalendarHeight,
-          _collapsePreviewProgress,
-        )!;
-  }
-
-  ScrollPhysics get _listPhysics {
-    if (_yearMode ||
-        _controller.displayMode == CalendarDisplayMode.month ||
-        _collapsePreviewProgress < 1) {
-      return const NeverScrollableScrollPhysics();
-    }
-    return const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics());
-  }
-
-  bool get _isHorizontalCalendarPaging =>
-      _pageOrientation == CalendarPageOrientation.horizontal;
-
-  bool get _canGestureToFullScreen =>
-      _isHorizontalCalendarPaging &&
-      _controller.displayMode == CalendarDisplayMode.month &&
-      _collapsePreviewProgress <= 0.0001;
-
-  double get _normalMonthBodyHeight => _calendarRowHeight * _monthRowCount;
-
-  double get _effectiveMonthBodyHeight =>
-      (_canGestureToFullScreen && _monthBodyHeightOverride != null)
-      ? _monthBodyHeightOverride!
-      : _normalMonthBodyHeight;
-
-  double get _maxMonthBodyHeight {
-    final viewportBodyHeight =
-        _calendarViewportHeight - _monthHeaderHeight - _weekBarHeight;
-    if (viewportBodyHeight <= _normalMonthBodyHeight) {
-      return _normalMonthBodyHeight;
-    }
-    return viewportBodyHeight;
-  }
-
-  bool get _isFullScreenExpanded =>
-      _effectiveMonthBodyHeight > _normalMonthBodyHeight + 0.1;
-
   @override
   void dispose() {
-    _fullScreenController.dispose();
-    _settleController.dispose();
-    _listController.dispose();
+    _interactiveController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -231,7 +98,10 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
           child: Column(
             children: [
               SizedBox(height: MediaQuery.of(context).padding.top),
-              _buildToolbar(),
+              AnimatedBuilder(
+                animation: _interactiveController,
+                builder: (context, _) => _buildToolbar(),
+              ),
               Visibility(
                 visible: _yearMode,
                 child: Padding(
@@ -247,182 +117,87 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
                 ),
               ),
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    _calendarViewportHeight = constraints.maxHeight;
-                    return Stack(
-                      children: [
-                        Column(
-                          children: [
-                            Expanded(
-                              child: Stack(
-                                children: [
-                                  GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onVerticalDragStart:
-                                        _isHorizontalCalendarPaging
-                                        ? (_) {
-                                            _stopSettleAnimation();
-                                            _stopFullScreenAnimation();
-                                            _dragAccumulated = 0;
-                                            _isCalendarAreaDragging = true;
-                                            _dragSourceMode =
-                                                _controller.displayMode;
-                                            _fullScreenDragStartBodyHeight =
-                                                _effectiveMonthBodyHeight;
-                                            _isCalendarFullScreenDragging =
-                                                _canGestureToFullScreen &&
-                                                _isFullScreenExpanded;
-                                          }
-                                        : null,
-                                    onVerticalDragUpdate:
-                                        _isHorizontalCalendarPaging
-                                        ? (details) {
-                                            _dragAccumulated += details.delta.dy;
-                                            if (_isCalendarFullScreenDragging) {
-                                              _updateFullScreenDrag(
-                                                _dragAccumulated,
-                                              );
-                                              return;
-                                            }
-                                            _updateCollapsePreview();
-                                          }
-                                        : null,
-                                    onVerticalDragEnd: _isHorizontalCalendarPaging
-                                        ? (details) {
-                                            if (_isCalendarFullScreenDragging) {
-                                              _finishFullScreenDrag(
-                                                details.primaryVelocity ?? 0,
-                                              );
-                                              return;
-                                            }
-                                            _commitVerticalDrag(
-                                              details.primaryVelocity ?? 0,
-                                            );
-                                          }
-                                        : null,
-                                    onVerticalDragCancel:
-                                        _isHorizontalCalendarPaging
-                                        ? () {
-                                            if (_isCalendarFullScreenDragging) {
-                                              _finishFullScreenDrag(0);
-                                              return;
-                                            }
-                                            _resetDragState();
-                                          }
-                                        : null,
-                                    child: CalendarView(
-                                      controller: _controller,
-                                      onDaySelected: (day) {
-                                        if (_controller.isDisabled(day)) {
-                                          _showMessage(
-                                            '${_formatDate(day)}拦截不可点击',
-                                          );
-                                          return;
-                                        }
-                                        _controller.selectDay(day);
-                                        _showMessage(_calendarToastText(day));
-                                      },
-                                      onPageChanged: (_) {
-                                        _rebuildMarkersForFocusedMonth();
-                                        setState(() {
-                                          _yearPanelYear =
-                                              _controller.focusedDay.year;
-                                        });
-                                      },
-                                      onDisplayedHeightChanged: (height) {
-                                        if (_displayedCalendarHeight != null &&
-                                            (_displayedCalendarHeight! - height)
-                                                    .abs() <
-                                                0.0001) {
-                                          return;
-                                        }
-                                        setState(() {
-                                          _displayedCalendarHeight = height;
-                                        });
-                                      },
-                                      pageOrientation: _pageOrientation,
-                                      monthBodyHeightOverride:
-                                          _canGestureToFullScreen
-                                          ? _monthBodyHeightOverride
-                                          : null,
-                                      collapsePreviewProgress:
-                                          _collapsePreviewProgress,
-                                      previewExpandFromWeek:
-                                          _dragSourceMode ==
-                                              CalendarDisplayMode.week &&
-                                          _controller.displayMode ==
-                                              CalendarDisplayMode.week &&
-                                          _collapsePreviewProgress < 1,
-                                      calendarHeight: _calendarRowHeight,
-                                      weekBarHeight: _weekBarHeight,
-                                      monthHeaderHeight: _monthHeaderHeight,
-                                    ),
-                                  ),
-                                  Positioned.fill(
-                                    top: _listTopOffset,
-                                    child: ClipRect(
-                                      child: Listener(
-                                        behavior: HitTestBehavior.translucent,
-                                        onPointerDown: _handleListPointerDown,
-                                        onPointerMove: _handleListPointerMove,
-                                        onPointerUp: _handleListPointerEnd,
-                                        onPointerCancel: _handleListPointerCancel,
-                                        child: ListView.separated(
-                                          controller: _listController,
-                                          physics: _listPhysics,
-                                          padding: const EdgeInsets.only(
-                                            top: 12,
-                                            bottom: 12,
-                                          ),
-                                          itemCount: demoEntries.length,
-                                          separatorBuilder: (_, _) =>
-                                              const SizedBox(height: 12),
-                                          itemBuilder: (context, index) {
-                                            final entry = demoEntries[index];
-                                            return _DemoCard(
-                                              entry: entry,
-                                              onTap: () => _handleDemoTap(entry),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_yearMode)
-                          _YearOverlay(
-                            year: _yearPanelYear,
-                            selectedMonth: _controller.focusedDay.month,
-                            onPrevYear: () {
-                              setState(() {
-                                _yearPanelYear -= 1;
-                              });
-                            },
-                            onNextYear: () {
-                              setState(() {
-                                _yearPanelYear += 1;
-                              });
-                            },
-                            onMonthTap: (month) {
-                              _controller.jumpToMonth(
-                                DateTime(_yearPanelYear, month, 1),
-                              );
-                              _rebuildMarkersForFocusedMonth();
-                              setState(() {
-                                _yearMode = false;
-                                _yearPanelYear = _controller.focusedDay.year;
-                                _syncPreviewToMode();
-                              });
-                            },
-                          ),
-                      ],
-                    );
-                  },
+                child: Stack(
+                  children: [
+                    CalendarInteractiveView(
+                      controller: _controller,
+                      interactionController: _interactiveController,
+                      yearMode: _yearMode,
+                      onFocusedDayChanged: (_) {
+                        _rebuildMarkersForFocusedMonth();
+                        setState(() {
+                          _yearPanelYear = _controller.focusedDay.year;
+                        });
+                      },
+                      onDaySelected: (day) {
+                        if (_controller.isDisabled(day)) {
+                          _showMessage('${_formatDate(day)}拦截不可点击');
+                          return;
+                        }
+                        final previousMonth = DateTime(
+                          _controller.focusedDay.year,
+                          _controller.focusedDay.month,
+                        );
+                        _controller.selectDay(day);
+                        final currentMonth = DateTime(
+                          _controller.focusedDay.year,
+                          _controller.focusedDay.month,
+                        );
+                        if (previousMonth != currentMonth) {
+                          _rebuildMarkersForFocusedMonth();
+                        }
+                        setState(() {
+                          _yearPanelYear = _controller.focusedDay.year;
+                        });
+                        _showMessage(_calendarToastText(day));
+                      },
+                      calendarHeight: _calendarRowHeight,
+                      weekBarHeight: _weekBarHeight,
+                      monthHeaderHeight: _monthHeaderHeight,
+                      contentBuilder: (context, scrollController, physics) {
+                        return ListView.separated(
+                          controller: scrollController,
+                          physics: physics,
+                          padding: const EdgeInsets.only(top: 12, bottom: 12),
+                          itemCount: demoEntries.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final entry = demoEntries[index];
+                            return _DemoCard(
+                              entry: entry,
+                              onTap: () => _handleDemoTap(entry),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    if (_yearMode)
+                      _YearOverlay(
+                        year: _yearPanelYear,
+                        selectedMonth: _controller.focusedDay.month,
+                        onPrevYear: () {
+                          setState(() {
+                            _yearPanelYear -= 1;
+                          });
+                        },
+                        onNextYear: () {
+                          setState(() {
+                            _yearPanelYear += 1;
+                          });
+                        },
+                        onMonthTap: (month) {
+                          _controller.jumpToMonth(
+                            DateTime(_yearPanelYear, month, 1),
+                          );
+                          _rebuildMarkersForFocusedMonth();
+                          setState(() {
+                            _yearMode = false;
+                            _yearPanelYear = _controller.focusedDay.year;
+                          });
+                        },
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -434,7 +209,8 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
 
   Widget _buildToolbar() {
     final orientationAsset =
-        _isHorizontalCalendarPaging
+        _interactiveController.pageOrientation ==
+            CalendarPageOrientation.horizontal
         ? 'assets/icons/ic_horizontal.png'
         : 'assets/icons/ic_vertical.png';
     return SizedBox(
@@ -448,7 +224,6 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
               setState(() {
                 _yearMode = value;
                 _yearPanelYear = _controller.focusedDay.year;
-                _syncPreviewToMode();
               });
             },
           ),
@@ -459,13 +234,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
               if (_yearMode) {
                 return;
               }
-              setState(() {
-                _pageOrientation =
-                    _isHorizontalCalendarPaging
-                    ? CalendarPageOrientation.vertical
-                    : CalendarPageOrientation.horizontal;
-                _resetDragState();
-              });
+              _interactiveController.togglePageOrientation();
             },
           ),
           const SizedBox(width: 12),
@@ -475,7 +244,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
               if (_yearMode) {
                 return;
               }
-              _toggleFullScreenByButton();
+              _interactiveController.toggleFullScreen();
             },
           ),
           const SizedBox(width: 12),
@@ -591,25 +360,25 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
     setState(() {
       switch (which) {
         case 0:
-          _controller.setDisplayMode(CalendarDisplayMode.month);
-          _syncPreviewToMode();
+          _interactiveController.expand();
           break;
         case 1:
-          _controller.setDisplayMode(CalendarDisplayMode.week);
-          _syncPreviewToMode();
+          _interactiveController.collapse();
           break;
         case 2:
           _controller.previousPage();
           _rebuildMarkersForFocusedMonth();
+          _yearPanelYear = _controller.focusedDay.year;
           break;
         case 3:
           _controller.nextPage();
           _rebuildMarkersForFocusedMonth();
+          _yearPanelYear = _controller.focusedDay.year;
           break;
         case 4:
           _controller.jumpToDay(CalendarDateUtils.stripTime(DateTime.now()));
           _rebuildMarkersForFocusedMonth();
-          _syncPreviewToMode();
+          _yearPanelYear = _controller.focusedDay.year;
           break;
         case 5:
           _showMessage('限制日期范围已在控制器中启用 0001-9999');
@@ -619,84 +388,6 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
           break;
       }
     });
-  }
-
-  void _updateCollapsePreview() {
-    if (_dragSourceMode == null || _yearMode || !_isHorizontalCalendarPaging) {
-      return;
-    }
-    if (_dragSourceMode == CalendarDisplayMode.month) {
-      final next = (-_dragAccumulated / _collapseTravel).clamp(0.0, 1.0);
-      if (next != _collapsePreviewProgress) {
-        setState(() {
-          _collapsePreviewProgress = next;
-        });
-      }
-      return;
-    }
-    if (_dragSourceMode == CalendarDisplayMode.week && _isListAtTop()) {
-      final expand = (_dragAccumulated / _collapseTravel).clamp(0.0, 1.0);
-      final next = 1 - expand;
-      if (next != _collapsePreviewProgress) {
-        setState(() {
-          _collapsePreviewProgress = next;
-        });
-      }
-      return;
-    }
-    if (_dragSourceMode == CalendarDisplayMode.week && _isCalendarAreaDragging) {
-      final expand = (_dragAccumulated / _collapseTravel).clamp(0.0, 1.0);
-      final next = 1 - expand;
-      if (next != _collapsePreviewProgress) {
-        setState(() {
-          _collapsePreviewProgress = next;
-        });
-      }
-    }
-  }
-
-  void _commitVerticalDrag(double velocity) {
-    if (_yearMode) {
-      return;
-    }
-    if (_dragSourceMode == null) {
-      return;
-    }
-    if (_dragSourceMode == CalendarDisplayMode.month) {
-      final shouldShrink = _collapsePreviewProgress > 0.45 || velocity < -450;
-      _animateCollapseSettle(
-        targetProgress: shouldShrink ? 1 : 0,
-        targetMode: shouldShrink
-            ? CalendarDisplayMode.week
-            : CalendarDisplayMode.month,
-        velocity: velocity,
-      );
-    } else if (_dragSourceMode == CalendarDisplayMode.week) {
-      final shouldExpand =
-          (_collapsePreviewProgress < 0.55 &&
-              (_isCalendarAreaDragging || _isListAtTop())) ||
-          velocity > 450;
-      if (shouldExpand &&
-          _listController.hasClients &&
-          _listController.position.pixels != 0) {
-        _listController.jumpTo(0);
-      }
-      _animateCollapseSettle(
-        targetProgress: shouldExpand ? 0 : 1,
-        targetMode: shouldExpand
-            ? CalendarDisplayMode.month
-            : CalendarDisplayMode.week,
-        velocity: velocity,
-      );
-    }
-    _dragAccumulated = 0;
-  }
-
-  bool _isListAtTop() {
-    if (!_listController.hasClients) {
-      return true;
-    }
-    return _listController.position.pixels <= 0;
   }
 
   String _calendarToastText(DateTime day) {
@@ -713,288 +404,6 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
       ..showSnackBar(
         SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
       );
-  }
-
-  void _handleListPointerDown(PointerDownEvent event) {
-    _stopSettleAnimation();
-    _stopFullScreenAnimation();
-    _listPointerId = event.pointer;
-    _listPointerStartY = event.position.dy;
-    _fullScreenDragStartBodyHeight = _effectiveMonthBodyHeight;
-    _isCalendarAreaDragging = false;
-    _isListCollapseDragging = false;
-    _isListPullExpanding = false;
-    _isListFullScreenDragging = false;
-    _isCalendarFullScreenDragging = false;
-    if (_controller.displayMode == CalendarDisplayMode.month) {
-      _dragSourceMode = CalendarDisplayMode.month;
-      return;
-    }
-    if (_controller.displayMode == CalendarDisplayMode.week && _isListAtTop()) {
-      _dragSourceMode = CalendarDisplayMode.week;
-    }
-  }
-
-  void _handleListPointerMove(PointerMoveEvent event) {
-    if (_yearMode || _listPointerId != event.pointer) {
-      return;
-    }
-
-    final deltaY = event.position.dy - _listPointerStartY;
-    if (_controller.displayMode == CalendarDisplayMode.month) {
-      if (_canGestureToFullScreen && _isListAtTop()) {
-        final shouldHandleFullScreen =
-            _isListFullScreenDragging || _isFullScreenExpanded || deltaY > 0;
-        if (shouldHandleFullScreen) {
-          _isListFullScreenDragging = true;
-          _updateFullScreenDrag(deltaY);
-          return;
-        }
-      }
-      if (!_isListCollapseDragging) {
-        if (deltaY >= 0) {
-          return;
-        }
-        _isListCollapseDragging = true;
-      }
-      final next = (-deltaY / _collapseTravel).clamp(0.0, 1.0);
-      if (next != _collapsePreviewProgress) {
-        setState(() {
-          _dragSourceMode = CalendarDisplayMode.month;
-          _collapsePreviewProgress = next;
-        });
-      }
-      return;
-    }
-
-    if (_controller.displayMode != CalendarDisplayMode.week) {
-      return;
-    }
-    if (!_isListPullExpanding) {
-      if (!_isListAtTop() || deltaY <= 0) {
-        return;
-      }
-      _isListPullExpanding = true;
-      _dragSourceMode = CalendarDisplayMode.week;
-      _listPointerStartY = event.position.dy;
-      return;
-    }
-
-    final expandDelta = event.position.dy - _listPointerStartY;
-    final next = (1 - (expandDelta / _collapseTravel)).clamp(0.0, 1.0);
-    if (next != _collapsePreviewProgress) {
-      setState(() {
-        _dragSourceMode = CalendarDisplayMode.week;
-        _collapsePreviewProgress = next;
-      });
-    }
-  }
-
-  void _handleListPointerEnd(PointerEvent event) {
-    if (_listPointerId != event.pointer) {
-      return;
-    }
-    _finishListPullExpand();
-  }
-
-  void _handleListPointerCancel(PointerCancelEvent event) {
-    if (_listPointerId != event.pointer) {
-      return;
-    }
-    _finishListPullExpand();
-  }
-
-  void _finishListPullExpand() {
-    _listPointerId = null;
-    if (_isListFullScreenDragging) {
-      _finishFullScreenDrag(0);
-      return;
-    }
-    if (!_isListPullExpanding && !_isListCollapseDragging) {
-      if (_controller.displayMode == CalendarDisplayMode.week ||
-          _controller.displayMode == CalendarDisplayMode.month) {
-        _resetDragState();
-      }
-      return;
-    }
-    final velocity =
-        _isListCollapseDragging ? -520.0 : 520.0;
-    _commitVerticalDrag(velocity);
-  }
-
-  void _resetDragState() {
-    _dragSourceMode = null;
-    _isCalendarAreaDragging = false;
-    _isListCollapseDragging = false;
-    _isListPullExpanding = false;
-    _isListFullScreenDragging = false;
-    _isCalendarFullScreenDragging = false;
-  }
-
-  void _stopSettleAnimation() {
-    if (_settleController.isAnimating) {
-      _settleController.stop();
-    }
-    _settleController.value = _collapsePreviewProgress;
-  }
-
-  void _stopFullScreenAnimation() {
-    if (_fullScreenController.isAnimating) {
-      _fullScreenController.stop();
-    }
-  }
-
-  void _toggleFullScreenByButton() {
-    if (!_isHorizontalCalendarPaging) {
-      return;
-    }
-    _stopSettleAnimation();
-    _stopFullScreenAnimation();
-    if (_controller.displayMode != CalendarDisplayMode.month ||
-        _collapsePreviewProgress > 0.0001) {
-      setState(() {
-        _controller.setDisplayMode(CalendarDisplayMode.month);
-        _collapsePreviewProgress = 0;
-        _settleController.value = 0;
-        _resetDragState();
-      });
-    }
-    final targetHeight = _isFullScreenExpanded
-        ? _normalMonthBodyHeight
-        : _maxMonthBodyHeight;
-    _animateFullScreenCalendar(targetHeight);
-  }
-
-  void _updateFullScreenDrag(double totalDelta) {
-    final desiredHeight = _fullScreenDragStartBodyHeight + totalDelta;
-    final clampedHeight = desiredHeight.clamp(
-      _normalMonthBodyHeight,
-      _maxMonthBodyHeight,
-    );
-    final overflowUp = (_normalMonthBodyHeight - desiredHeight).clamp(
-      0.0,
-      double.infinity,
-    );
-    setState(() {
-      if (overflowUp > 0) {
-        _monthBodyHeightOverride = _normalMonthBodyHeight;
-        _collapsePreviewProgress = (overflowUp / _collapseTravel).clamp(
-          0.0,
-          1.0,
-        );
-      } else {
-        _monthBodyHeightOverride = clampedHeight;
-        _collapsePreviewProgress = 0;
-      }
-    });
-  }
-
-  void _finishFullScreenDrag(double velocity) {
-    if (_collapsePreviewProgress > 0.0001) {
-      _monthBodyHeightOverride = null;
-      _isListFullScreenDragging = false;
-      _isCalendarFullScreenDragging = false;
-      _commitVerticalDrag(velocity);
-      return;
-    }
-    _settleFullScreenCalendar(velocity: velocity);
-  }
-
-  void _settleFullScreenCalendar({double velocity = 0}) {
-    final currentHeight = _effectiveMonthBodyHeight;
-    final midpoint = (_normalMonthBodyHeight + _maxMonthBodyHeight) / 2;
-    final targetHeight = velocity > 450
-        ? _maxMonthBodyHeight
-        : velocity < -450
-        ? _normalMonthBodyHeight
-        : (currentHeight >= midpoint
-              ? _maxMonthBodyHeight
-              : _normalMonthBodyHeight);
-    _animateFullScreenCalendar(targetHeight);
-  }
-
-  void _animateFullScreenCalendar(double targetHeight) {
-    _stopFullScreenAnimation();
-    final begin = _effectiveMonthBodyHeight;
-    if ((begin - targetHeight).abs() < 0.0001) {
-      setState(() {
-        _monthBodyHeightOverride = targetHeight > _normalMonthBodyHeight
-            ? targetHeight
-            : null;
-        _resetDragState();
-      });
-      return;
-    }
-    final animation = Tween<double>(
-      begin: begin,
-      end: targetHeight,
-    ).animate(CurvedAnimation(parent: _fullScreenController, curve: Curves.easeOutCubic));
-    _fullScreenController
-      ..stop()
-      ..reset();
-    void listener() {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        final value = animation.value;
-        _monthBodyHeightOverride = value;
-      });
-    }
-
-    _fullScreenController.addListener(listener);
-    _fullScreenController.forward().whenCompleteOrCancel(() {
-      _fullScreenController.removeListener(listener);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _monthBodyHeightOverride = targetHeight > _normalMonthBodyHeight
-            ? targetHeight
-            : null;
-        _resetDragState();
-      });
-    });
-  }
-
-  void _animateCollapseSettle({
-    required double targetProgress,
-    required CalendarDisplayMode targetMode,
-    required double velocity,
-  }) {
-    _stopSettleAnimation();
-    final currentProgress = _collapsePreviewProgress;
-    if ((currentProgress - targetProgress).abs() < 0.0001) {
-      setState(() {
-        _controller.setDisplayMode(targetMode);
-        _collapsePreviewProgress = targetProgress;
-        _settleController.value = targetProgress;
-        _resetDragState();
-      });
-      return;
-    }
-
-    final progressVelocity = (-velocity / _collapseTravel).clamp(-8.0, 8.0);
-    final simulation = SpringSimulation(
-      _settleSpring,
-      currentProgress,
-      targetProgress,
-      progressVelocity,
-    );
-
-    _settleController
-        .animateWith(simulation)
-        .whenCompleteOrCancel(() {
-          if (!mounted) {
-            return;
-          }
-          setState(() {
-            _controller.setDisplayMode(targetMode);
-            _collapsePreviewProgress = targetProgress;
-            _settleController.value = targetProgress;
-            _resetDragState();
-          });
-        });
   }
 
   void _handleDemoTap(DemoEntry entry) {
