@@ -7,6 +7,8 @@ import 'calendar_models.dart';
 import 'date_utils_ext.dart';
 import 'lunar_service.dart';
 
+const double _calendarHorizontalPadding = 10;
+
 class _DirectionalPagePhysics extends ScrollPhysics {
   const _DirectionalPagePhysics({
     required this.lockedPage,
@@ -107,6 +109,7 @@ class CalendarView extends StatefulWidget {
     required this.controller,
     required this.onDaySelected,
     required this.pageOrientation,
+    this.componentStyle = CalendarComponentStyle.custom,
     this.onPageChanged,
     this.onDisplayedHeightChanged,
     this.collapsePreviewProgress,
@@ -120,6 +123,7 @@ class CalendarView extends StatefulWidget {
   final CalendarController controller;
   final ValueChanged<DateTime> onDaySelected;
   final CalendarPageOrientation pageOrientation;
+  final CalendarComponentStyle componentStyle;
   final ValueChanged<DateTime>? onPageChanged;
   final ValueChanged<double>? onDisplayedHeightChanged;
   final double? collapsePreviewProgress;
@@ -276,10 +280,12 @@ class _CalendarViewState extends State<CalendarView> {
               _MonthHeader(
                 month: activeBaseDate.month,
                 height: widget.monthHeaderHeight,
+                componentStyle: widget.componentStyle,
               ),
               _WeekBar(
                 firstWeekday: widget.controller.firstWeekday,
                 height: widget.weekBarHeight,
+                componentStyle: widget.componentStyle,
               ),
               SizedBox(
                 height: bodyHeight,
@@ -393,6 +399,7 @@ class _CalendarViewState extends State<CalendarView> {
       anchorDate: pageDate,
       controller: widget.controller,
       onDaySelected: widget.onDaySelected,
+      componentStyle: widget.componentStyle,
       collapseProgress: collapseProgress,
       showMonthBody: shouldShowMonthBody,
       rowHeight: widget.calendarHeight,
@@ -816,6 +823,7 @@ class _CalendarPage extends StatelessWidget {
     required this.anchorDate,
     required this.controller,
     required this.onDaySelected,
+    required this.componentStyle,
     required this.collapseProgress,
     required this.showMonthBody,
     required this.rowHeight,
@@ -826,6 +834,7 @@ class _CalendarPage extends StatelessWidget {
   final DateTime anchorDate;
   final CalendarController controller;
   final ValueChanged<DateTime> onDaySelected;
+  final CalendarComponentStyle componentStyle;
   final double collapseProgress;
   final bool showMonthBody;
   final double rowHeight;
@@ -869,7 +878,9 @@ class _CalendarPage extends StatelessWidget {
                 child: SizedBox(
                   height: monthBodyHeight,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: _calendarHorizontalPadding,
+                    ),
                     child: _MonthGrid(
                       days: monthDays,
                       lineCount: monthLineCount,
@@ -877,6 +888,7 @@ class _CalendarPage extends StatelessWidget {
                       controller: controller,
                       visibleAnchorDate: anchorDate,
                       onDaySelected: onDaySelected,
+                      componentStyle: componentStyle,
                       rowHeight: monthRowHeight,
                     ),
                   ),
@@ -886,13 +898,16 @@ class _CalendarPage extends StatelessWidget {
           : SizedBox(
               height: bodyHeight,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _calendarHorizontalPadding,
+                ),
                 child: _WeekGrid(
                   days: weekDays,
                   focusedMonth: focusedMonth,
                   controller: controller,
                   visibleAnchorDate: anchorDate,
                   onDaySelected: onDaySelected,
+                  componentStyle: componentStyle,
                   rowHeight: rowHeight,
                 ),
               ),
@@ -902,20 +917,28 @@ class _CalendarPage extends StatelessWidget {
 }
 
 class _MonthHeader extends StatelessWidget {
-  const _MonthHeader({required this.month, required this.height});
+  const _MonthHeader({
+    required this.month,
+    required this.height,
+    required this.componentStyle,
+  });
 
   final int month;
   final double height;
+  final CalendarComponentStyle componentStyle;
 
   @override
   Widget build(BuildContext context) {
+    final textColor = componentStyle == CalendarComponentStyle.meizu
+        ? const Color(0xFF222222)
+        : const Color(0xFF333333);
     return SizedBox(
       height: height,
       child: Center(
         child: Text(
           '$month月',
-          style: const TextStyle(
-            color: Color(0xFF333333),
+          style: TextStyle(
+            color: textColor,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -933,6 +956,7 @@ class _MonthGrid extends StatelessWidget {
     required this.controller,
     required this.visibleAnchorDate,
     required this.onDaySelected,
+    required this.componentStyle,
     required this.rowHeight,
   });
 
@@ -942,6 +966,7 @@ class _MonthGrid extends StatelessWidget {
   final CalendarController controller;
   final DateTime visibleAnchorDate;
   final ValueChanged<DateTime> onDaySelected;
+  final CalendarComponentStyle componentStyle;
   final double rowHeight;
 
   @override
@@ -975,6 +1000,7 @@ class _MonthGrid extends StatelessWidget {
                           visibleAnchorDate,
                         ),
                         isDisabled: controller.isDisabled(date),
+                        componentStyle: componentStyle,
                         showBottomDivider: rowIndex < lineCount - 1,
                         onTap: () => onDaySelected(date),
                       ),
@@ -994,6 +1020,7 @@ class _WeekGrid extends StatelessWidget {
     required this.controller,
     required this.visibleAnchorDate,
     required this.onDaySelected,
+    required this.componentStyle,
     required this.rowHeight,
   });
 
@@ -1002,6 +1029,7 @@ class _WeekGrid extends StatelessWidget {
   final CalendarController controller;
   final DateTime visibleAnchorDate;
   final ValueChanged<DateTime> onDaySelected;
+  final CalendarComponentStyle componentStyle;
   final double rowHeight;
 
   @override
@@ -1022,6 +1050,7 @@ class _WeekGrid extends StatelessWidget {
               ),
               isSelected: CalendarDateUtils.isSameDay(date, visibleAnchorDate),
               isDisabled: controller.isDisabled(date),
+              componentStyle: componentStyle,
               showBottomDivider: false,
               onTap: () => onDaySelected(date),
             ),
@@ -1033,42 +1062,71 @@ class _WeekGrid extends StatelessWidget {
 }
 
 class _WeekBar extends StatelessWidget {
-  const _WeekBar({required this.firstWeekday, required this.height});
+  const _WeekBar({
+    required this.firstWeekday,
+    required this.height,
+    required this.componentStyle,
+  });
 
   final int firstWeekday;
   final double height;
+  final CalendarComponentStyle componentStyle;
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    final ordered = switch (firstWeekday) {
-      DateTime.monday => [...labels.skip(1), labels.first],
-      DateTime.saturday => [labels.last, ...labels.take(6)],
-      _ => labels,
-    };
+    final ordered = _orderedWeekLabels(componentStyle, firstWeekday);
+    final backgroundColor = componentStyle == CalendarComponentStyle.meizu
+        ? Colors.white
+        : const Color(0xFFF7F6FE);
+    final labelColor = componentStyle == CalendarComponentStyle.meizu
+        ? const Color(0xFF666666)
+        : const Color(0xFFE1E1E1);
     return Container(
       height: height,
-      color: const Color(0xFFF7F6FE),
+      color: backgroundColor,
       alignment: Alignment.center,
-      child: Row(
-        children: ordered
-            .map(
-              (label) => Expanded(
-                child: Center(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      color: Color(0xFFE1E1E1),
-                      fontSize: 12,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: _calendarHorizontalPadding,
+        ),
+        child: Row(
+          children: ordered
+              .map(
+                (label) => Expanded(
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: labelColor,
+                        fontSize: 12,
+                        fontWeight:
+                            componentStyle == CalendarComponentStyle.meizu
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            )
-            .toList(),
+              )
+              .toList(),
+        ),
       ),
     );
   }
+}
+
+List<String> _orderedWeekLabels(
+  CalendarComponentStyle componentStyle,
+  int firstWeekday,
+) {
+  final labels = componentStyle == CalendarComponentStyle.meizu
+      ? const ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+      : const ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  return switch (firstWeekday) {
+    DateTime.monday => [...labels.skip(1), labels.first],
+    DateTime.saturday => [labels.last, ...labels.take(6)],
+    _ => labels,
+  };
 }
 
 class _CalendarDayCell extends StatelessWidget {
@@ -1080,6 +1138,7 @@ class _CalendarDayCell extends StatelessWidget {
     required this.isToday,
     required this.isSelected,
     required this.isDisabled,
+    required this.componentStyle,
     required this.showBottomDivider,
     required this.onTap,
   });
@@ -1091,11 +1150,23 @@ class _CalendarDayCell extends StatelessWidget {
   final bool isToday;
   final bool isSelected;
   final bool isDisabled;
+  final CalendarComponentStyle componentStyle;
   final bool showBottomDivider;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final child = componentStyle == CalendarComponentStyle.meizu
+        ? _buildMeizuCell()
+        : _buildCustomCell();
+    return GestureDetector(
+      onTap: isDisabled ? null : onTap,
+      behavior: HitTestBehavior.opaque,
+      child: child,
+    );
+  }
+
+  Widget _buildCustomCell() {
     final inMonth = CalendarDateUtils.isSameMonth(date, focusedMonth);
     Color dayColor;
     Color lunarColor;
@@ -1126,121 +1197,195 @@ class _CalendarDayCell extends StatelessWidget {
     final schemeColor = markers.isEmpty ? null : markers.first.color;
     final schemeText = markers.isEmpty ? null : markers.first.label;
 
-    return GestureDetector(
-      onTap: isDisabled ? null : onTap,
-      behavior: HitTestBehavior.opaque,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final cellWidth = constraints.maxWidth;
-          final circleSize = (cellWidth).clamp(36.0, 42.0);
-          final circleTop = 6.0;
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              if (isSelected || isToday)
-                Positioned(
-                  top: circleTop,
-                  left: (cellWidth - circleSize) / 2,
-                  child: Container(
-                    width: circleSize,
-                    height: circleSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isSelected
-                          ? const Color(0x80CFCFCF)
-                          : const Color(0xFFEAEAEA),
-                    ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cellWidth = constraints.maxWidth;
+        final circleSize = cellWidth.clamp(36.0, 42.0);
+        final circleTop = 6.0;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            if (isSelected || isToday)
+              Positioned(
+                top: circleTop,
+                left: (cellWidth - circleSize) / 2,
+                child: Container(
+                  width: circleSize,
+                  height: circleSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected
+                        ? const Color(0x80CFCFCF)
+                        : const Color(0xFFEAEAEA),
                   ),
                 ),
-              if (schemeText != null && schemeColor != null)
-                Positioned(
-                  top: 4,
-                  right: 0,
-                  child: SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: DecoratedBox(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          schemeText,
-                          style: TextStyle(
-                            fontSize: 8,
-                            color: schemeColor,
-                            fontWeight: FontWeight.bold,
-                            height: 1,
-                          ),
+              ),
+            if (schemeText != null && schemeColor != null)
+              Positioned(
+                top: 4,
+                right: 0,
+                child: SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        schemeText,
+                        style: TextStyle(
+                          fontSize: 8,
+                          color: schemeColor,
+                          fontWeight: FontWeight.bold,
+                          height: 1,
                         ),
                       ),
                     ),
                   ),
                 ),
-              Positioned(
-                top: 10,
+              ),
+            Positioned(
+              top: 10,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  '${date.day}',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: dayColor,
+                    fontWeight: FontWeight.bold,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 33,
+              left: 2,
+              right: 2,
+              child: Center(
+                child: Text(
+                  lunarText,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  style: TextStyle(fontSize: 10, color: lunarColor, height: 1),
+                ),
+              ),
+            ),
+            if (showBottomDivider)
+              const Positioned(
                 left: 0,
                 right: 0,
-                child: Center(
-                  child: Text(
-                    '${date.day}',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: dayColor,
-                      fontWeight: FontWeight.bold,
-                      height: 1,
-                    ),
+                bottom: 5,
+                child: Divider(
+                  height: 0.3,
+                  thickness: 0.3,
+                  color: Color(0xFFE5E5E5),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMeizuCell() {
+    final inMonth = CalendarDateUtils.isSameMonth(date, focusedMonth);
+    final schemeColor = markers.isEmpty ? null : markers.first.color;
+    final schemeText = markers.isEmpty ? null : markers.first.label;
+
+    var dayColor = inMonth ? const Color(0xFF333333) : const Color(0xFFE1E1E1);
+    var lunarColor = inMonth
+        ? const Color(0xFFCFCFCF)
+        : const Color(0xFFE1E1E1);
+
+    if (isToday) {
+      dayColor = const Color(0xFFFF0000);
+      lunarColor = const Color(0xFFFF0000);
+    }
+    if (isSelected) {
+      dayColor = const Color(0xFF128C4B);
+      lunarColor = const Color(0xFF128C4B);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: AnimatedContainer(
+              duration: Duration.zero,
+              decoration: isSelected
+                  ? BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFF128C4B),
+                        width: 1.6,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x12000000),
+                          blurRadius: 10,
+                          offset: Offset(2, 6),
+                        ),
+                      ],
+                    )
+                  : null,
+            ),
+          ),
+          if (schemeText != null && schemeColor != null)
+            Positioned(
+              top: 2,
+              right: 4,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: schemeColor,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  schemeText,
+                  style: const TextStyle(
+                    fontSize: 8,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    height: 1,
                   ),
                 ),
               ),
-              Positioned(
-                top: 33,
-                left: 2,
-                right: 2,
-                child: Center(
-                  child: Text(
-                    lunarText,
-                    maxLines: 1,
-                    overflow: TextOverflow.clip,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: lunarColor,
-                      height: 1,
-                    ),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${date.day}',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: dayColor,
+                    fontWeight: FontWeight.bold,
+                    height: 1,
                   ),
                 ),
-              ),
-              if (showBottomDivider)
-                const Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 5,
-                  child: Divider(
-                    height: 0.3,
-                    thickness: 0.3,
-                    color: Color(0xFFE5E5E5),
-                  ),
+                const SizedBox(height: 8),
+                Text(
+                  lunarText,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  style: TextStyle(fontSize: 10, color: lunarColor, height: 1),
                 ),
-              // if (markers.isNotEmpty)
-              //   Positioned(
-              //     left: 0,
-              //     right: 0,
-              //     bottom: 0.8,
-              //     child: Center(
-              //       child: Container(
-              //         width: 4,
-              //         height: 4,
-              //         decoration: BoxDecoration(
-              //           color: isSelected ? Colors.white : Colors.grey,
-              //           shape: BoxShape.circle,
-              //         ),
-              //       ),
-              //     ),
-              //   ),
-            ],
-          );
-        },
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

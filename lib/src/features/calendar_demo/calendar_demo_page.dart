@@ -17,6 +17,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
   late final CalendarController _controller;
   final CalendarInteractiveController _interactiveController =
       CalendarInteractiveController();
+  CalendarComponentStyle _componentStyle = CalendarComponentStyle.custom;
   bool _yearMode = false;
   int _yearPanelYear = DateTime.now().year;
   static const double _calendarRowHeight = 62;
@@ -122,6 +123,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
                     CalendarInteractiveView(
                       controller: _controller,
                       interactionController: _interactiveController,
+                      componentStyle: _componentStyle,
                       yearMode: _yearMode,
                       onFocusedDayChanged: (_) {
                         _rebuildMarkersForFocusedMonth();
@@ -339,15 +341,20 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
           );
           break;
         case 4:
-          _showMessage('热插拔更换周月视图待继续还原');
+          _componentStyle = _componentStyle == CalendarComponentStyle.custom
+              ? CalendarComponentStyle.meizu
+              : CalendarComponentStyle.custom;
+          _showMessage(
+            _componentStyle == CalendarComponentStyle.meizu
+                ? '已切换为魅族周月视图'
+                : '已切换为自定义周月视图',
+          );
           break;
         case 5:
           _controller.setMonthViewShowMode(MonthViewShowMode.allMonth);
           break;
         case 6:
-          _controller.setMonthViewShowMode(
-            MonthViewShowMode.onlyCurrentMonth,
-          );
+          _controller.setMonthViewShowMode(MonthViewShowMode.onlyCurrentMonth);
           break;
         case 7:
           _controller.setMonthViewShowMode(MonthViewShowMode.fitMonth);

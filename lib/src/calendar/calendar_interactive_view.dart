@@ -129,6 +129,7 @@ class CalendarInteractiveView extends StatefulWidget {
     this.calendarHeight = 62,
     this.weekBarHeight = 46,
     this.monthHeaderHeight = 60,
+    this.componentStyle = CalendarComponentStyle.custom,
   });
 
   final CalendarController controller;
@@ -141,6 +142,7 @@ class CalendarInteractiveView extends StatefulWidget {
   final double calendarHeight;
   final double weekBarHeight;
   final double monthHeaderHeight;
+  final CalendarComponentStyle componentStyle;
 
   @override
   State<CalendarInteractiveView> createState() =>
@@ -181,23 +183,24 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     super.initState();
     _lastKnownDisplayMode = widget.controller.displayMode;
     widget.controller.addListener(_handleCalendarControllerChanged);
-    _settleController = AnimationController(
-      vsync: this,
-      lowerBound: 0,
-      upperBound: 1,
-      value: _collapsePreviewProgress,
-    )..addListener(() {
-      if (!mounted) {
-        return;
-      }
-      final next = _settleController.value.clamp(0.0, 1.0);
-      if (next == _collapsePreviewProgress) {
-        return;
-      }
-      setState(() {
-        _collapsePreviewProgress = next;
-      });
-    });
+    _settleController =
+        AnimationController(
+          vsync: this,
+          lowerBound: 0,
+          upperBound: 1,
+          value: _collapsePreviewProgress,
+        )..addListener(() {
+          if (!mounted) {
+            return;
+          }
+          final next = _settleController.value.clamp(0.0, 1.0);
+          if (next == _collapsePreviewProgress) {
+            return;
+          }
+          setState(() {
+            _collapsePreviewProgress = next;
+          });
+        });
     _fullScreenController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 280),
@@ -285,7 +288,9 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   double get _collapsedCalendarHeight {
-    return widget.monthHeaderHeight + widget.weekBarHeight + widget.calendarHeight;
+    return widget.monthHeaderHeight +
+        widget.weekBarHeight +
+        widget.calendarHeight;
   }
 
   double get _listTopOffset {
@@ -323,7 +328,9 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
 
   double get _maxMonthBodyHeight {
     final viewportBodyHeight =
-        _calendarViewportHeight - widget.monthHeaderHeight - widget.weekBarHeight;
+        _calendarViewportHeight -
+        widget.monthHeaderHeight -
+        widget.weekBarHeight;
     if (viewportBodyHeight <= _normalMonthBodyHeight) {
       return _normalMonthBodyHeight;
     }
@@ -451,7 +458,8 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
                                     _stopFullScreenAnimation();
                                     _dragAccumulated = 0;
                                     _isCalendarAreaDragging = true;
-                                    _dragSourceMode = widget.controller.displayMode;
+                                    _dragSourceMode =
+                                        widget.controller.displayMode;
                                     _fullScreenDragStartBodyHeight =
                                         _effectiveMonthBodyHeight;
                                     _isCalendarFullScreenDragging =
@@ -494,6 +502,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
                             child: CalendarView(
                               controller: widget.controller,
                               onDaySelected: widget.onDaySelected,
+                              componentStyle: widget.componentStyle,
                               onPageChanged: (_) {
                                 widget.onFocusedDayChanged?.call(
                                   widget.controller.focusedDay,
@@ -555,7 +564,9 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   void _updateCollapsePreview() {
-    if (_dragSourceMode == null || widget.yearMode || !_isHorizontalCalendarPaging) {
+    if (_dragSourceMode == null ||
+        widget.yearMode ||
+        !_isHorizontalCalendarPaging) {
       return;
     }
     if (_dragSourceMode == CalendarDisplayMode.month) {
@@ -577,7 +588,8 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
       }
       return;
     }
-    if (_dragSourceMode == CalendarDisplayMode.week && _isCalendarAreaDragging) {
+    if (_dragSourceMode == CalendarDisplayMode.week &&
+        _isCalendarAreaDragging) {
       final expand = (_dragAccumulated / _collapseTravel).clamp(0.0, 1.0);
       final next = 1 - expand;
       if (next != _collapsePreviewProgress) {
@@ -877,10 +889,10 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     final targetHeight = velocity > 450
         ? _maxMonthBodyHeight
         : velocity < -450
-            ? _normalMonthBodyHeight
-            : (currentHeight >= midpoint
-                ? _maxMonthBodyHeight
-                : _normalMonthBodyHeight);
+        ? _normalMonthBodyHeight
+        : (currentHeight >= midpoint
+              ? _maxMonthBodyHeight
+              : _normalMonthBodyHeight);
     _animateFullScreenCalendar(targetHeight);
   }
 
@@ -900,10 +912,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
       onCompleted?.call();
       return;
     }
-    final animation = Tween<double>(
-      begin: begin,
-      end: targetHeight,
-    ).animate(
+    final animation = Tween<double>(begin: begin, end: targetHeight).animate(
       CurvedAnimation(
         parent: _fullScreenController,
         curve: Curves.easeOutCubic,

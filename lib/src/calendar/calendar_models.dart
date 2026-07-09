@@ -8,6 +8,8 @@ enum CalendarPageOrientation { horizontal, vertical }
 
 enum MonthViewShowMode { allMonth, onlyCurrentMonth, fitMonth }
 
+enum CalendarComponentStyle { custom, meizu }
+
 @immutable
 class CalendarBounds {
   const CalendarBounds({this.min, this.max});
