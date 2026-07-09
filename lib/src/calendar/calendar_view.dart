@@ -17,6 +17,7 @@ class CalendarView extends StatefulWidget {
     this.onDisplayedHeightChanged,
     this.collapsePreviewProgress,
     this.previewExpandFromWeek = false,
+    this.monthBodyHeightOverride,
     this.calendarHeight = 62,
     this.weekBarHeight = 46,
     this.monthHeaderHeight = 60,
@@ -29,6 +30,7 @@ class CalendarView extends StatefulWidget {
   final ValueChanged<double>? onDisplayedHeightChanged;
   final double? collapsePreviewProgress;
   final bool previewExpandFromWeek;
+  final double? monthBodyHeightOverride;
   final double calendarHeight;
   final double weekBarHeight;
   final double monthHeaderHeight;
@@ -218,6 +220,7 @@ class _CalendarViewState extends State<CalendarView> {
             showMonthBody: shouldShowMonthBody,
             rowHeight: widget.calendarHeight,
             bodyHeight: bodyHeight,
+            monthBodyHeightOverride: widget.monthBodyHeightOverride,
           );
         },
       ),
@@ -248,6 +251,7 @@ class _CalendarViewState extends State<CalendarView> {
             showMonthBody: shouldShowMonthBody,
             rowHeight: widget.calendarHeight,
             bodyHeight: bodyHeight,
+            monthBodyHeightOverride: widget.monthBodyHeightOverride,
           );
         },
       ),
@@ -266,6 +270,15 @@ class _CalendarViewState extends State<CalendarView> {
   }
 
   double _pageBodyHeight(DateTime date, double collapseProgress) {
+    final monthBodyHeightOverride = widget.monthBodyHeightOverride;
+    if (monthBodyHeightOverride != null &&
+        widget.controller.displayMode == CalendarDisplayMode.month) {
+      return lerpDouble(
+        monthBodyHeightOverride,
+        widget.calendarHeight,
+        collapseProgress,
+      )!;
+    }
     final monthLineCount = CalendarDateUtils.visibleMonthRowCount(
       DateTime(date.year, date.month, 1),
       firstWeekday: widget.controller.firstWeekday,
@@ -474,6 +487,7 @@ class _CalendarPage extends StatelessWidget {
     required this.showMonthBody,
     required this.rowHeight,
     required this.bodyHeight,
+    required this.monthBodyHeightOverride,
   });
 
   final DateTime anchorDate;
@@ -483,6 +497,7 @@ class _CalendarPage extends StatelessWidget {
   final bool showMonthBody;
   final double rowHeight;
   final double bodyHeight;
+  final double? monthBodyHeightOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -501,12 +516,13 @@ class _CalendarPage extends StatelessWidget {
       firstWeekday: controller.firstWeekday,
       monthViewShowMode: controller.monthViewShowMode,
     );
-    final monthBodyHeight = monthLineCount * rowHeight;
+    final monthBodyHeight = monthBodyHeightOverride ?? (monthLineCount * rowHeight);
+    final monthRowHeight = monthBodyHeight / monthLineCount;
     final selectedLine = CalendarDateUtils.weekIndexInMonth(
       anchorDate,
       firstWeekday: controller.firstWeekday,
     ).clamp(0, monthLineCount - 1);
-    final monthTranslation = selectedLine * rowHeight * collapseProgress;
+    final monthTranslation = selectedLine * monthRowHeight * collapseProgress;
 
     return ClipRect(
       child: showMonthBody
@@ -527,7 +543,7 @@ class _CalendarPage extends StatelessWidget {
                       controller: controller,
                       visibleAnchorDate: anchorDate,
                       onDaySelected: onDaySelected,
-                      rowHeight: rowHeight,
+                      rowHeight: monthRowHeight,
                     ),
                   ),
                 ),
