@@ -2,12 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import 'calendar_components.dart';
 import 'calendar_controller.dart';
 import 'calendar_models.dart';
 import 'date_utils_ext.dart';
 import 'lunar_service.dart';
-
-const double _calendarHorizontalPadding = 10;
 
 class _DirectionalPagePhysics extends ScrollPhysics {
   const _DirectionalPagePhysics({
@@ -109,6 +108,7 @@ class CalendarView extends StatefulWidget {
     required this.controller,
     required this.onDaySelected,
     required this.pageOrientation,
+    this.componentBuilder,
     this.componentStyle = CalendarComponentStyle.custom,
     this.onPageChanged,
     this.onDisplayedHeightChanged,
@@ -123,6 +123,7 @@ class CalendarView extends StatefulWidget {
   final CalendarController controller;
   final ValueChanged<DateTime> onDaySelected;
   final CalendarPageOrientation pageOrientation;
+  final CalendarComponentBuilder? componentBuilder;
   final CalendarComponentStyle componentStyle;
   final ValueChanged<DateTime>? onPageChanged;
   final ValueChanged<double>? onDisplayedHeightChanged;
@@ -140,6 +141,11 @@ class CalendarView extends StatefulWidget {
 class _CalendarViewState extends State<CalendarView> {
   static const int _verticalInitialPage = 10000;
 
+  static const CalendarComponentBuilder _customComponentBuilder =
+      CustomCalendarComponentBuilder();
+  static const CalendarComponentBuilder _meizuComponentBuilder =
+      MeizuCalendarComponentBuilder();
+
   late PageController _pageController;
   late final PageController _verticalPageController;
   double _pageOffset = 0;
@@ -152,6 +158,17 @@ class _CalendarViewState extends State<CalendarView> {
   late DateTime _verticalReferenceDate;
   int _verticalCurrentPage = _verticalInitialPage;
   bool _isResettingPage = false;
+
+  CalendarComponentBuilder get _resolvedComponentBuilder {
+    final override = widget.componentBuilder;
+    if (override != null) {
+      return override;
+    }
+    return switch (widget.componentStyle) {
+      CalendarComponentStyle.meizu => _meizuComponentBuilder,
+      CalendarComponentStyle.custom => _customComponentBuilder,
+    };
+  }
 
   @override
   void initState() {
@@ -282,10 +299,12 @@ class _CalendarViewState extends State<CalendarView> {
                 height: widget.monthHeaderHeight,
                 componentStyle: widget.componentStyle,
               ),
-              _WeekBar(
-                firstWeekday: widget.controller.firstWeekday,
-                height: widget.weekBarHeight,
-                componentStyle: widget.componentStyle,
+              _resolvedComponentBuilder.buildWeekBar(
+                context,
+                CalendarWeekBarData(
+                  firstWeekday: widget.controller.firstWeekday,
+                  height: widget.weekBarHeight,
+                ),
               ),
               SizedBox(
                 height: bodyHeight,
@@ -399,7 +418,7 @@ class _CalendarViewState extends State<CalendarView> {
       anchorDate: pageDate,
       controller: widget.controller,
       onDaySelected: widget.onDaySelected,
-      componentStyle: widget.componentStyle,
+      componentBuilder: _resolvedComponentBuilder,
       collapseProgress: collapseProgress,
       showMonthBody: shouldShowMonthBody,
       rowHeight: widget.calendarHeight,
@@ -823,7 +842,7 @@ class _CalendarPage extends StatelessWidget {
     required this.anchorDate,
     required this.controller,
     required this.onDaySelected,
-    required this.componentStyle,
+    required this.componentBuilder,
     required this.collapseProgress,
     required this.showMonthBody,
     required this.rowHeight,
@@ -834,7 +853,7 @@ class _CalendarPage extends StatelessWidget {
   final DateTime anchorDate;
   final CalendarController controller;
   final ValueChanged<DateTime> onDaySelected;
-  final CalendarComponentStyle componentStyle;
+  final CalendarComponentBuilder componentBuilder;
   final double collapseProgress;
   final bool showMonthBody;
   final double rowHeight;
@@ -878,9 +897,7 @@ class _CalendarPage extends StatelessWidget {
                 child: SizedBox(
                   height: monthBodyHeight,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: _calendarHorizontalPadding,
-                    ),
+                    padding: componentBuilder.contentPadding,
                     child: _MonthGrid(
                       days: monthDays,
                       lineCount: monthLineCount,
@@ -888,7 +905,7 @@ class _CalendarPage extends StatelessWidget {
                       controller: controller,
                       visibleAnchorDate: anchorDate,
                       onDaySelected: onDaySelected,
-                      componentStyle: componentStyle,
+                      componentBuilder: componentBuilder,
                       rowHeight: monthRowHeight,
                     ),
                   ),
@@ -898,16 +915,14 @@ class _CalendarPage extends StatelessWidget {
           : SizedBox(
               height: bodyHeight,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _calendarHorizontalPadding,
-                ),
+                padding: componentBuilder.contentPadding,
                 child: _WeekGrid(
                   days: weekDays,
                   focusedMonth: focusedMonth,
                   controller: controller,
                   visibleAnchorDate: anchorDate,
                   onDaySelected: onDaySelected,
-                  componentStyle: componentStyle,
+                  componentBuilder: componentBuilder,
                   rowHeight: rowHeight,
                 ),
               ),
@@ -956,7 +971,7 @@ class _MonthGrid extends StatelessWidget {
     required this.controller,
     required this.visibleAnchorDate,
     required this.onDaySelected,
-    required this.componentStyle,
+    required this.componentBuilder,
     required this.rowHeight,
   });
 
@@ -966,7 +981,7 @@ class _MonthGrid extends StatelessWidget {
   final CalendarController controller;
   final DateTime visibleAnchorDate;
   final ValueChanged<DateTime> onDaySelected;
-  final CalendarComponentStyle componentStyle;
+  final CalendarComponentBuilder componentBuilder;
   final double rowHeight;
 
   @override
@@ -1000,7 +1015,7 @@ class _MonthGrid extends StatelessWidget {
                           visibleAnchorDate,
                         ),
                         isDisabled: controller.isDisabled(date),
-                        componentStyle: componentStyle,
+                        componentBuilder: componentBuilder,
                         showBottomDivider: rowIndex < lineCount - 1,
                         onTap: () => onDaySelected(date),
                       ),
@@ -1020,7 +1035,7 @@ class _WeekGrid extends StatelessWidget {
     required this.controller,
     required this.visibleAnchorDate,
     required this.onDaySelected,
-    required this.componentStyle,
+    required this.componentBuilder,
     required this.rowHeight,
   });
 
@@ -1029,7 +1044,7 @@ class _WeekGrid extends StatelessWidget {
   final CalendarController controller;
   final DateTime visibleAnchorDate;
   final ValueChanged<DateTime> onDaySelected;
-  final CalendarComponentStyle componentStyle;
+  final CalendarComponentBuilder componentBuilder;
   final double rowHeight;
 
   @override
@@ -1050,7 +1065,7 @@ class _WeekGrid extends StatelessWidget {
               ),
               isSelected: CalendarDateUtils.isSameDay(date, visibleAnchorDate),
               isDisabled: controller.isDisabled(date),
-              componentStyle: componentStyle,
+              componentBuilder: componentBuilder,
               showBottomDivider: false,
               onTap: () => onDaySelected(date),
             ),
@@ -1059,74 +1074,6 @@ class _WeekGrid extends StatelessWidget {
       ),
     );
   }
-}
-
-class _WeekBar extends StatelessWidget {
-  const _WeekBar({
-    required this.firstWeekday,
-    required this.height,
-    required this.componentStyle,
-  });
-
-  final int firstWeekday;
-  final double height;
-  final CalendarComponentStyle componentStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    final ordered = _orderedWeekLabels(componentStyle, firstWeekday);
-    final backgroundColor = componentStyle == CalendarComponentStyle.meizu
-        ? Colors.white
-        : const Color(0xFFF7F6FE);
-    final labelColor = componentStyle == CalendarComponentStyle.meizu
-        ? const Color(0xFF666666)
-        : const Color(0xFFE1E1E1);
-    return Container(
-      height: height,
-      color: backgroundColor,
-      alignment: Alignment.center,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: _calendarHorizontalPadding,
-        ),
-        child: Row(
-          children: ordered
-              .map(
-                (label) => Expanded(
-                  child: Center(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: labelColor,
-                        fontSize: 12,
-                        fontWeight:
-                            componentStyle == CalendarComponentStyle.meizu
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-      ),
-    );
-  }
-}
-
-List<String> _orderedWeekLabels(
-  CalendarComponentStyle componentStyle,
-  int firstWeekday,
-) {
-  final labels = componentStyle == CalendarComponentStyle.meizu
-      ? const ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-      : const ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-  return switch (firstWeekday) {
-    DateTime.monday => [...labels.skip(1), labels.first],
-    DateTime.saturday => [labels.last, ...labels.take(6)],
-    _ => labels,
-  };
 }
 
 class _CalendarDayCell extends StatelessWidget {
@@ -1138,7 +1085,7 @@ class _CalendarDayCell extends StatelessWidget {
     required this.isToday,
     required this.isSelected,
     required this.isDisabled,
-    required this.componentStyle,
+    required this.componentBuilder,
     required this.showBottomDivider,
     required this.onTap,
   });
@@ -1150,243 +1097,29 @@ class _CalendarDayCell extends StatelessWidget {
   final bool isToday;
   final bool isSelected;
   final bool isDisabled;
-  final CalendarComponentStyle componentStyle;
+  final CalendarComponentBuilder componentBuilder;
   final bool showBottomDivider;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final child = componentStyle == CalendarComponentStyle.meizu
-        ? _buildMeizuCell()
-        : _buildCustomCell();
+    final child = componentBuilder.buildDayCell(
+      context,
+      CalendarDayCellData(
+        date: date,
+        focusedMonth: focusedMonth,
+        markers: markers,
+        lunarText: lunarText,
+        isToday: isToday,
+        isSelected: isSelected,
+        isDisabled: isDisabled,
+        showBottomDivider: showBottomDivider,
+      ),
+    );
     return GestureDetector(
       onTap: isDisabled ? null : onTap,
       behavior: HitTestBehavior.opaque,
-      child: child,
-    );
-  }
-
-  Widget _buildCustomCell() {
-    final inMonth = CalendarDateUtils.isSameMonth(date, focusedMonth);
-    Color dayColor;
-    Color lunarColor;
-
-    final isWeekend =
-        date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
-    if (isWeekend && inMonth) {
-      dayColor = const Color(0xFF489DFF);
-      lunarColor = const Color(0xFF489DFF);
-    } else if (!inMonth) {
-      dayColor = const Color(0xFFE1E1E1);
-      lunarColor = const Color(0xFFE1E1E1);
-    } else {
-      dayColor = const Color(0xFF333333);
-      lunarColor = const Color(0xFFCFCFCF);
-    }
-
-    if (isToday) {
-      dayColor = const Color(0xFFFF0000);
-      lunarColor = const Color(0xFFFF0000);
-    }
-
-    if (isSelected) {
-      dayColor = const Color(0xFF128C4B);
-      lunarColor = const Color(0xFF128C4B);
-    }
-
-    final schemeColor = markers.isEmpty ? null : markers.first.color;
-    final schemeText = markers.isEmpty ? null : markers.first.label;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cellWidth = constraints.maxWidth;
-        final circleSize = cellWidth.clamp(36.0, 42.0);
-        final circleTop = 6.0;
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            if (isSelected || isToday)
-              Positioned(
-                top: circleTop,
-                left: (cellWidth - circleSize) / 2,
-                child: Container(
-                  width: circleSize,
-                  height: circleSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isSelected
-                        ? const Color(0x80CFCFCF)
-                        : const Color(0xFFEAEAEA),
-                  ),
-                ),
-              ),
-            if (schemeText != null && schemeColor != null)
-              Positioned(
-                top: 4,
-                right: 0,
-                child: SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: DecoratedBox(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        schemeText,
-                        style: TextStyle(
-                          fontSize: 8,
-                          color: schemeColor,
-                          fontWeight: FontWeight.bold,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            Positioned(
-              top: 10,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  '${date.day}',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: dayColor,
-                    fontWeight: FontWeight.bold,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 33,
-              left: 2,
-              right: 2,
-              child: Center(
-                child: Text(
-                  lunarText,
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: TextStyle(fontSize: 10, color: lunarColor, height: 1),
-                ),
-              ),
-            ),
-            if (showBottomDivider)
-              const Positioned(
-                left: 0,
-                right: 0,
-                bottom: 5,
-                child: Divider(
-                  height: 0.3,
-                  thickness: 0.3,
-                  color: Color(0xFFE5E5E5),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildMeizuCell() {
-    final inMonth = CalendarDateUtils.isSameMonth(date, focusedMonth);
-    final schemeColor = markers.isEmpty ? null : markers.first.color;
-    final schemeText = markers.isEmpty ? null : markers.first.label;
-
-    var dayColor = inMonth ? const Color(0xFF333333) : const Color(0xFFE1E1E1);
-    var lunarColor = inMonth
-        ? const Color(0xFFCFCFCF)
-        : const Color(0xFFE1E1E1);
-
-    if (isToday) {
-      dayColor = const Color(0xFFFF0000);
-      lunarColor = const Color(0xFFFF0000);
-    }
-    if (isSelected) {
-      dayColor = const Color(0xFF128C4B);
-      lunarColor = const Color(0xFF128C4B);
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: AnimatedContainer(
-              duration: Duration.zero,
-              decoration: isSelected
-                  ? BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFF128C4B),
-                        width: 1.6,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x12000000),
-                          blurRadius: 10,
-                          offset: Offset(2, 6),
-                        ),
-                      ],
-                    )
-                  : null,
-            ),
-          ),
-          if (schemeText != null && schemeColor != null)
-            Positioned(
-              top: 2,
-              right: 4,
-              child: Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: schemeColor,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  schemeText,
-                  style: const TextStyle(
-                    fontSize: 8,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${date.day}',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: dayColor,
-                    fontWeight: FontWeight.bold,
-                    height: 1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  lunarText,
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: TextStyle(fontSize: 10, color: lunarColor, height: 1),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      child: SizedBox.expand(child: child),
     );
   }
 }

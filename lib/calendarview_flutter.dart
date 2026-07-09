@@ -1,3 +1,4 @@
+export 'src/calendar/calendar_components.dart';
 export 'src/calendar/calendar_controller.dart';
 export 'src/calendar/calendar_interactive_view.dart';
 export 'src/calendar/calendar_models.dart';

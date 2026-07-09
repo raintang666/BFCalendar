@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
+import 'calendar_components.dart';
 import 'calendar_controller.dart';
 import 'calendar_models.dart';
 import 'calendar_view.dart';
@@ -129,6 +130,7 @@ class CalendarInteractiveView extends StatefulWidget {
     this.calendarHeight = 62,
     this.weekBarHeight = 46,
     this.monthHeaderHeight = 60,
+    this.componentBuilder,
     this.componentStyle = CalendarComponentStyle.custom,
   });
 
@@ -142,6 +144,7 @@ class CalendarInteractiveView extends StatefulWidget {
   final double calendarHeight;
   final double weekBarHeight;
   final double monthHeaderHeight;
+  final CalendarComponentBuilder? componentBuilder;
   final CalendarComponentStyle componentStyle;
 
   @override
@@ -502,6 +505,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
                             child: CalendarView(
                               controller: widget.controller,
                               onDaySelected: widget.onDaySelected,
+                              componentBuilder: widget.componentBuilder,
                               componentStyle: widget.componentStyle,
                               onPageChanged: (_) {
                                 widget.onFocusedDayChanged?.call(

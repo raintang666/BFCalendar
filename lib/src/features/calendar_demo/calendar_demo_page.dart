@@ -123,6 +123,10 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
                     CalendarInteractiveView(
                       controller: _controller,
                       interactionController: _interactiveController,
+                      componentBuilder:
+                          _componentStyle == CalendarComponentStyle.meizu
+                          ? const MeizuCalendarComponentBuilder()
+                          : const CustomCalendarComponentBuilder(),
                       componentStyle: _componentStyle,
                       yearMode: _yearMode,
                       onFocusedDayChanged: (_) {
