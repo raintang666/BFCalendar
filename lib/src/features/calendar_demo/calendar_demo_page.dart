@@ -475,14 +475,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
               if (_yearMode) {
                 return;
               }
-              setState(() {
-                _controller.setDisplayMode(
-                  _controller.displayMode == CalendarDisplayMode.month
-                      ? CalendarDisplayMode.week
-                      : CalendarDisplayMode.month,
-                );
-                _syncPreviewToMode();
-              });
+              _toggleFullScreenByButton();
             },
           ),
           const SizedBox(width: 12),
@@ -849,6 +842,27 @@ class _CalendarDemoPageState extends State<CalendarDemoPage>
     if (_fullScreenController.isAnimating) {
       _fullScreenController.stop();
     }
+  }
+
+  void _toggleFullScreenByButton() {
+    if (!_isHorizontalCalendarPaging) {
+      return;
+    }
+    _stopSettleAnimation();
+    _stopFullScreenAnimation();
+    if (_controller.displayMode != CalendarDisplayMode.month ||
+        _collapsePreviewProgress > 0.0001) {
+      setState(() {
+        _controller.setDisplayMode(CalendarDisplayMode.month);
+        _collapsePreviewProgress = 0;
+        _settleController.value = 0;
+        _resetDragState();
+      });
+    }
+    final targetHeight = _isFullScreenExpanded
+        ? _normalMonthBodyHeight
+        : _maxMonthBodyHeight;
+    _animateFullScreenCalendar(targetHeight);
   }
 
   void _updateFullScreenDrag(double totalDelta) {
