@@ -83,8 +83,7 @@ class _DirectionalPagePhysics extends ScrollPhysics {
         !allowPrevious &&
         (velocity < 0 || pixels < lockedPixels - _pixelTolerance);
     final blockedNext =
-        !allowNext &&
-        (velocity > 0 || pixels > lockedPixels + _pixelTolerance);
+        !allowNext && (velocity > 0 || pixels > lockedPixels + _pixelTolerance);
     if (blockedPrevious || blockedNext) {
       if ((pixels - lockedPixels).abs() <= _pixelTolerance &&
           velocity.abs() <= toleranceFor(position).velocity) {
@@ -144,6 +143,7 @@ class _CalendarViewState extends State<CalendarView> {
   double? _lastReportedHeight;
   DateTime? _transitionAnchorDate;
   String? _lastHorizontalPagerSignature;
+  String? _lastWarmUpSignature;
   int? _pendingHorizontalPageJump;
   late DateTime _verticalReferenceDate;
   int _verticalCurrentPage = _verticalInitialPage;
@@ -156,6 +156,7 @@ class _CalendarViewState extends State<CalendarView> {
     _verticalReferenceDate = widget.controller.focusedDay;
     _verticalPageController = PageController(initialPage: _verticalCurrentPage)
       ..addListener(_handleVerticalPageScroll);
+    _schedulePageWarmUp();
   }
 
   void _createHorizontalPageController({required int initialPage}) {
@@ -249,6 +250,7 @@ class _CalendarViewState extends State<CalendarView> {
       builder: (context, _) {
         _syncPagerAnchorFromController();
         _syncHorizontalPagerIndexIfNeeded();
+        _schedulePageWarmUp();
         final collapseProgress =
             widget.collapsePreviewProgress ??
             (widget.controller.displayMode == CalendarDisplayMode.week
@@ -308,31 +310,29 @@ class _CalendarViewState extends State<CalendarView> {
     final relativePages = _horizontalRelativePages;
     final currentPageIndex = _horizontalCurrentPageIndex;
     final pageDates = relativePages.map(_pageDateForRelative).toList();
+    final pageChildren = pageDates
+        .map(
+          (pageDate) => _buildCalendarPage(
+            pageDate: pageDate,
+            collapseProgress: collapseProgress,
+            shouldShowMonthBody: shouldShowMonthBody,
+            bodyHeight: bodyHeight,
+          ),
+        )
+        .toList(growable: false);
     return NotificationListener<ScrollEndNotification>(
       onNotification: (notification) {
         _handlePageScrollEnd();
         return false;
       },
-      child: PageView.builder(
+      child: PageView(
         key: ValueKey(
           'calendar-horizontal-pager-${relativePages.join(",")}-$currentPageIndex',
         ),
         controller: _pageController,
+        allowImplicitScrolling: true,
         physics: const PageScrollPhysics(),
-        itemCount: pageDates.length,
-        itemBuilder: (context, index) {
-          final pageDate = pageDates[index];
-          return _CalendarPage(
-            anchorDate: pageDate,
-            controller: widget.controller,
-            onDaySelected: widget.onDaySelected,
-            collapseProgress: collapseProgress,
-            showMonthBody: shouldShowMonthBody,
-            rowHeight: widget.calendarHeight,
-            bodyHeight: bodyHeight,
-            monthBodyHeightOverride: widget.monthBodyHeightOverride,
-          );
-        },
+        children: pageChildren,
       ),
     );
   }
@@ -359,6 +359,7 @@ class _CalendarViewState extends State<CalendarView> {
       child: PageView.builder(
         key: const ValueKey('calendar-vertical-pager'),
         controller: _verticalPageController,
+        allowImplicitScrolling: true,
         scrollDirection: Axis.vertical,
         physics: _DirectionalPagePhysics(
           lockedPage: _verticalCurrentPage.toDouble(),
@@ -368,18 +369,35 @@ class _CalendarViewState extends State<CalendarView> {
         ),
         itemBuilder: (context, index) {
           final pageDate = _verticalPageDateForIndex(index);
-          return _CalendarPage(
-            anchorDate: pageDate,
-            controller: widget.controller,
-            onDaySelected: widget.onDaySelected,
+          return _buildCalendarPage(
+            pageDate: pageDate,
             collapseProgress: collapseProgress,
-            showMonthBody: shouldShowMonthBody,
-            rowHeight: widget.calendarHeight,
+            shouldShowMonthBody: shouldShowMonthBody,
             bodyHeight: bodyHeight,
-            monthBodyHeightOverride: widget.monthBodyHeightOverride,
           );
         },
       ),
+    );
+  }
+
+  Widget _buildCalendarPage({
+    required DateTime pageDate,
+    required double collapseProgress,
+    required bool shouldShowMonthBody,
+    required double bodyHeight,
+  }) {
+    return _CalendarPage(
+      key: ValueKey(
+        '${widget.controller.displayMode.name}-${CalendarDateUtils.formatIsoDate(pageDate)}',
+      ),
+      anchorDate: pageDate,
+      controller: widget.controller,
+      onDaySelected: widget.onDaySelected,
+      collapseProgress: collapseProgress,
+      showMonthBody: shouldShowMonthBody,
+      rowHeight: widget.calendarHeight,
+      bodyHeight: bodyHeight,
+      monthBodyHeightOverride: widget.monthBodyHeightOverride,
     );
   }
 
@@ -408,11 +426,17 @@ class _CalendarViewState extends State<CalendarView> {
       monthViewShowMode: widget.controller.monthViewShowMode,
     );
     final monthBodyHeight = monthLineCount * widget.calendarHeight;
-    return lerpDouble(monthBodyHeight, widget.calendarHeight, collapseProgress)!;
+    return lerpDouble(
+      monthBodyHeight,
+      widget.calendarHeight,
+      collapseProgress,
+    )!;
   }
 
   double _buildHorizontalBodyHeight(double collapseProgress) {
-    final pageDates = _horizontalRelativePages.map(_pageDateForRelative).toList();
+    final pageDates = _horizontalRelativePages
+        .map(_pageDateForRelative)
+        .toList();
     final pageBodyHeights = pageDates
         .map((date) => _pageBodyHeight(date, collapseProgress))
         .toList();
@@ -451,7 +475,10 @@ class _CalendarViewState extends State<CalendarView> {
   }) {
     final offset = _pageOffset;
     if (offset > 0) {
-      final nextIndex = (currentPageIndex + 1).clamp(0, pageBodyHeights.length - 1);
+      final nextIndex = (currentPageIndex + 1).clamp(
+        0,
+        pageBodyHeights.length - 1,
+      );
       return lerpDouble(
         pageBodyHeights[currentPageIndex],
         pageBodyHeights[nextIndex],
@@ -594,7 +621,8 @@ class _CalendarViewState extends State<CalendarView> {
       return;
     }
     final desiredPage = _horizontalCurrentPageIndex;
-    final currentPage = _pageController.page?.round() ?? _pageController.initialPage;
+    final currentPage =
+        _pageController.page?.round() ?? _pageController.initialPage;
     if (currentPage == desiredPage) {
       if (structureChanged && (_pageOffset != 0 || _isResettingPage)) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -676,7 +704,9 @@ class _CalendarViewState extends State<CalendarView> {
     }
     widget.onPageChanged?.call(widget.controller.focusedDay);
     _resetHorizontalPageController(
-      initialPage: _horizontalCurrentPageIndexForBase(widget.controller.focusedDay),
+      initialPage: _horizontalCurrentPageIndexForBase(
+        widget.controller.focusedDay,
+      ),
     );
     if (!mounted) {
       return;
@@ -725,10 +755,64 @@ class _CalendarViewState extends State<CalendarView> {
   void _syncControllerToDate(DateTime date) {
     widget.controller.jumpToDay(date);
   }
+
+  void _schedulePageWarmUp() {
+    final displayMode = widget.controller.displayMode;
+    final anchorDates = <DateTime>[
+      widget.controller.focusedDay,
+      if (widget.controller.resolvedPageAnchorForRelative(
+            -1,
+            referenceDay: widget.controller.focusedDay,
+            displayMode: displayMode,
+          )
+          case final previous?)
+        previous,
+      if (widget.controller.resolvedPageAnchorForRelative(
+            1,
+            referenceDay: widget.controller.focusedDay,
+            displayMode: displayMode,
+          )
+          case final next?)
+        next,
+    ];
+    final signature =
+        '$displayMode|${widget.controller.firstWeekday}|${widget.controller.monthViewShowMode}|'
+        '${anchorDates.map(CalendarDateUtils.formatIsoDate).join(",")}';
+    if (_lastWarmUpSignature == signature) {
+      return;
+    }
+    _lastWarmUpSignature = signature;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      if (displayMode == CalendarDisplayMode.month) {
+        for (final anchorDate in anchorDates) {
+          LunarService.prefetchDates(
+            CalendarDateUtils.visibleMonthDays(
+              DateTime(anchorDate.year, anchorDate.month, 1),
+              firstWeekday: widget.controller.firstWeekday,
+              monthViewShowMode: widget.controller.monthViewShowMode,
+            ),
+          );
+        }
+        return;
+      }
+      for (final anchorDate in anchorDates) {
+        LunarService.prefetchDates(
+          CalendarDateUtils.visibleWeekDays(
+            anchorDate,
+            firstWeekday: widget.controller.firstWeekday,
+          ),
+        );
+      }
+    });
+  }
 }
 
 class _CalendarPage extends StatelessWidget {
   const _CalendarPage({
+    super.key,
     required this.anchorDate,
     required this.controller,
     required this.onDaySelected,
@@ -765,7 +849,8 @@ class _CalendarPage extends StatelessWidget {
       firstWeekday: controller.firstWeekday,
       monthViewShowMode: controller.monthViewShowMode,
     );
-    final monthBodyHeight = monthBodyHeightOverride ?? (monthLineCount * rowHeight);
+    final monthBodyHeight =
+        monthBodyHeightOverride ?? (monthLineCount * rowHeight);
     final monthRowHeight = monthBodyHeight / monthLineCount;
     final selectedLine = CalendarDateUtils.weekIndexInMonth(
       anchorDate,
@@ -935,10 +1020,7 @@ class _WeekGrid extends StatelessWidget {
                 date,
                 CalendarDateUtils.stripTime(DateTime.now()),
               ),
-              isSelected: CalendarDateUtils.isSameDay(
-                date,
-                visibleAnchorDate,
-              ),
+              isSelected: CalendarDateUtils.isSameDay(date, visibleAnchorDate),
               isDisabled: controller.isDisabled(date),
               showBottomDivider: false,
               onTap: () => onDaySelected(date),
