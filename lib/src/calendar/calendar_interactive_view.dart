@@ -178,6 +178,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   bool _isListPullExpanding = false;
   bool _isListFullScreenDragging = false;
   bool _isCalendarFullScreenDragging = false;
+  bool _isVerticalFullScreenExpanded = false;
   double? _displayedCalendarHeight;
   double? _monthBodyHeightOverride;
   double _fullScreenDragStartBodyHeight = 0;
@@ -319,6 +320,9 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   bool get _isHorizontalCalendarPaging =>
       _effectivePageOrientation == CalendarPageOrientation.horizontal;
 
+  bool get _isVerticalCalendarPaging =>
+      _effectivePageOrientation == CalendarPageOrientation.vertical;
+
   bool get _canGestureToFullScreen =>
       _isHorizontalCalendarPaging &&
       widget.controller.displayMode == CalendarDisplayMode.month &&
@@ -343,6 +347,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   bool get _isFullScreenExpanded =>
+      _isVerticalFullScreenExpanded ||
       _effectiveMonthBodyHeight > _normalMonthBodyHeight + 0.1;
 
   void _syncPreviewToMode() {
@@ -353,6 +358,9 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   void _clearFullScreenIfUnavailable() {
+    if (!_isVerticalCalendarPaging && _isVerticalFullScreenExpanded) {
+      _isVerticalFullScreenExpanded = false;
+    }
     if (_canGestureToFullScreen || _monthBodyHeightOverride == null) {
       return;
     }
@@ -448,6 +456,17 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
         return LayoutBuilder(
           builder: (context, constraints) {
             _calendarViewportHeight = constraints.maxHeight;
+            if (_isVerticalFullScreenExpanded) {
+              return CalendarMonthListView(
+                controller: widget.controller,
+                onDaySelected: widget.onDaySelected,
+                calendarHeight: widget.calendarHeight,
+                weekBarHeight: widget.weekBarHeight,
+                componentBuilder: widget.componentBuilder,
+                componentStyle: widget.componentStyle,
+                onFocusedMonthChanged: widget.onFocusedDayChanged,
+              );
+            }
             return Stack(
               children: [
                 Column(
@@ -865,6 +884,23 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   void _toggleFullScreenByButton() {
+    if (_isVerticalCalendarPaging) {
+      _stopSettleAnimation();
+      _stopFullScreenAnimation();
+      if (widget.controller.displayMode != CalendarDisplayMode.month ||
+          _collapsePreviewProgress > 0.0001) {
+        setState(() {
+          _applyDisplayMode(CalendarDisplayMode.month);
+          _collapsePreviewProgress = 0;
+          _settleController.value = 0;
+          _resetDragState();
+        });
+      }
+      setState(() {
+        _isVerticalFullScreenExpanded = !_isVerticalFullScreenExpanded;
+      });
+      return;
+    }
     if (!_isHorizontalCalendarPaging) {
       return;
     }
@@ -891,6 +927,24 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     }
     _stopSettleAnimation();
     _stopFullScreenAnimation();
+    if (_isVerticalCalendarPaging) {
+      if (_isVerticalFullScreenExpanded) {
+        return;
+      }
+      if (widget.controller.displayMode != CalendarDisplayMode.month ||
+          _collapsePreviewProgress > 0.0001) {
+        setState(() {
+          _applyDisplayMode(CalendarDisplayMode.month);
+          _collapsePreviewProgress = 0;
+          _settleController.value = 0;
+          _resetDragState();
+        });
+      }
+      setState(() {
+        _isVerticalFullScreenExpanded = true;
+      });
+      return;
+    }
     if (_listController.hasClients && _listController.position.pixels != 0) {
       _listController.jumpTo(0);
     }
@@ -915,6 +969,15 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     }
     _stopSettleAnimation();
     _stopFullScreenAnimation();
+    if (_isVerticalCalendarPaging) {
+      if (!_isVerticalFullScreenExpanded) {
+        return;
+      }
+      setState(() {
+        _isVerticalFullScreenExpanded = false;
+      });
+      return;
+    }
     if (_isFullScreenExpanded) {
       _animateFullScreenCalendar(
         _normalMonthBodyHeight,

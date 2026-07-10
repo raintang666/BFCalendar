@@ -22,7 +22,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
   CalendarComponentStyle _componentStyle = CalendarComponentStyle.custom;
   static const double _calendarRowHeight = 62;
   static const double _weekBarHeight = 46;
-  static const double _monthHeaderHeight = 60;
+  static const double _monthHeaderHeight = 0;
 
   static const _moreActions = <String>[
     '周日为周起始',

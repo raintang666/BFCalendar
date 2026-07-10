@@ -138,6 +138,226 @@ class CalendarView extends StatefulWidget {
   State<CalendarView> createState() => _CalendarViewState();
 }
 
+class CalendarMonthListView extends StatefulWidget {
+  const CalendarMonthListView({
+    super.key,
+    required this.controller,
+    required this.onDaySelected,
+    required this.calendarHeight,
+    required this.weekBarHeight,
+    this.componentBuilder,
+    this.componentStyle = CalendarComponentStyle.custom,
+    this.onFocusedMonthChanged,
+  });
+
+  final CalendarController controller;
+  final ValueChanged<DateTime> onDaySelected;
+  final double calendarHeight;
+  final double weekBarHeight;
+  final CalendarComponentBuilder? componentBuilder;
+  final CalendarComponentStyle componentStyle;
+  final ValueChanged<DateTime>? onFocusedMonthChanged;
+
+  @override
+  State<CalendarMonthListView> createState() => _CalendarMonthListViewState();
+}
+
+class _CalendarMonthListViewState extends State<CalendarMonthListView> {
+  final GlobalKey _centerMonthKey = GlobalKey();
+  static const double _inlineMonthLabelHeight = 28;
+  late DateTime _rangeStartMonth;
+  late DateTime _rangeEndMonth;
+  late DateTime _focusedMonth;
+
+  CalendarComponentBuilder get _resolvedComponentBuilder {
+    final override = widget.componentBuilder;
+    if (override != null) {
+      return override;
+    }
+    return switch (widget.componentStyle) {
+      CalendarComponentStyle.meizu => const MeizuCalendarComponentBuilder(),
+      CalendarComponentStyle.custom => const CustomCalendarComponentBuilder(),
+    };
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _focusedMonth = DateTime(
+      widget.controller.focusedDay.year,
+      widget.controller.focusedDay.month,
+      1,
+    );
+    _initMonthRange();
+  }
+
+  @override
+  void didUpdateWidget(covariant CalendarMonthListView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      _focusedMonth = DateTime(
+        widget.controller.focusedDay.year,
+        widget.controller.focusedDay.month,
+        1,
+      );
+      _initMonthRange();
+    }
+  }
+
+  void _initMonthRange() {
+    final minDate = widget.controller.minDate ?? DateTime(1, 1, 1);
+    final maxDate = widget.controller.maxDate ?? DateTime(9999, 12, 31);
+    _rangeStartMonth = DateTime(minDate.year, minDate.month, 1);
+    _rangeEndMonth = DateTime(maxDate.year, maxDate.month, 1);
+  }
+
+  DateTime _monthForIndex(int index) {
+    return DateTime(
+      _rangeStartMonth.year,
+      _rangeStartMonth.month + index,
+      1,
+    );
+  }
+
+  int _monthDelta(DateTime start, DateTime end) {
+    return ((end.year - start.year) * 12) + (end.month - start.month);
+  }
+
+  double _bodyHeightForMonth(DateTime month) {
+    final rowCount = CalendarDateUtils.visibleMonthRowCount(
+      month,
+      firstWeekday: widget.controller.firstWeekday,
+      monthViewShowMode: widget.controller.monthViewShowMode,
+    );
+    return rowCount * widget.calendarHeight;
+  }
+
+  int _firstDayColumnForMonth(DateTime month) {
+    final monthDays = CalendarDateUtils.visibleMonthDays(
+      month,
+      firstWeekday: widget.controller.firstWeekday,
+      monthViewShowMode: widget.controller.monthViewShowMode,
+    );
+    final firstDayIndex = monthDays.indexWhere(
+      (day) => CalendarDateUtils.isSameDay(day, month),
+    );
+    if (firstDayIndex < 0) {
+      return 0;
+    }
+    return firstDayIndex % 7;
+  }
+
+  Widget _buildInlineMonthLabel(DateTime month) {
+    final firstDayColumn = _firstDayColumnForMonth(month);
+    final textColor = widget.componentStyle == CalendarComponentStyle.meizu
+        ? const Color(0xFF222222)
+        : const Color(0xFF333333);
+    final resolvedPadding = _resolvedComponentBuilder.contentPadding.resolve(
+      Directionality.of(context),
+    );
+    return SizedBox(
+      height: _inlineMonthLabelHeight,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: resolvedPadding.left,
+          right: resolvedPadding.right,
+        ),
+        child: Row(
+          children: List.generate(7, (index) {
+            return Expanded(
+              child: Center(
+                child: index == firstDayColumn
+                    ? Text(
+                        '${month.month}月',
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthListItem(DateTime month) {
+    final bodyHeight = _bodyHeightForMonth(month);
+    return SizedBox(
+      height: bodyHeight + _inlineMonthLabelHeight,
+      child: Column(
+        children: [
+          _buildInlineMonthLabel(month),
+          Expanded(
+            child: _CalendarPage(
+              anchorDate: month,
+              selectedDate: widget.controller.focusedDay,
+              controller: widget.controller,
+              onDaySelected: widget.onDaySelected,
+              componentBuilder: _resolvedComponentBuilder,
+              collapseProgress: 0,
+              showMonthBody: true,
+              rowHeight: widget.calendarHeight,
+              bodyHeight: bodyHeight,
+              monthBodyHeightOverride: null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final previousCount = _monthDelta(_rangeStartMonth, _focusedMonth);
+    final nextCount = _monthDelta(_focusedMonth, _rangeEndMonth);
+    return Column(
+      key: const ValueKey('calendar-vertical-fullscreen-list'),
+      children: [
+        _resolvedComponentBuilder.buildWeekBar(
+          context,
+          CalendarWeekBarData(
+            firstWeekday: widget.controller.firstWeekday,
+            height: widget.weekBarHeight,
+          ),
+        ),
+        Expanded(
+          child: CustomScrollView(
+            center: _centerMonthKey,
+            slivers: [
+              SliverList.builder(
+                itemCount: previousCount,
+                itemBuilder: (context, index) {
+                  final month = _monthForIndex(previousCount - index - 1);
+                  return _buildMonthListItem(month);
+                },
+              ),
+              SliverToBoxAdapter(
+                key: _centerMonthKey,
+                child: _buildMonthListItem(_focusedMonth),
+              ),
+              SliverList.builder(
+                itemCount: nextCount,
+                itemBuilder: (context, index) {
+                  final month = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month + index + 1,
+                    1,
+                  );
+                  return _buildMonthListItem(month);
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _CalendarViewState extends State<CalendarView> {
   static const int _verticalInitialPage = 10000;
 
@@ -840,6 +1060,7 @@ class _CalendarPage extends StatelessWidget {
   const _CalendarPage({
     super.key,
     required this.anchorDate,
+    this.selectedDate,
     required this.controller,
     required this.onDaySelected,
     required this.componentBuilder,
@@ -851,6 +1072,7 @@ class _CalendarPage extends StatelessWidget {
   });
 
   final DateTime anchorDate;
+  final DateTime? selectedDate;
   final CalendarController controller;
   final ValueChanged<DateTime> onDaySelected;
   final CalendarComponentBuilder componentBuilder;
@@ -863,6 +1085,7 @@ class _CalendarPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final focusedMonth = DateTime(anchorDate.year, anchorDate.month, 1);
+    final resolvedSelectedDate = selectedDate ?? anchorDate;
     final monthDays = CalendarDateUtils.visibleMonthDays(
       focusedMonth,
       firstWeekday: controller.firstWeekday,
@@ -903,7 +1126,7 @@ class _CalendarPage extends StatelessWidget {
                       lineCount: monthLineCount,
                       focusedMonth: focusedMonth,
                       controller: controller,
-                      visibleAnchorDate: anchorDate,
+                      visibleAnchorDate: resolvedSelectedDate,
                       onDaySelected: onDaySelected,
                       componentBuilder: componentBuilder,
                       rowHeight: monthRowHeight,
@@ -920,7 +1143,7 @@ class _CalendarPage extends StatelessWidget {
                   days: weekDays,
                   focusedMonth: focusedMonth,
                   controller: controller,
-                  visibleAnchorDate: anchorDate,
+                  visibleAnchorDate: resolvedSelectedDate,
                   onDaySelected: onDaySelected,
                   componentBuilder: componentBuilder,
                   rowHeight: rowHeight,
