@@ -171,8 +171,10 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   CalendarDisplayMode? _dragSourceMode;
   bool _isCalendarAreaDragging = false;
   int? _calendarPointerId;
+  double _calendarPointerStartX = 0;
   double _calendarPointerStartY = 0;
   int? _listPointerId;
+  double _listPointerStartX = 0;
   double _listPointerStartY = 0;
   bool _isListCollapseDragging = false;
   bool _isListPullExpanding = false;
@@ -349,6 +351,16 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   bool get _isFullScreenExpanded =>
       _isVerticalFullScreenExpanded ||
       _effectiveMonthBodyHeight > _normalMonthBodyHeight + 0.1;
+
+  bool _isDominantVerticalGesture({
+    required double deltaX,
+    required double deltaY,
+  }) {
+    const minVerticalDistance = 8.0;
+    final absX = deltaX.abs();
+    final absY = deltaY.abs();
+    return absY >= minVerticalDistance && absY > absX;
+  }
 
   void _syncPreviewToMode() {
     _collapsePreviewProgress =
@@ -579,8 +591,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
                                   });
                                 },
                                 pageOrientation: _effectivePageOrientation,
-                                monthBodyHeightOverride:
-                                    _canGestureToFullScreen
+                                monthBodyHeightOverride: _canGestureToFullScreen
                                     ? _monthBodyHeightOverride
                                     : null,
                                 collapsePreviewProgress:
@@ -707,6 +718,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
 
   void _handleCalendarPointerDown(PointerDownEvent event) {
     _calendarPointerId = event.pointer;
+    _calendarPointerStartX = event.position.dx;
     _calendarPointerStartY = event.position.dy;
     _fullScreenDragStartBodyHeight = _effectiveMonthBodyHeight;
   }
@@ -719,7 +731,13 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
         !_canGestureToFullScreen) {
       return;
     }
+    final deltaX = event.position.dx - _calendarPointerStartX;
     final deltaY = event.position.dy - _calendarPointerStartY;
+    if (!_isCalendarFullScreenDragging &&
+        !_isFullScreenExpanded &&
+        !_isDominantVerticalGesture(deltaX: deltaX, deltaY: deltaY)) {
+      return;
+    }
     final shouldHandleFullScreen =
         _isCalendarFullScreenDragging || _isFullScreenExpanded || deltaY > 0;
     if (!shouldHandleFullScreen) {
@@ -757,6 +775,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     _stopSettleAnimation();
     _stopFullScreenAnimation();
     _listPointerId = event.pointer;
+    _listPointerStartX = event.position.dx;
     _listPointerStartY = event.position.dy;
     _fullScreenDragStartBodyHeight = _effectiveMonthBodyHeight;
     _isCalendarAreaDragging = false;
@@ -779,8 +798,14 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
       return;
     }
 
+    final deltaX = event.position.dx - _listPointerStartX;
     final deltaY = event.position.dy - _listPointerStartY;
     if (widget.controller.displayMode == CalendarDisplayMode.month) {
+      if (!_isListFullScreenDragging &&
+          !_isFullScreenExpanded &&
+          !_isDominantVerticalGesture(deltaX: deltaX, deltaY: deltaY)) {
+        return;
+      }
       if (_canGestureToFullScreen && _isListAtTop()) {
         final shouldHandleFullScreen =
             _isListFullScreenDragging || _isFullScreenExpanded || deltaY > 0;
@@ -810,7 +835,9 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
       return;
     }
     if (!_isListPullExpanding) {
-      if (!_isListAtTop() || deltaY <= 0) {
+      if (!_isListAtTop() ||
+          deltaY <= 0 ||
+          !_isDominantVerticalGesture(deltaX: deltaX, deltaY: deltaY)) {
         return;
       }
       _isListPullExpanding = true;
