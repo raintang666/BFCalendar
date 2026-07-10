@@ -212,11 +212,7 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
   }
 
   DateTime _monthForIndex(int index) {
-    return DateTime(
-      _rangeStartMonth.year,
-      _rangeStartMonth.month + index,
-      1,
-    );
+    return DateTime(_rangeStartMonth.year, _rangeStartMonth.month + index, 1);
   }
 
   int _monthDelta(DateTime start, DateTime end) {
@@ -986,7 +982,12 @@ class _CalendarViewState extends State<CalendarView> {
     final targetDate = _normalizePageTargetDate(
       _verticalPageDateForIndex(targetPage),
     );
+    final relative = targetPage - _verticalInitialPage;
     setState(() {
+      _verticalReferenceDate = CalendarDateUtils.addMonths(
+        targetDate,
+        -relative,
+      );
       _verticalCurrentPage = targetPage;
       _verticalPageOffset = 0;
     });
@@ -995,10 +996,21 @@ class _CalendarViewState extends State<CalendarView> {
   }
 
   DateTime _normalizePageTargetDate(DateTime date) {
-    return CalendarDateUtils.stripTime(date);
+    final normalized = CalendarDateUtils.stripTime(date);
+    if (widget.controller.displayMode != CalendarDisplayMode.month) {
+      return normalized;
+    }
+    final targetMonth = DateTime(normalized.year, normalized.month, 1);
+    final lastDay = CalendarDateUtils.lastDayOfMonth(targetMonth).day;
+    final preferredDay = widget.controller.focusedDay.day.clamp(1, lastDay);
+    return DateTime(normalized.year, normalized.month, preferredDay);
   }
 
   void _syncControllerToDate(DateTime date) {
+    if (widget.controller.displayMode == CalendarDisplayMode.month) {
+      widget.controller.jumpToMonth(date);
+      return;
+    }
     widget.controller.jumpToDay(date);
   }
 

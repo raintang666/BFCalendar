@@ -18,9 +18,7 @@ class CalendarController extends ChangeNotifier {
            CalendarDateUtils.stripTime(entry.key): entry.value,
        },
        _disabledDates = disabledDates.map(CalendarDateUtils.stripTime).toSet() {
-    if (_minDate != null &&
-        _maxDate != null &&
-        _minDate!.isAfter(_maxDate!)) {
+    if (_minDate != null && _maxDate != null && _minDate!.isAfter(_maxDate!)) {
       throw ArgumentError('minDate must be on or before maxDate');
     }
     _focusedDay = _snapDateToRangeStart(
@@ -60,7 +58,8 @@ class CalendarController extends ChangeNotifier {
   DateTime? get maxDate => _maxDate;
   DateTime? get minRangeCalendar => _minDate;
   DateTime? get maxRangeCalendar => _maxDate;
-  CalendarBounds get calendarRange => CalendarBounds(min: _minDate, max: _maxDate);
+  CalendarBounds get calendarRange =>
+      CalendarBounds(min: _minDate, max: _maxDate);
 
   String get rangeDescription {
     final minText = _minDate == null
@@ -155,9 +154,7 @@ class CalendarController extends ChangeNotifier {
 
   void setOnlyCurrentMonth(bool value) {
     setMonthViewShowMode(
-      value
-          ? MonthViewShowMode.onlyCurrentMonth
-          : MonthViewShowMode.allMonth,
+      value ? MonthViewShowMode.onlyCurrentMonth : MonthViewShowMode.allMonth,
     );
   }
 
@@ -204,7 +201,7 @@ class CalendarController extends ChangeNotifier {
   }
 
   void jumpToMonth(DateTime month) {
-    final normalized = DateTime(month.year, month.month, 1);
+    final normalized = CalendarDateUtils.stripTime(month);
     if (!canShowMonth(normalized)) {
       return;
     }
@@ -447,7 +444,9 @@ class CalendarController extends ChangeNotifier {
 
   DateTime get _rangeAnchorDate => _minDate ?? _maxDate ?? _focusedDay;
 
-  CalendarSelectionState _adjustSelectionToBounds(CalendarSelectionState selection) {
+  CalendarSelectionState _adjustSelectionToBounds(
+    CalendarSelectionState selection,
+  ) {
     return switch (_selectionMode) {
       CalendarSelectionMode.single => _adjustSingleSelectionToBounds(selection),
       CalendarSelectionMode.range => _adjustRangeSelectionToBounds(selection),
