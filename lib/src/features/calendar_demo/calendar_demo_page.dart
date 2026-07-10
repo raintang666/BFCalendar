@@ -17,9 +17,9 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
   late final CalendarController _controller;
   final CalendarInteractiveController _interactiveController =
       CalendarInteractiveController();
+  final CalendarMonthYearController _monthYearController =
+      CalendarMonthYearController();
   CalendarComponentStyle _componentStyle = CalendarComponentStyle.custom;
-  bool _yearMode = false;
-  int _yearPanelYear = DateTime.now().year;
   static const double _calendarRowHeight = 62;
   static const double _weekBarHeight = 46;
   static const double _monthHeaderHeight = 60;
@@ -56,7 +56,6 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
       markers: _buildMarkers(now.year, now.month),
     );
     _controller.setWeekStart(DateTime.sunday);
-    _yearPanelYear = now.year;
   }
 
   Map<DateTime, List<CalendarMarker>> _buildMarkers(int year, int month) {
@@ -83,6 +82,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
 
   @override
   void dispose() {
+    _monthYearController.dispose();
     _interactiveController.dispose();
     _controller.dispose();
     super.dispose();
@@ -100,84 +100,66 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
             children: [
               SizedBox(height: MediaQuery.of(context).padding.top),
               AnimatedBuilder(
-                animation: _interactiveController,
+                animation: Listenable.merge([
+                  _interactiveController,
+                  _monthYearController,
+                ]),
                 builder: (context, _) => _buildToolbar(),
               ),
               Expanded(
-                child: Stack(
-                  children: [
-                    CalendarInteractiveView(
-                      controller: _controller,
-                      interactionController: _interactiveController,
-                      componentBuilder:
-                          _componentStyle == CalendarComponentStyle.meizu
-                          ? const MeizuCalendarComponentBuilder()
-                          : const CustomCalendarComponentBuilder(),
-                      componentStyle: _componentStyle,
-                      yearMode: _yearMode,
-                      onFocusedDayChanged: (_) {
-                        _rebuildMarkersForFocusedMonth();
-                        setState(() {
-                          _yearPanelYear = _controller.focusedDay.year;
-                        });
-                      },
-                      onDaySelected: (day) {
-                        if (_controller.isDisabled(day)) {
-                          _showMessage('${_formatDate(day)}拦截不可点击');
-                          return;
-                        }
-                        final previousMonth = DateTime(
-                          _controller.focusedDay.year,
-                          _controller.focusedDay.month,
-                        );
-                        _controller.selectDay(day);
-                        final currentMonth = DateTime(
-                          _controller.focusedDay.year,
-                          _controller.focusedDay.month,
-                        );
-                        if (previousMonth != currentMonth) {
-                          _rebuildMarkersForFocusedMonth();
-                        }
-                        setState(() {
-                          _yearPanelYear = _controller.focusedDay.year;
-                        });
-                        _showMessage(_calendarToastText(day));
-                      },
-                      calendarHeight: _calendarRowHeight,
-                      weekBarHeight: _weekBarHeight,
-                      monthHeaderHeight: _monthHeaderHeight,
-                      contentBuilder: (context, scrollController, physics) {
-                        return ListView.separated(
-                          controller: scrollController,
-                          physics: physics,
-                          padding: const EdgeInsets.only(top: 12, bottom: 12),
-                          itemCount: demoEntries.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final entry = demoEntries[index];
-                            return _DemoCard(
-                              entry: entry,
-                              onTap: () => _handleDemoTap(entry),
-                            );
-                          },
+                child: CalendarMonthYearView(
+                  controller: _controller,
+                  interactionController: _interactiveController,
+                  monthYearController: _monthYearController,
+                  componentBuilder:
+                      _componentStyle == CalendarComponentStyle.meizu
+                      ? const MeizuCalendarComponentBuilder()
+                      : const CustomCalendarComponentBuilder(),
+                  componentStyle: _componentStyle,
+                  onFocusedDayChanged: (_) {
+                    _rebuildMarkersForFocusedMonth();
+                  },
+                  onMonthSelected: (_) {
+                    _rebuildMarkersForFocusedMonth();
+                  },
+                  onDaySelected: (day) {
+                    if (_controller.isDisabled(day)) {
+                      _showMessage('${_formatDate(day)}拦截不可点击');
+                      return;
+                    }
+                    final previousMonth = DateTime(
+                      _controller.focusedDay.year,
+                      _controller.focusedDay.month,
+                    );
+                    _controller.selectDay(day);
+                    final currentMonth = DateTime(
+                      _controller.focusedDay.year,
+                      _controller.focusedDay.month,
+                    );
+                    if (previousMonth != currentMonth) {
+                      _rebuildMarkersForFocusedMonth();
+                    }
+                    _showMessage(_calendarToastText(day));
+                  },
+                  calendarHeight: _calendarRowHeight,
+                  weekBarHeight: _weekBarHeight,
+                  monthHeaderHeight: _monthHeaderHeight,
+                  contentBuilder: (context, scrollController, physics) {
+                    return ListView.separated(
+                      controller: scrollController,
+                      physics: physics,
+                      padding: const EdgeInsets.only(top: 12, bottom: 12),
+                      itemCount: demoEntries.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final entry = demoEntries[index];
+                        return _DemoCard(
+                          entry: entry,
+                          onTap: () => _handleDemoTap(entry),
                         );
                       },
-                    ),
-                    if (_yearMode)
-                      _YearOverlay(
-                        initialYear: _yearPanelYear,
-                        selectedDate: _controller.focusedDay,
-                        onMonthTap: (monthDate) {
-                          _controller.jumpToMonth(monthDate);
-                          _rebuildMarkersForFocusedMonth();
-                          setState(() {
-                            _yearMode = false;
-                            _yearPanelYear = _controller.focusedDay.year;
-                          });
-                        },
-                      ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -199,19 +181,14 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
         children: [
           const SizedBox(width: 22),
           _SwitchView(
-            checked: _yearMode,
-            onChanged: (value) {
-              setState(() {
-                _yearMode = value;
-                _yearPanelYear = _controller.focusedDay.year;
-              });
-            },
+            checked: _monthYearController.isYearMode,
+            onChanged: _monthYearController.setYearMode,
           ),
           const Spacer(),
           _ToolbarIconButton(
             asset: orientationAsset,
             onTap: () {
-              if (_yearMode) {
+              if (_monthYearController.isYearMode) {
                 return;
               }
               _interactiveController.togglePageOrientation();
@@ -221,7 +198,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
           _ToolbarIconButton(
             asset: 'assets/icons/ic_expand_list.png',
             onTap: () {
-              if (_yearMode) {
+              if (_monthYearController.isYearMode) {
                 return;
               }
               _interactiveController.toggleFullScreen();
@@ -353,22 +330,18 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
         case 2:
           _controller.previousPage();
           _rebuildMarkersForFocusedMonth();
-          _yearPanelYear = _controller.focusedDay.year;
           break;
         case 3:
           _controller.nextPage();
           _rebuildMarkersForFocusedMonth();
-          _yearPanelYear = _controller.focusedDay.year;
           break;
         case 4:
           _controller.jumpToDay(CalendarDateUtils.stripTime(DateTime.now()));
           _rebuildMarkersForFocusedMonth();
-          _yearPanelYear = _controller.focusedDay.year;
           break;
         case 5:
           _controller.setRange(2018, 7, 1, 2019, 11, 28);
           _rebuildMarkersForFocusedMonth();
-          _yearPanelYear = _controller.focusedDay.year;
           break;
         case 6:
           _showMessage(_controller.rangeDescription);
@@ -564,314 +537,6 @@ class _DemoCard extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _YearOverlay extends StatefulWidget {
-  const _YearOverlay({
-    required this.initialYear,
-    required this.selectedDate,
-    required this.onMonthTap,
-  });
-
-  final int initialYear;
-  final DateTime selectedDate;
-  final ValueChanged<DateTime> onMonthTap;
-
-  @override
-  State<_YearOverlay> createState() => _YearOverlayState();
-}
-
-class _YearOverlayState extends State<_YearOverlay> {
-  static const int _initialPage = 10000;
-
-  late final PageController _pageController;
-  late int _visibleYear;
-
-  @override
-  void initState() {
-    super.initState();
-    _visibleYear = widget.initialYear;
-    _pageController = PageController(initialPage: _initialPage);
-  }
-
-  @override
-  void didUpdateWidget(covariant _YearOverlay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialYear != widget.initialYear) {
-      _visibleYear = widget.initialYear;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_pageController.hasClients) {
-          return;
-        }
-        _pageController.jumpToPage(_initialPage);
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _animateToYearPage(int delta) {
-    if (!_pageController.hasClients) {
-      return;
-    }
-    final currentPage = _pageController.page?.round() ?? _initialPage;
-    _pageController.animateToPage(
-      currentPage + delta,
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  int _yearForPage(int page) {
-    return widget.initialYear + (page - _initialPage);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFFF7F6FE),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 52,
-            child: Row(
-              children: [
-                const SizedBox(width: 22),
-                _YearHeaderButton(
-                  text: '${_visibleYear - 1}',
-                  onTap: () => _animateToYearPage(-1),
-                ),
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      '$_visibleYear',
-                      style: const TextStyle(
-                        color: Color(0xFF333333),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                _YearHeaderButton(
-                  text: '${_visibleYear + 1}',
-                  onTap: () => _animateToYearPage(1),
-                ),
-                const SizedBox(width: 22),
-              ],
-            ),
-          ),
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: (page) {
-                setState(() {
-                  _visibleYear = _yearForPage(page);
-                });
-              },
-              itemBuilder: (context, page) {
-                final year = _yearForPage(page);
-                return _YearGridPage(
-                  year: year,
-                  selectedDate: widget.selectedDate,
-                  onMonthTap: widget.onMonthTap,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _YearGridPage extends StatelessWidget {
-  const _YearGridPage({
-    required this.year,
-    required this.selectedDate,
-    required this.onMonthTap,
-  });
-
-  final int year;
-  final DateTime selectedDate;
-  final ValueChanged<DateTime> onMonthTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const padding = EdgeInsets.fromLTRB(10, 10, 10, 12);
-        const crossAxisCount = 3;
-        const mainAxisCount = 4;
-        const mainAxisSpacing = 12.0;
-        const crossAxisSpacing = 12.0;
-        final itemWidth =
-            (constraints.maxWidth -
-                padding.horizontal -
-                (crossAxisSpacing * (crossAxisCount - 1))) /
-            crossAxisCount;
-        final itemHeight =
-            (constraints.maxHeight -
-                padding.vertical -
-                (mainAxisSpacing * (mainAxisCount - 1))) /
-            mainAxisCount;
-        return GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          padding: padding,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: itemWidth / itemHeight,
-            mainAxisSpacing: mainAxisSpacing,
-            crossAxisSpacing: crossAxisSpacing,
-          ),
-          itemCount: 12,
-          itemBuilder: (context, index) {
-            final month = index + 1;
-            final selected =
-                selectedDate.year == year && selectedDate.month == month;
-            final monthDate = DateTime(year, month, 1);
-            return _YearMonthCard(
-              year: year,
-              month: month,
-              selected: selected,
-              onTap: () => onMonthTap(monthDate),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _YearMonthCard extends StatelessWidget {
-  const _YearMonthCard({
-    required this.year,
-    required this.month,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final int year;
-  final int month;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final monthDate = DateTime(year, month, 1);
-    final previewDays = CalendarDateUtils.visibleMonthDays(
-      monthDate,
-      monthViewShowMode: MonthViewShowMode.allMonth,
-    );
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: selected
-              ? Border.all(color: const Color(0xFF128C4B), width: 1.2)
-              : null,
-        ),
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '$month月',
-              style: const TextStyle(color: Color(0xFF888888), fontSize: 12),
-            ),
-            const SizedBox(height: 6),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  const spacing = 1.0;
-                  final cellWidth = (constraints.maxWidth - (spacing * 6)) / 7;
-                  final cellHeight =
-                      (constraints.maxHeight - (spacing * 5)) / 6;
-                  return GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 7,
-                      childAspectRatio: cellWidth / cellHeight,
-                      mainAxisSpacing: spacing,
-                      crossAxisSpacing: spacing,
-                    ),
-                    itemCount: previewDays.length,
-                    itemBuilder: (context, index) {
-                      final day = previewDays[index];
-                      final inMonth = CalendarDateUtils.isSameMonth(
-                        day,
-                        monthDate,
-                      );
-                      final isToday = CalendarDateUtils.isSameDay(
-                        day,
-                        CalendarDateUtils.stripTime(DateTime.now()),
-                      );
-                      final isMonthSelected =
-                          selected &&
-                          CalendarDateUtils.isSameMonth(day, monthDate);
-                      return Container(
-                        alignment: Alignment.center,
-                        decoration: isToday && inMonth
-                            ? const BoxDecoration(
-                                color: Color(0xFFF1F1F1),
-                                shape: BoxShape.circle,
-                              )
-                            : null,
-                        child: Text(
-                          '${day.day}',
-                          style: TextStyle(
-                            color: isMonthSelected && inMonth
-                                ? const Color(0xFF128C4B)
-                                : inMonth
-                                ? const Color(0xFF888888)
-                                : const Color(0xFFD9D9D9),
-                            fontSize: 8,
-                            fontWeight: isMonthSelected && inMonth
-                                ? FontWeight.w700
-                                : FontWeight.w400,
-                            height: 1,
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _YearHeaderButton extends StatelessWidget {
-  const _YearHeaderButton({required this.text, required this.onTap});
-
-  final String text;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Text(
-          text,
-          style: const TextStyle(color: Color(0xFF888888), fontSize: 14),
         ),
       ),
     );

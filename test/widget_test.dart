@@ -29,4 +29,23 @@ void main() {
     expect(find.text('min range = -1'), findsOneWidget);
     expect(find.text('max range = -1'), findsOneWidget);
   });
+
+  testWidgets('demo toggles reusable month year view cleanly', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 2200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const CalendarViewFlutterApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('年'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PageView), findsWidgets);
+    expect(find.textContaining(RegExp(r'^\d{4}$')), findsWidgets);
+
+    await tester.tap(find.text('月'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('iOS日历'), findsOneWidget);
+  });
 }
