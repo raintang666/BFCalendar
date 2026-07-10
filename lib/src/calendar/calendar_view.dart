@@ -821,6 +821,15 @@ class _CalendarViewState extends State<CalendarView> {
     if (CalendarDateUtils.isSameDay(visibleDate, controllerDate)) {
       return;
     }
+    if (widget.controller.displayMode == CalendarDisplayMode.month &&
+        CalendarDateUtils.isSameMonth(visibleDate, controllerDate)) {
+      final relative = _verticalCurrentPage - _verticalInitialPage;
+      _verticalReferenceDate = CalendarDateUtils.addMonths(
+        controllerDate,
+        -relative,
+      );
+      return;
+    }
     _verticalReferenceDate = controllerDate;
     _verticalCurrentPage = _verticalInitialPage;
     WidgetsBinding.instance.addPostFrameCallback((_) {
