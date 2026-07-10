@@ -106,14 +106,21 @@ class CalendarMonthYearView extends StatefulWidget {
   State<CalendarMonthYearView> createState() => _CalendarMonthYearViewState();
 }
 
-class _CalendarMonthYearViewState extends State<CalendarMonthYearView> {
+class _CalendarMonthYearViewState extends State<CalendarMonthYearView>
+    with SingleTickerProviderStateMixin {
   bool _yearMode = false;
+  bool _yearOverlayVisible = false;
   late int _yearPanelYear;
+  late final AnimationController _yearOverlayFadeController;
 
   @override
   void initState() {
     super.initState();
     _yearPanelYear = widget.controller.focusedDay.year;
+    _yearOverlayFadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+    );
     widget.monthYearController?._attach(
       _CalendarMonthYearActions(
         showYearMode: _showYearMode,
@@ -144,27 +151,41 @@ class _CalendarMonthYearViewState extends State<CalendarMonthYearView> {
   @override
   void dispose() {
     widget.monthYearController?._detach();
+    _yearOverlayFadeController.dispose();
     super.dispose();
   }
 
   void _showYearMode() {
-    if (_yearMode) {
+    if (_yearMode && _yearOverlayVisible) {
       return;
     }
     setState(() {
       _yearMode = true;
+      _yearOverlayVisible = true;
       _yearPanelYear = widget.controller.focusedDay.year;
     });
+    _yearOverlayFadeController.forward(
+      from: _yearOverlayFadeController.status == AnimationStatus.reverse
+          ? _yearOverlayFadeController.value
+          : 0,
+    );
     widget.onYearModeChanged?.call(true);
     _syncMonthYearController();
   }
 
-  void _hideYearMode() {
-    if (!_yearMode) {
+  Future<void> _hideYearMode() async {
+    if (!_yearOverlayVisible) {
+      return;
+    }
+    await _yearOverlayFadeController.reverse(
+      from: _yearOverlayFadeController.value,
+    );
+    if (!mounted) {
       return;
     }
     setState(() {
       _yearMode = false;
+      _yearOverlayVisible = false;
       _yearPanelYear = widget.controller.focusedDay.year;
     });
     widget.onYearModeChanged?.call(false);
@@ -173,13 +194,9 @@ class _CalendarMonthYearViewState extends State<CalendarMonthYearView> {
 
   void _handleMonthTap(DateTime monthDate) {
     widget.controller.jumpToMonth(monthDate);
-    setState(() {
-      _yearMode = false;
-      _yearPanelYear = widget.controller.focusedDay.year;
-    });
+    _yearPanelYear = widget.controller.focusedDay.year;
     widget.onMonthSelected?.call(monthDate);
-    widget.onYearModeChanged?.call(false);
-    _syncMonthYearController();
+    _hideYearMode();
   }
 
   void _handleFocusedDayChanged(DateTime day) {
@@ -191,7 +208,10 @@ class _CalendarMonthYearViewState extends State<CalendarMonthYearView> {
   void _syncMonthYearController() {
     widget.monthYearController?._syncState(
       isYearMode: _yearMode,
-      visibleYear: _yearMode ? _yearPanelYear : widget.controller.focusedDay.year,
+      visibleYear:
+          (_yearMode || _yearOverlayVisible)
+          ? _yearPanelYear
+          : widget.controller.focusedDay.year,
     );
   }
 
@@ -213,15 +233,25 @@ class _CalendarMonthYearViewState extends State<CalendarMonthYearView> {
           componentBuilder: widget.componentBuilder,
           componentStyle: widget.componentStyle,
         ),
-        if (_yearMode)
-          _YearOverlay(
-            initialYear: _yearPanelYear,
-            selectedDate: widget.controller.focusedDay,
-            onVisibleYearChanged: (year) {
-              _yearPanelYear = year;
-              _syncMonthYearController();
-            },
-            onMonthTap: _handleMonthTap,
+        if (_yearOverlayVisible)
+          IgnorePointer(
+            ignoring: !_yearMode,
+            child: FadeTransition(
+              opacity: CurvedAnimation(
+                parent: _yearOverlayFadeController,
+                curve: Curves.easeOutCubic,
+                reverseCurve: Curves.easeInCubic,
+              ),
+              child: _YearOverlay(
+                initialYear: _yearPanelYear,
+                selectedDate: widget.controller.focusedDay,
+                onVisibleYearChanged: (year) {
+                  _yearPanelYear = year;
+                  _syncMonthYearController();
+                },
+                onMonthTap: _handleMonthTap,
+              ),
+            ),
           ),
       ],
     );
