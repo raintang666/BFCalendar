@@ -208,8 +208,7 @@ class _CalendarMonthYearViewState extends State<CalendarMonthYearView>
   void _syncMonthYearController() {
     widget.monthYearController?._syncState(
       isYearMode: _yearMode,
-      visibleYear:
-          (_yearMode || _yearOverlayVisible)
+      visibleYear: (_yearMode || _yearOverlayVisible)
           ? _yearPanelYear
           : widget.controller.focusedDay.year,
     );
@@ -434,6 +433,7 @@ class _YearGridPage extends StatelessWidget {
               year: year,
               month: month,
               selected: selected,
+              selectedDate: selectedDate,
               onTap: () => onMonthTap(monthDate),
             );
           },
@@ -448,12 +448,14 @@ class _YearMonthCard extends StatelessWidget {
     required this.year,
     required this.month,
     required this.selected,
+    required this.selectedDate,
     required this.onTap,
   });
 
   final int year;
   final int month;
   final bool selected;
+  final DateTime selectedDate;
   final VoidCallback onTap;
 
   @override
@@ -462,6 +464,10 @@ class _YearMonthCard extends StatelessWidget {
     final previewDays = CalendarDateUtils.visibleMonthDays(
       monthDate,
       monthViewShowMode: MonthViewShowMode.allMonth,
+    );
+    final today = CalendarDateUtils.stripTime(DateTime.now());
+    final selectedDay = CalendarDateUtils.stripTime(
+      DateTime(selectedDate.year, selectedDate.month, selectedDate.day),
     );
     return GestureDetector(
       onTap: onTap,
@@ -505,31 +511,41 @@ class _YearMonthCard extends StatelessWidget {
                         day,
                         monthDate,
                       );
-                      final isToday = CalendarDateUtils.isSameDay(
+                      final isToday = CalendarDateUtils.isSameDay(day, today);
+                      final isSelectedDay = CalendarDateUtils.isSameDay(
                         day,
-                        CalendarDateUtils.stripTime(DateTime.now()),
+                        selectedDay,
                       );
-                      final isMonthSelected =
-                          selected &&
-                          CalendarDateUtils.isSameMonth(day, monthDate);
-                      return Container(
+                      final shouldHighlightToday = isToday && inMonth;
+                      final shouldHighlightSelected = isSelectedDay && inMonth;
+                      final dayTextColor = shouldHighlightSelected
+                          ? const Color(0xFF128C4B)
+                          : shouldHighlightToday
+                          ? const Color(0xFFFF0000)
+                          : inMonth
+                          ? const Color(0xFF888888)
+                          : const Color(0xFFD9D9D9);
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 140),
                         alignment: Alignment.center,
-                        decoration: isToday && inMonth
+                        decoration: shouldHighlightSelected
                             ? const BoxDecoration(
-                                color: Color(0xFFF1F1F1),
+                                color: Color(0x80CFCFCF),
+                                shape: BoxShape.circle,
+                              )
+                            : shouldHighlightToday
+                            ? const BoxDecoration(
+                                color: Color(0xFFEAEAEA),
                                 shape: BoxShape.circle,
                               )
                             : null,
                         child: Text(
                           '${day.day}',
                           style: TextStyle(
-                            color: isMonthSelected && inMonth
-                                ? const Color(0xFF128C4B)
-                                : inMonth
-                                ? const Color(0xFF888888)
-                                : const Color(0xFFD9D9D9),
+                            color: dayTextColor,
                             fontSize: 8,
-                            fontWeight: isMonthSelected && inMonth
+                            fontWeight:
+                                shouldHighlightSelected || shouldHighlightToday
                                 ? FontWeight.w700
                                 : FontWeight.w400,
                             height: 1,
