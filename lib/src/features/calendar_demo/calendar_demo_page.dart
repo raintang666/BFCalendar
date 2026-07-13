@@ -5,6 +5,7 @@ import 'package:calendarview_flutter/calendarview_flutter.dart';
 import '../../calendar/date_utils_ext.dart';
 import '../ios_calendar/ios_calendar_page.dart';
 import '../range/range_page.dart';
+import '../simple/simple_calendar_page.dart';
 import 'demo_entries.dart';
 
 class CalendarDemoPage extends StatefulWidget {
@@ -372,6 +373,11 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
       case 0:
         Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const IOSCalendarPage()),
+        );
+        break;
+      case 1:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const SimpleCalendarPage()),
         );
         break;
       case 8:
