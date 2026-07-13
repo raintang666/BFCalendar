@@ -8,7 +8,7 @@ enum CalendarPageOrientation { horizontal, vertical }
 
 enum MonthViewShowMode { allMonth, onlyCurrentMonth, fitMonth }
 
-enum CalendarComponentStyle { custom, meizu }
+enum CalendarComponentStyle { custom, meizu, ios }
 
 @immutable
 class CalendarBounds {

@@ -176,6 +176,7 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
     }
     return switch (widget.componentStyle) {
       CalendarComponentStyle.meizu => const MeizuCalendarComponentBuilder(),
+      CalendarComponentStyle.ios => const IOSCalendarComponentBuilder(),
       CalendarComponentStyle.custom => const CustomCalendarComponentBuilder(),
     };
   }
@@ -361,6 +362,8 @@ class _CalendarViewState extends State<CalendarView> {
       CustomCalendarComponentBuilder();
   static const CalendarComponentBuilder _meizuComponentBuilder =
       MeizuCalendarComponentBuilder();
+  static const CalendarComponentBuilder _iosComponentBuilder =
+      IOSCalendarComponentBuilder();
 
   late PageController _pageController;
   late final PageController _verticalPageController;
@@ -382,6 +385,7 @@ class _CalendarViewState extends State<CalendarView> {
     }
     return switch (widget.componentStyle) {
       CalendarComponentStyle.meizu => _meizuComponentBuilder,
+      CalendarComponentStyle.ios => _iosComponentBuilder,
       CalendarComponentStyle.custom => _customComponentBuilder,
     };
   }
@@ -510,10 +514,10 @@ class _CalendarViewState extends State<CalendarView> {
           height: totalHeight,
           child: Column(
             children: [
-              _MonthHeader(
-                month: activeBaseDate.month,
-                height: widget.monthHeaderHeight,
-                componentStyle: widget.componentStyle,
+              _resolvedComponentBuilder.buildMonthHeader(
+                context,
+                activeBaseDate,
+                widget.monthHeaderHeight,
               ),
               _resolvedComponentBuilder.buildWeekBar(
                 context,
@@ -597,26 +601,37 @@ class _CalendarViewState extends State<CalendarView> {
         _handleVerticalPageScrollEnd();
         return false;
       },
-      child: PageView.builder(
-        key: const ValueKey('calendar-vertical-pager'),
-        controller: _verticalPageController,
-        allowImplicitScrolling: true,
-        scrollDirection: Axis.vertical,
-        physics: _DirectionalPagePhysics(
-          lockedPage: _verticalCurrentPage.toDouble(),
-          allowPrevious: canGoPrevious,
-          allowNext: canGoNext,
-          parent: const PageScrollPhysics(),
-        ),
-        itemBuilder: (context, index) {
-          final pageDate = _verticalPageDateForIndex(index);
-          return _buildCalendarPage(
-            pageDate: pageDate,
-            collapseProgress: collapseProgress,
-            shouldShowMonthBody: shouldShowMonthBody,
-            bodyHeight: bodyHeight,
-          );
-        },
+      child: Stack(
+        children: [
+          PageView.builder(
+            key: const ValueKey('calendar-vertical-pager'),
+            controller: _verticalPageController,
+            allowImplicitScrolling: true,
+            scrollDirection: Axis.vertical,
+            physics: _DirectionalPagePhysics(
+              lockedPage: _verticalCurrentPage.toDouble(),
+              allowPrevious: canGoPrevious,
+              allowNext: canGoNext,
+              parent: const PageScrollPhysics(),
+            ),
+            itemBuilder: (context, index) {
+              final pageDate = _verticalPageDateForIndex(index);
+              return _buildCalendarPage(
+                pageDate: pageDate,
+                collapseProgress: collapseProgress,
+                shouldShowMonthBody: shouldShowMonthBody,
+                bodyHeight: bodyHeight,
+              );
+            },
+          ),
+          const IgnorePointer(
+            child: Opacity(
+              key: ValueKey('calendar-vertical-pinned-month-label-opacity'),
+              opacity: 0,
+              child: SizedBox.shrink(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1171,38 +1186,6 @@ class _CalendarPage extends StatelessWidget {
                 ),
               ),
             ),
-    );
-  }
-}
-
-class _MonthHeader extends StatelessWidget {
-  const _MonthHeader({
-    required this.month,
-    required this.height,
-    required this.componentStyle,
-  });
-
-  final int month;
-  final double height;
-  final CalendarComponentStyle componentStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    final textColor = componentStyle == CalendarComponentStyle.meizu
-        ? const Color(0xFF222222)
-        : const Color(0xFF333333);
-    return SizedBox(
-      height: height,
-      child: Center(
-        child: Text(
-          '$month月',
-          style: TextStyle(
-            color: textColor,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
     );
   }
 }

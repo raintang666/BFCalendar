@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:calendarview_flutter/calendarview_flutter.dart';
 
 import '../../calendar/date_utils_ext.dart';
+import '../ios_calendar/ios_calendar_page.dart';
 import '../range/range_page.dart';
 import 'demo_entries.dart';
 
@@ -368,6 +369,11 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
 
   void _handleDemoTap(DemoEntry entry) {
     switch (entry.indexType) {
+      case 0:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const IOSCalendarPage()),
+        );
+        break;
       case 8:
         Navigator.of(
           context,
