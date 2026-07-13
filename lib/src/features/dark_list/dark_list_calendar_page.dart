@@ -21,8 +21,8 @@ class _DarkListCalendarPageState extends State<DarkListCalendarPage> {
   static const int _maxYear = 2099;
 
   late final ScrollController _scrollController;
+  late final CalendarMonthYearController _monthYearController;
   DateTime _selectedDay = CalendarDateUtils.stripTime(DateTime.now());
-  bool _yearVisible = false;
   int _selectedTab = 1;
 
   int get _monthCount => (_maxYear - _minYear + 1) * 12;
@@ -33,11 +33,13 @@ class _DarkListCalendarPageState extends State<DarkListCalendarPage> {
     _scrollController = ScrollController(
       initialScrollOffset: _monthIndexFor(_selectedDay) * _monthItemHeight,
     );
+    _monthYearController = CalendarMonthYearController();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _monthYearController.dispose();
     super.dispose();
   }
 
@@ -70,80 +72,71 @@ class _DarkListCalendarPageState extends State<DarkListCalendarPage> {
   }
 
   Widget _buildCalendarPanel() {
-    return Stack(
-      children: [
-        Column(
-          children: [
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  _yearVisible = true;
-                });
-              },
-              behavior: HitTestBehavior.opaque,
-              child: AnimatedOpacity(
-                opacity: _yearVisible ? 0 : 1,
-                duration: const Duration(milliseconds: 280),
-                child: SizedBox(
-                  height: 86,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 44),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        _titleForDay(_selectedDay),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
+    return CalendarYearModeLayout(
+      controller: _monthYearController,
+      selectedDate: _selectedDay,
+      style: CalendarYearModeStyle.dark,
+      onMonthSelected: (month) {
+        setState(() {
+          _selectedDay = DateTime(month.year, month.month, 1);
+        });
+        _scrollToMonth(month);
+      },
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: () => _monthYearController.setYearMode(true),
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedBuilder(
+              animation: _monthYearController,
+              builder: (context, _) {
+                return AnimatedOpacity(
+                  opacity: _monthYearController.isYearMode ? 0 : 1,
+                  duration: const Duration(milliseconds: 280),
+                  child: SizedBox(
+                    height: 86,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 44),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _titleForDay(_selectedDay),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                itemExtent: _monthItemHeight,
-                itemCount: _monthCount,
-                itemBuilder: (context, index) {
-                  final month = _monthForIndex(index);
-                  return _DarkMonthSection(
-                    month: month,
-                    selectedDay: _selectedDay,
-                    onDaySelected: (day) {
-                      setState(() {
-                        _selectedDay = CalendarDateUtils.stripTime(day);
-                      });
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-        if (_yearVisible)
-          _DarkYearOverlay(
-            year: _selectedDay.year,
-            selectedDay: _selectedDay,
-            onClose: () {
-              setState(() {
-                _yearVisible = false;
-              });
-            },
-            onMonthSelected: (month) {
-              setState(() {
-                _selectedDay = DateTime(month.year, month.month, 1);
-                _yearVisible = false;
-              });
-              _scrollToMonth(month);
-            },
           ),
-      ],
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              itemExtent: _monthItemHeight,
+              itemCount: _monthCount,
+              itemBuilder: (context, index) {
+                final month = _monthForIndex(index);
+                return _DarkMonthSection(
+                  month: month,
+                  selectedDay: _selectedDay,
+                  onDaySelected: (day) {
+                    setState(() {
+                      _selectedDay = CalendarDateUtils.stripTime(day);
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -332,174 +325,6 @@ class _DarkDayCell extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DarkYearOverlay extends StatelessWidget {
-  const _DarkYearOverlay({
-    required this.year,
-    required this.selectedDay,
-    required this.onClose,
-    required this.onMonthSelected,
-  });
-
-  final int year;
-  final DateTime selectedDay;
-  final VoidCallback onClose;
-  final ValueChanged<DateTime> onMonthSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.black,
-      child: Column(
-        children: [
-          SizedBox(
-            height: 86,
-            child: Row(
-              children: [
-                const SizedBox(width: 44),
-                Expanded(
-                  child: Text(
-                    '$year年',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                CupertinoButton(
-                  minimumSize: const Size(44, 44),
-                  padding: EdgeInsets.zero,
-                  onPressed: onClose,
-                  child: const Icon(
-                    CupertinoIcons.xmark,
-                    color: Color(0xFFE4E4E4),
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 24),
-              ],
-            ),
-          ),
-          const _BottomDivider(),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.82,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 18,
-              ),
-              itemCount: 12,
-              itemBuilder: (context, index) {
-                final month = DateTime(year, index + 1);
-                return _DarkYearMonthCard(
-                  month: month,
-                  selectedDay: selectedDay,
-                  onTap: () => onMonthSelected(month),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DarkYearMonthCard extends StatelessWidget {
-  const _DarkYearMonthCard({
-    required this.month,
-    required this.selectedDay,
-    required this.onTap,
-  });
-
-  final DateTime month;
-  final DateTime selectedDay;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final days = CalendarDateUtils.visibleMonthDays(
-      month,
-      monthViewShowMode: MonthViewShowMode.allMonth,
-    );
-    final isSelectedMonth =
-        selectedDay.year == month.year && selectedDay.month == month.month;
-    return GestureDetector(
-      onTap: onTap,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isSelectedMonth ? Colors.white : const Color(0xFF333333),
-            width: isSelectedMonth ? 1.2 : 0.5,
-          ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _monthName(month.month),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 7,
-                    childAspectRatio: 1,
-                    crossAxisSpacing: 1,
-                    mainAxisSpacing: 1,
-                  ),
-                  itemCount: days.length,
-                  itemBuilder: (context, index) {
-                    final day = days[index];
-                    final isInMonth = CalendarDateUtils.isSameMonth(day, month);
-                    final isSelected =
-                        CalendarDateUtils.isSameDay(day, selectedDay) &&
-                        isInMonth;
-                    return DecoratedBox(
-                      decoration: isSelected
-                          ? const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            )
-                          : const BoxDecoration(),
-                      child: Center(
-                        child: Text(
-                          '${day.day}',
-                          style: TextStyle(
-                            color: isSelected
-                                ? Colors.black
-                                : isInMonth
-                                ? Colors.white
-                                : const Color(0xFF666666),
-                            fontSize: 7,
-                            height: 1,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
           ),
         ),
       ),

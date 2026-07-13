@@ -7,6 +7,7 @@ import '../dark_list/dark_list_calendar_page.dart';
 import '../ios_calendar/ios_calendar_page.dart';
 import '../range/range_page.dart';
 import '../simple/simple_calendar_page.dart';
+import '../vertical_list/vertical_list_calendar_page.dart';
 import 'demo_entries.dart';
 
 class CalendarDemoPage extends StatefulWidget {
@@ -390,6 +391,13 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
         Navigator.of(
           context,
         ).push(MaterialPageRoute<void>(builder: (_) => const RangePage()));
+        break;
+      case 19:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const VerticalListCalendarPage(),
+          ),
+        );
         break;
       default:
         _showMessage('Demo ${entry.title} 待继续还原');
