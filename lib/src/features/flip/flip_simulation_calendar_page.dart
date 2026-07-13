@@ -93,7 +93,6 @@ class _FlipSimulationCalendarPageState extends State<FlipSimulationCalendarPage>
         if (degrees > 90) _PreviousHalfShadow(alpha: (degrees - 90) / 90),
         if (degrees < 90) _NextHalfShadow(alpha: (90 - degrees) / 90),
         _buildTurningHalf(degrees),
-        const Center(child: _BookBinding()),
       ],
     );
   }
@@ -365,17 +364,21 @@ class _PreviousHalfShadow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: FractionallySizedBox(
-        heightFactor: 0.5,
-        widthFactor: 1,
-        child: ColoredBox(
-          color: Colors.black.withValues(
-            alpha: (alpha.clamp(0, 1) * 180) / 255,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: (constraints.maxHeight / 2 - 2).clamp(0, double.infinity),
+            child: ColoredBox(
+              color: Colors.black.withValues(
+                alpha: (alpha.clamp(0, 1) * 180) / 255,
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -387,17 +390,21 @@ class _NextHalfShadow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: FractionallySizedBox(
-        heightFactor: 0.5,
-        widthFactor: 1,
-        child: ColoredBox(
-          color: Colors.black.withValues(
-            alpha: (alpha.clamp(0, 1) * 180) / 255,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: (constraints.maxHeight / 2 - 2).clamp(0, double.infinity),
+            child: ColoredBox(
+              color: Colors.black.withValues(
+                alpha: (alpha.clamp(0, 1) * 180) / 255,
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
