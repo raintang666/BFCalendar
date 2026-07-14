@@ -83,6 +83,8 @@ class _VerticalListCalendarPageState extends State<VerticalListCalendarPage> {
               child: CalendarYearModeLayout(
                 controller: _monthYearController,
                 selectedDate: _selectedDay,
+                minDate: DateTime(_minYear, 1, 1),
+                maxDate: DateTime(_maxYear, 12, 31),
                 style: CalendarYearModeStyle.vertical,
                 onMonthSelected: (month) {
                   setState(() {

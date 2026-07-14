@@ -6,6 +6,7 @@ import '../../calendar/date_utils_ext.dart';
 import '../custom/custom_calendar_page.dart';
 import '../dark_list/dark_list_calendar_page.dart';
 import '../flip/flip_simulation_calendar_page.dart';
+import '../full/full_calendar_page.dart';
 import '../ios_calendar/ios_calendar_page.dart';
 import '../range/range_page.dart';
 import '../simple/simple_calendar_page.dart';
@@ -399,6 +400,11 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
       case 5:
         Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const CustomCalendarPage()),
+        );
+        break;
+      case 6:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const FullCalendarPage()),
         );
         break;
       case 7:

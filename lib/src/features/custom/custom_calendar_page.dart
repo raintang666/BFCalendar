@@ -657,7 +657,6 @@ class _TodayButton extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          const Icon(CupertinoIcons.calendar, size: 22, color: Colors.black),
           Padding(
             padding: const EdgeInsets.only(top: 3),
             child: Text(

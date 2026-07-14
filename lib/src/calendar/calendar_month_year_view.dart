@@ -69,6 +69,11 @@ class CalendarYearModeStyle {
     required this.selectedTextColor,
     required this.dividerColor,
     required this.inactiveBorderColor,
+    this.disabledMonthBackgroundColor = const Color(0xFFF8F9FB),
+    this.disabledMonthBorderColor = const Color(0xFFEDEFF3),
+    this.disabledMonthTextColor = const Color(0xFFC7CAD1),
+    this.disabledMonthDayColor = const Color(0xFFD4D7DE),
+    this.disabledMonthOutsideDayColor = const Color(0xFFE6E8EE),
     this.headerHeight = 86,
     this.monthCardRadius = 8,
     this.monthNames = const [
@@ -95,6 +100,11 @@ class CalendarYearModeStyle {
   final Color selectedTextColor;
   final Color dividerColor;
   final Color inactiveBorderColor;
+  final Color disabledMonthBackgroundColor;
+  final Color disabledMonthBorderColor;
+  final Color disabledMonthTextColor;
+  final Color disabledMonthDayColor;
+  final Color disabledMonthOutsideDayColor;
   final double headerHeight;
   final double monthCardRadius;
   final List<String> monthNames;
@@ -108,6 +118,11 @@ class CalendarYearModeStyle {
     selectedTextColor: Colors.black,
     dividerColor: Color(0xFF666666),
     inactiveBorderColor: Color(0xFF333333),
+    disabledMonthBackgroundColor: Color(0xFF070707),
+    disabledMonthBorderColor: Color(0xFF242424),
+    disabledMonthTextColor: Color(0xFF4A4A4A),
+    disabledMonthDayColor: Color(0xFF3F3F3F),
+    disabledMonthOutsideDayColor: Color(0xFF2A2A2A),
   );
 
   static const vertical = CalendarYearModeStyle(
@@ -119,6 +134,11 @@ class CalendarYearModeStyle {
     selectedTextColor: Colors.white,
     dividerColor: Color(0xAAE5E7E7),
     inactiveBorderColor: Color(0xFFE5E7E7),
+    disabledMonthBackgroundColor: Color(0xFFF8F9FB),
+    disabledMonthBorderColor: Color(0xFFEDEFF3),
+    disabledMonthTextColor: Color(0xFFC7CAD1),
+    disabledMonthDayColor: Color(0xFFD4D7DE),
+    disabledMonthOutsideDayColor: Color(0xFFE6E8EE),
   );
 }
 
@@ -129,6 +149,8 @@ class CalendarYearModeLayout extends StatefulWidget {
     required this.selectedDate,
     required this.onMonthSelected,
     required this.child,
+    this.minDate,
+    this.maxDate,
     this.style = CalendarYearModeStyle.vertical,
   });
 
@@ -136,6 +158,8 @@ class CalendarYearModeLayout extends StatefulWidget {
   final DateTime selectedDate;
   final ValueChanged<DateTime> onMonthSelected;
   final Widget child;
+  final DateTime? minDate;
+  final DateTime? maxDate;
   final CalendarYearModeStyle style;
 
   @override
@@ -254,6 +278,8 @@ class _CalendarYearModeLayoutState extends State<CalendarYearModeLayout>
               child: _StyledYearOverlay(
                 initialYear: _visibleYear,
                 selectedDate: widget.selectedDate,
+                minDate: widget.minDate,
+                maxDate: widget.maxDate,
                 style: widget.style,
                 onClose: _hideYearMode,
                 onVisibleYearChanged: _handleVisibleYearChanged,
@@ -452,6 +478,8 @@ class _CalendarMonthYearViewState extends State<CalendarMonthYearView>
               child: _YearOverlay(
                 initialYear: _yearPanelYear,
                 selectedDate: widget.controller.focusedDay,
+                minDate: widget.controller.minDate,
+                maxDate: widget.controller.maxDate,
                 onVisibleYearChanged: (year) {
                   _yearPanelYear = year;
                   _syncMonthYearController();
@@ -469,12 +497,16 @@ class _YearOverlay extends StatefulWidget {
   const _YearOverlay({
     required this.initialYear,
     required this.selectedDate,
+    required this.minDate,
+    required this.maxDate,
     required this.onVisibleYearChanged,
     required this.onMonthTap,
   });
 
   final int initialYear;
   final DateTime selectedDate;
+  final DateTime? minDate;
+  final DateTime? maxDate;
   final ValueChanged<int> onVisibleYearChanged;
   final ValueChanged<DateTime> onMonthTap;
 
@@ -483,28 +515,32 @@ class _YearOverlay extends StatefulWidget {
 }
 
 class _YearOverlayState extends State<_YearOverlay> {
-  static const int _initialPage = 10000;
-
   late final PageController _pageController;
   late int _visibleYear;
+
+  int get _minYear => widget.minDate?.year ?? 1;
+  int get _maxYear => widget.maxDate?.year ?? 9999;
+  int get _yearCount => _maxYear - _minYear + 1;
 
   @override
   void initState() {
     super.initState();
-    _visibleYear = widget.initialYear;
-    _pageController = PageController(initialPage: _initialPage);
+    _visibleYear = widget.initialYear.clamp(_minYear, _maxYear);
+    _pageController = PageController(initialPage: _pageForYear(_visibleYear));
   }
 
   @override
   void didUpdateWidget(covariant _YearOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialYear != widget.initialYear) {
-      _visibleYear = widget.initialYear;
+    if (oldWidget.initialYear != widget.initialYear ||
+        oldWidget.minDate != widget.minDate ||
+        oldWidget.maxDate != widget.maxDate) {
+      _visibleYear = widget.initialYear.clamp(_minYear, _maxYear);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_pageController.hasClients) {
           return;
         }
-        _pageController.jumpToPage(_initialPage);
+        _pageController.jumpToPage(_pageForYear(_visibleYear));
       });
     }
   }
@@ -519,16 +555,25 @@ class _YearOverlayState extends State<_YearOverlay> {
     if (!_pageController.hasClients) {
       return;
     }
-    final currentPage = _pageController.page?.round() ?? _initialPage;
+    final currentPage =
+        _pageController.page?.round() ?? _pageForYear(_visibleYear);
+    final targetPage = (currentPage + delta).clamp(0, _yearCount - 1);
+    if (targetPage == currentPage) {
+      return;
+    }
     _pageController.animateToPage(
-      currentPage + delta,
+      targetPage,
       duration: const Duration(milliseconds: 240),
       curve: Curves.easeOutCubic,
     );
   }
 
   int _yearForPage(int page) {
-    return widget.initialYear + (page - _initialPage);
+    return _minYear + page;
+  }
+
+  int _pageForYear(int year) {
+    return (year - _minYear).clamp(0, _yearCount - 1);
   }
 
   @override
@@ -544,6 +589,7 @@ class _YearOverlayState extends State<_YearOverlay> {
                 const SizedBox(width: 22),
                 _YearHeaderButton(
                   text: '${_visibleYear - 1}',
+                  enabled: _visibleYear > _minYear,
                   onTap: () => _animateToYearPage(-1),
                 ),
                 Expanded(
@@ -560,6 +606,7 @@ class _YearOverlayState extends State<_YearOverlay> {
                 ),
                 _YearHeaderButton(
                   text: '${_visibleYear + 1}',
+                  enabled: _visibleYear < _maxYear,
                   onTap: () => _animateToYearPage(1),
                 ),
                 const SizedBox(width: 22),
@@ -569,6 +616,7 @@ class _YearOverlayState extends State<_YearOverlay> {
           Expanded(
             child: PageView.builder(
               controller: _pageController,
+              itemCount: _yearCount,
               onPageChanged: (page) {
                 final nextYear = _yearForPage(page);
                 setState(() {
@@ -581,6 +629,8 @@ class _YearOverlayState extends State<_YearOverlay> {
                 return _YearGridPage(
                   year: year,
                   selectedDate: widget.selectedDate,
+                  minDate: widget.minDate,
+                  maxDate: widget.maxDate,
                   onMonthTap: widget.onMonthTap,
                 );
               },
@@ -596,11 +646,15 @@ class _YearGridPage extends StatelessWidget {
   const _YearGridPage({
     required this.year,
     required this.selectedDate,
+    required this.minDate,
+    required this.maxDate,
     required this.onMonthTap,
   });
 
   final int year;
   final DateTime selectedDate;
+  final DateTime? minDate;
+  final DateTime? maxDate;
   final ValueChanged<DateTime> onMonthTap;
 
   @override
@@ -637,17 +691,33 @@ class _YearGridPage extends StatelessWidget {
             final selected =
                 selectedDate.year == year && selectedDate.month == month;
             final monthDate = DateTime(year, month, 1);
+            final enabled = _isMonthSelectable(monthDate);
             return _YearMonthCard(
               year: year,
               month: month,
               selected: selected,
+              enabled: enabled,
               selectedDate: selectedDate,
-              onTap: () => onMonthTap(monthDate),
+              onTap: enabled ? () => onMonthTap(monthDate) : null,
             );
           },
         );
       },
     );
+  }
+
+  bool _isMonthSelectable(DateTime month) {
+    final monthStart = DateTime(month.year, month.month, 1);
+    final monthEnd = CalendarDateUtils.lastDayOfMonth(month);
+    final min = minDate == null ? null : CalendarDateUtils.stripTime(minDate!);
+    final max = maxDate == null ? null : CalendarDateUtils.stripTime(maxDate!);
+    if (min != null && monthEnd.isBefore(min)) {
+      return false;
+    }
+    if (max != null && monthStart.isAfter(max)) {
+      return false;
+    }
+    return true;
   }
 }
 
@@ -656,6 +726,7 @@ class _YearMonthCard extends StatelessWidget {
     required this.year,
     required this.month,
     required this.selected,
+    required this.enabled,
     required this.selectedDate,
     required this.onTap,
   });
@@ -663,8 +734,9 @@ class _YearMonthCard extends StatelessWidget {
   final int year;
   final int month;
   final bool selected;
+  final bool enabled;
   final DateTime selectedDate;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -681,11 +753,13 @@ class _YearMonthCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: enabled ? Colors.white : const Color(0xFFF8F9FB),
           borderRadius: BorderRadius.circular(12),
           border: selected
               ? Border.all(color: const Color(0xFF128C4B), width: 1.2)
-              : null,
+              : enabled
+              ? null
+              : Border.all(color: const Color(0xFFEDEFF3), width: 0.5),
         ),
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
         child: Column(
@@ -693,7 +767,12 @@ class _YearMonthCard extends StatelessWidget {
           children: [
             Text(
               '$month月',
-              style: const TextStyle(color: Color(0xFF888888), fontSize: 12),
+              style: TextStyle(
+                color: enabled
+                    ? const Color(0xFF888888)
+                    : const Color(0xFFC7CAD1),
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 6),
             Expanded(
@@ -731,8 +810,12 @@ class _YearMonthCard extends StatelessWidget {
                           : shouldHighlightToday
                           ? const Color(0xFFFF0000)
                           : inMonth
-                          ? const Color(0xFF888888)
-                          : const Color(0xFFD9D9D9);
+                          ? enabled
+                                ? const Color(0xFF888888)
+                                : const Color(0xFFD4D7DE)
+                          : enabled
+                          ? const Color(0xFFD9D9D9)
+                          : const Color(0xFFE6E8EE);
                       return AnimatedContainer(
                         duration: const Duration(milliseconds: 140),
                         alignment: Alignment.center,
@@ -773,21 +856,29 @@ class _YearMonthCard extends StatelessWidget {
 }
 
 class _YearHeaderButton extends StatelessWidget {
-  const _YearHeaderButton({required this.text, required this.onTap});
+  const _YearHeaderButton({
+    required this.text,
+    required this.onTap,
+    this.enabled = true,
+  });
 
   final String text;
   final VoidCallback onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(20),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Text(
           text,
-          style: const TextStyle(color: Color(0xFF888888), fontSize: 14),
+          style: TextStyle(
+            color: enabled ? const Color(0xFF888888) : const Color(0xFFC7CAD1),
+            fontSize: 14,
+          ),
         ),
       ),
     );
@@ -798,6 +889,8 @@ class _StyledYearOverlay extends StatefulWidget {
   const _StyledYearOverlay({
     required this.initialYear,
     required this.selectedDate,
+    required this.minDate,
+    required this.maxDate,
     required this.style,
     required this.onClose,
     required this.onVisibleYearChanged,
@@ -806,6 +899,8 @@ class _StyledYearOverlay extends StatefulWidget {
 
   final int initialYear;
   final DateTime selectedDate;
+  final DateTime? minDate;
+  final DateTime? maxDate;
   final CalendarYearModeStyle style;
   final VoidCallback onClose;
   final ValueChanged<int> onVisibleYearChanged;
@@ -816,28 +911,32 @@ class _StyledYearOverlay extends StatefulWidget {
 }
 
 class _StyledYearOverlayState extends State<_StyledYearOverlay> {
-  static const int _initialPage = 10000;
-
   late final PageController _pageController;
   late int _visibleYear;
+
+  int get _minYear => widget.minDate?.year ?? 1;
+  int get _maxYear => widget.maxDate?.year ?? 9999;
+  int get _yearCount => _maxYear - _minYear + 1;
 
   @override
   void initState() {
     super.initState();
-    _visibleYear = widget.initialYear;
-    _pageController = PageController(initialPage: _initialPage);
+    _visibleYear = widget.initialYear.clamp(_minYear, _maxYear);
+    _pageController = PageController(initialPage: _pageForYear(_visibleYear));
   }
 
   @override
   void didUpdateWidget(covariant _StyledYearOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialYear != widget.initialYear) {
-      _visibleYear = widget.initialYear;
+    if (oldWidget.initialYear != widget.initialYear ||
+        oldWidget.minDate != widget.minDate ||
+        oldWidget.maxDate != widget.maxDate) {
+      _visibleYear = widget.initialYear.clamp(_minYear, _maxYear);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_pageController.hasClients) {
           return;
         }
-        _pageController.jumpToPage(_initialPage);
+        _pageController.jumpToPage(_pageForYear(_visibleYear));
       });
     }
   }
@@ -849,7 +948,11 @@ class _StyledYearOverlayState extends State<_StyledYearOverlay> {
   }
 
   int _yearForPage(int page) {
-    return widget.initialYear + (page - _initialPage);
+    return _minYear + page;
+  }
+
+  int _pageForYear(int year) {
+    return (year - _minYear).clamp(0, _yearCount - 1);
   }
 
   @override
@@ -889,6 +992,7 @@ class _StyledYearOverlayState extends State<_StyledYearOverlay> {
           Expanded(
             child: PageView.builder(
               controller: _pageController,
+              itemCount: _yearCount,
               onPageChanged: (page) {
                 final year = _yearForPage(page);
                 setState(() {
@@ -901,6 +1005,8 @@ class _StyledYearOverlayState extends State<_StyledYearOverlay> {
                 return _StyledYearGridPage(
                   year: year,
                   selectedDate: widget.selectedDate,
+                  minDate: widget.minDate,
+                  maxDate: widget.maxDate,
                   style: widget.style,
                   onMonthSelected: widget.onMonthSelected,
                 );
@@ -917,12 +1023,16 @@ class _StyledYearGridPage extends StatelessWidget {
   const _StyledYearGridPage({
     required this.year,
     required this.selectedDate,
+    required this.minDate,
+    required this.maxDate,
     required this.style,
     required this.onMonthSelected,
   });
 
   final int year;
   final DateTime selectedDate;
+  final DateTime? minDate;
+  final DateTime? maxDate;
   final CalendarYearModeStyle style;
   final ValueChanged<DateTime> onMonthSelected;
 
@@ -939,14 +1049,30 @@ class _StyledYearGridPage extends StatelessWidget {
       itemCount: 12,
       itemBuilder: (context, index) {
         final month = DateTime(year, index + 1);
+        final enabled = _isMonthSelectable(month);
         return _StyledYearMonthCard(
           month: month,
           selectedDate: selectedDate,
+          enabled: enabled,
           style: style,
-          onTap: () => onMonthSelected(month),
+          onTap: enabled ? () => onMonthSelected(month) : null,
         );
       },
     );
+  }
+
+  bool _isMonthSelectable(DateTime month) {
+    final monthStart = DateTime(month.year, month.month, 1);
+    final monthEnd = CalendarDateUtils.lastDayOfMonth(month);
+    final min = minDate == null ? null : CalendarDateUtils.stripTime(minDate!);
+    final max = maxDate == null ? null : CalendarDateUtils.stripTime(maxDate!);
+    if (min != null && monthEnd.isBefore(min)) {
+      return false;
+    }
+    if (max != null && monthStart.isAfter(max)) {
+      return false;
+    }
+    return true;
   }
 }
 
@@ -954,14 +1080,16 @@ class _StyledYearMonthCard extends StatelessWidget {
   const _StyledYearMonthCard({
     required this.month,
     required this.selectedDate,
+    required this.enabled,
     required this.style,
     required this.onTap,
   });
 
   final DateTime month;
   final DateTime selectedDate;
+  final bool enabled;
   final CalendarYearModeStyle style;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -975,10 +1103,15 @@ class _StyledYearMonthCard extends StatelessWidget {
       onTap: onTap,
       child: DecoratedBox(
         decoration: BoxDecoration(
+          color: enabled
+              ? Colors.transparent
+              : style.disabledMonthBackgroundColor,
           border: Border.all(
             color: isSelectedMonth
                 ? style.primaryColor
-                : style.inactiveBorderColor,
+                : enabled
+                ? style.inactiveBorderColor
+                : style.disabledMonthBorderColor,
             width: isSelectedMonth ? 1.2 : 0.5,
           ),
           borderRadius: BorderRadius.circular(style.monthCardRadius),
@@ -991,7 +1124,9 @@ class _StyledYearMonthCard extends StatelessWidget {
               Text(
                 style.monthNames[month.month - 1],
                 style: TextStyle(
-                  color: style.primaryColor,
+                  color: enabled
+                      ? style.primaryColor
+                      : style.disabledMonthTextColor,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1028,8 +1163,12 @@ class _StyledYearMonthCard extends StatelessWidget {
                             color: isSelected
                                 ? style.selectedTextColor
                                 : isInMonth
-                                ? style.dayColor
-                                : style.outsideMonthDayColor,
+                                ? enabled
+                                      ? style.dayColor
+                                      : style.disabledMonthDayColor
+                                : enabled
+                                ? style.outsideMonthDayColor
+                                : style.disabledMonthOutsideDayColor,
                             fontSize: 7,
                             height: 1,
                           ),
