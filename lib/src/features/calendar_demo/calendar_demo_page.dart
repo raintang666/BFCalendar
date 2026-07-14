@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:calendarview_flutter/calendarview_flutter.dart';
 
 import '../../calendar/date_utils_ext.dart';
+import '../colorful/colorful_calendar_page.dart';
 import '../custom/custom_calendar_page.dart';
 import '../dark_list/dark_list_calendar_page.dart';
 import '../flip/flip_simulation_calendar_page.dart';
@@ -416,6 +417,11 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
       case 8:
         Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const MultiSelectPage()),
+        );
+        break;
+      case 9:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const ColorfulCalendarPage()),
         );
         break;
       case 19:
