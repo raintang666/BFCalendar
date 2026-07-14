@@ -60,6 +60,25 @@ void main() {
     expect(find.text('Colorful 01'), findsOneWidget);
   });
 
+  testWidgets('view pager entry navigates to tabbed pager page', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 2200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const CalendarViewFlutterApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('ViewPager风格'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CalendarView), findsOneWidget);
+    expect(find.text('热门'), findsOneWidget);
+    expect(find.text('头条'), findsOneWidget);
+    expect(find.text('时尚'), findsOneWidget);
+    expect(find.text('热门 01'), findsOneWidget);
+  });
+
   testWidgets('demo toggles reusable month year view cleanly', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));

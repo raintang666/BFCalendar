@@ -13,6 +13,7 @@ import '../multi_select/multi_select_page.dart';
 import '../range/range_page.dart';
 import '../simple/simple_calendar_page.dart';
 import '../vertical_list/vertical_list_calendar_page.dart';
+import '../view_pager/view_pager_calendar_page.dart';
 import 'demo_entries.dart';
 
 class CalendarDemoPage extends StatefulWidget {
@@ -422,6 +423,13 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
       case 9:
         Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const ColorfulCalendarPage()),
+        );
+        break;
+      case 10:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const ViewPagerCalendarPage(),
+          ),
         );
         break;
       case 19:

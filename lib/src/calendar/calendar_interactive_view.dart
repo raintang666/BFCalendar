@@ -132,6 +132,7 @@ class CalendarInteractiveView extends StatefulWidget {
     this.monthHeaderHeight = 60,
     this.componentBuilder,
     this.componentStyle = CalendarComponentStyle.custom,
+    this.contentVerticalDragLocked = false,
   });
 
   final CalendarController controller;
@@ -146,6 +147,7 @@ class CalendarInteractiveView extends StatefulWidget {
   final double monthHeaderHeight;
   final CalendarComponentBuilder? componentBuilder;
   final CalendarComponentStyle componentStyle;
+  final bool contentVerticalDragLocked;
 
   @override
   State<CalendarInteractiveView> createState() =>
@@ -246,6 +248,10 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     if (oldWidget.pageOrientation != widget.pageOrientation ||
         oldWidget.yearMode != widget.yearMode) {
       _clearFullScreenIfUnavailable();
+    }
+    if (!oldWidget.contentVerticalDragLocked &&
+        widget.contentVerticalDragLocked) {
+      _resetDragState();
     }
   }
 
@@ -772,6 +778,9 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   void _handleListPointerDown(PointerDownEvent event) {
+    if (widget.contentVerticalDragLocked) {
+      return;
+    }
     _stopSettleAnimation();
     _stopFullScreenAnimation();
     _listPointerId = event.pointer;
@@ -794,6 +803,10 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   void _handleListPointerMove(PointerMoveEvent event) {
+    if (widget.contentVerticalDragLocked) {
+      _resetDragState();
+      return;
+    }
     if (widget.yearMode || _listPointerId != event.pointer) {
       return;
     }
@@ -871,6 +884,10 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   void _finishListPullExpand() {
+    if (widget.contentVerticalDragLocked) {
+      _resetDragState();
+      return;
+    }
     _listPointerId = null;
     if (_isListFullScreenDragging) {
       _finishFullScreenDrag(0);
