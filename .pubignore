@@ -11,6 +11,7 @@ ios/
 assets/
 screenshots/
 test/
+tool/
 lib/main.dart
 lib/src/app.dart
 lib/src/theme.dart
