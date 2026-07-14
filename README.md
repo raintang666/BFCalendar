@@ -1,5 +1,7 @@
 # CalendarView Flutter API
 
+中文 | [English](README_EN.md)
+
 本文档只描述 `lib/src/calendar/` 日历库 API。`lib/src/features/` 下的页面和样式是 demo 实现，不属于核心库能力。
 
 ## 导入
