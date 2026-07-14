@@ -4,6 +4,15 @@
 
 This document only covers the calendar library APIs under `lib/src/calendar/`. Pages and styles under `lib/src/features/` are demo implementations and are not part of the core library.
 
+## Screenshots
+
+|  |  |  |  |
+| --- | --- | --- | --- |
+| ![](screenshots/screenshot_01.png) | ![](screenshots/screenshot_02.png) | ![](screenshots/screenshot_03.png) | ![](screenshots/screenshot_04.png) |
+| ![](screenshots/screenshot_05.png) | ![](screenshots/screenshot_06.png) | ![](screenshots/screenshot_07.png) | ![](screenshots/screenshot_08.png) |
+| ![](screenshots/screenshot_09.png) | ![](screenshots/screenshot_10.png) | ![](screenshots/screenshot_11.png) | ![](screenshots/screenshot_12.png) |
+| ![](screenshots/screenshot_13.png) | ![](screenshots/screenshot_14.png) | ![](screenshots/screenshot_15.png) | ![](screenshots/screenshot_16.png) |
+
 ## Import
 
 ```dart

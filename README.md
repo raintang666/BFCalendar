@@ -4,6 +4,15 @@
 
 本文档只描述 `lib/src/calendar/` 日历库 API。`lib/src/features/` 下的页面和样式是 demo 实现，不属于核心库能力。
 
+## 界面截图
+
+|  |  |  |  |
+| --- | --- | --- | --- |
+| ![](screenshots/screenshot_01.png) | ![](screenshots/screenshot_02.png) | ![](screenshots/screenshot_03.png) | ![](screenshots/screenshot_04.png) |
+| ![](screenshots/screenshot_05.png) | ![](screenshots/screenshot_06.png) | ![](screenshots/screenshot_07.png) | ![](screenshots/screenshot_08.png) |
+| ![](screenshots/screenshot_09.png) | ![](screenshots/screenshot_10.png) | ![](screenshots/screenshot_11.png) | ![](screenshots/screenshot_12.png) |
+| ![](screenshots/screenshot_13.png) | ![](screenshots/screenshot_14.png) | ![](screenshots/screenshot_15.png) | ![](screenshots/screenshot_16.png) |
+
 ## 导入
 
 ```dart
