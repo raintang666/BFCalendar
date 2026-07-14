@@ -8,6 +8,8 @@ This document only covers the calendar SDK APIs published to pub. Demo pages and
 
 If this package helps you, you can support the author with a coffee.
 
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/raintang666)
+
 | Alipay | WeChat Pay |
 | --- | --- |
 | <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_alipay.jpg" width="180" /> | <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_wechat.png" width="180" /> |
@@ -398,6 +400,10 @@ await showYearOverviewSheet(
   },
 );
 ```
+
+## Acknowledgements
+
+Thanks to the author of [huanghaibin-dev/CalendarView](https://github.com/huanghaibin-dev/CalendarView) for providing the Android version source code as a reference.
 
 ## Thanks For Supporting
 

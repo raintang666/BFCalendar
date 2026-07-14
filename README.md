@@ -8,6 +8,8 @@
 
 如果这个库对你有帮助，可以请作者喝杯咖啡。
 
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/raintang666)
+
 | 支付宝 | 微信 |
 | --- | --- |
 | <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_alipay.jpg" width="180" /> | <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_wechat.png" width="180" /> |
@@ -398,6 +400,10 @@ await showYearOverviewSheet(
   },
 );
 ```
+
+## 致谢
+
+感谢 [huanghaibin-dev/CalendarView](https://github.com/huanghaibin-dev/CalendarView) 作者提供 Android 版本源码参考。
 
 ## 再次感谢支持
 
