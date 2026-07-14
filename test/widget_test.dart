@@ -79,6 +79,20 @@ void main() {
     expect(find.text('热门 01'), findsOneWidget);
   });
 
+  testWidgets('single select entry navigates to single page', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 2200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const CalendarViewFlutterApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('单选风格'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CalendarView), findsOneWidget);
+    expect(find.text('Single 01'), findsOneWidget);
+  });
+
   testWidgets('demo toggles reusable month year view cleanly', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
