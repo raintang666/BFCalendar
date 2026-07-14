@@ -121,6 +121,8 @@ class CalendarView extends StatefulWidget {
     this.handleDaySelection = false,
     this.onRangeSelected,
     this.onSelectOutOfRange,
+    this.onMultiSelected,
+    this.onMultiSelectOutOfSize,
   });
 
   final CalendarController controller;
@@ -139,6 +141,8 @@ class CalendarView extends StatefulWidget {
   final bool handleDaySelection;
   final CalendarRangeSelectedCallback? onRangeSelected;
   final CalendarRangeLimitViolationCallback? onSelectOutOfRange;
+  final CalendarMultiSelectedCallback? onMultiSelected;
+  final CalendarMultiSelectOutOfSizeCallback? onMultiSelectOutOfSize;
 
   @override
   State<CalendarView> createState() => _CalendarViewState();
@@ -308,6 +312,8 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
               handleDaySelection: false,
               onRangeSelected: null,
               onSelectOutOfRange: null,
+              onMultiSelected: null,
+              onMultiSelectOutOfSize: null,
             ),
           ),
         ],
@@ -666,6 +672,8 @@ class _CalendarViewState extends State<CalendarView> {
       handleDaySelection: widget.handleDaySelection,
       onRangeSelected: widget.onRangeSelected,
       onSelectOutOfRange: widget.onSelectOutOfRange,
+      onMultiSelected: widget.onMultiSelected,
+      onMultiSelectOutOfSize: widget.onMultiSelectOutOfSize,
     );
   }
 
@@ -1118,6 +1126,8 @@ class _CalendarPage extends StatelessWidget {
     required this.handleDaySelection,
     required this.onRangeSelected,
     required this.onSelectOutOfRange,
+    required this.onMultiSelected,
+    required this.onMultiSelectOutOfSize,
   });
 
   final DateTime anchorDate;
@@ -1132,6 +1142,8 @@ class _CalendarPage extends StatelessWidget {
   final bool handleDaySelection;
   final CalendarRangeSelectedCallback? onRangeSelected;
   final CalendarRangeLimitViolationCallback? onSelectOutOfRange;
+  final CalendarMultiSelectedCallback? onMultiSelected;
+  final CalendarMultiSelectOutOfSizeCallback? onMultiSelectOutOfSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1182,6 +1194,8 @@ class _CalendarPage extends StatelessWidget {
                       handleDaySelection: handleDaySelection,
                       onRangeSelected: onRangeSelected,
                       onSelectOutOfRange: onSelectOutOfRange,
+                      onMultiSelected: onMultiSelected,
+                      onMultiSelectOutOfSize: onMultiSelectOutOfSize,
                     ),
                   ),
                 ),
@@ -1201,6 +1215,8 @@ class _CalendarPage extends StatelessWidget {
                   handleDaySelection: handleDaySelection,
                   onRangeSelected: onRangeSelected,
                   onSelectOutOfRange: onSelectOutOfRange,
+                  onMultiSelected: onMultiSelected,
+                  onMultiSelectOutOfSize: onMultiSelectOutOfSize,
                 ),
               ),
             ),
@@ -1220,6 +1236,8 @@ class _MonthGrid extends StatelessWidget {
     required this.handleDaySelection,
     required this.onRangeSelected,
     required this.onSelectOutOfRange,
+    required this.onMultiSelected,
+    required this.onMultiSelectOutOfSize,
   });
 
   final List<DateTime> days;
@@ -1232,6 +1250,8 @@ class _MonthGrid extends StatelessWidget {
   final bool handleDaySelection;
   final CalendarRangeSelectedCallback? onRangeSelected;
   final CalendarRangeLimitViolationCallback? onSelectOutOfRange;
+  final CalendarMultiSelectedCallback? onMultiSelected;
+  final CalendarMultiSelectOutOfSizeCallback? onMultiSelectOutOfSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1287,7 +1307,7 @@ class _MonthGrid extends StatelessWidget {
   }
 
   bool _isSelectedAdjacent(DateTime date, Duration offset) {
-    if (controller.selectionMode != CalendarSelectionMode.range ||
+    if (controller.selectionMode == CalendarSelectionMode.range &&
         controller.rangeSelection.end == null) {
       return false;
     }
@@ -1296,6 +1316,11 @@ class _MonthGrid extends StatelessWidget {
 
   void _handleDayTap(DateTime date) {
     if (handleDaySelection) {
+      if (controller.selectionMode == CalendarSelectionMode.multi &&
+          controller.isMultiSelectOutOfSize(date)) {
+        onMultiSelectOutOfSize?.call(date, controller.maxMultiSelectSize);
+        return;
+      }
       final violation = controller.rangeSelectionLimitViolation(date);
       if (violation != null) {
         onSelectOutOfRange?.call(date, violation);
@@ -1307,6 +1332,12 @@ class _MonthGrid extends StatelessWidget {
       }
       if (controller.selectionMode == CalendarSelectionMode.range) {
         onRangeSelected?.call(controller.rangeSelection);
+      } else if (controller.selectionMode == CalendarSelectionMode.multi) {
+        onMultiSelected?.call(
+          date,
+          controller.selectedMultiDates.length,
+          controller.maxMultiSelectSize,
+        );
       }
     }
     onDaySelected(date);
@@ -1324,6 +1355,8 @@ class _WeekGrid extends StatelessWidget {
     required this.handleDaySelection,
     required this.onRangeSelected,
     required this.onSelectOutOfRange,
+    required this.onMultiSelected,
+    required this.onMultiSelectOutOfSize,
   });
 
   final List<DateTime> days;
@@ -1335,6 +1368,8 @@ class _WeekGrid extends StatelessWidget {
   final bool handleDaySelection;
   final CalendarRangeSelectedCallback? onRangeSelected;
   final CalendarRangeLimitViolationCallback? onSelectOutOfRange;
+  final CalendarMultiSelectedCallback? onMultiSelected;
+  final CalendarMultiSelectOutOfSizeCallback? onMultiSelectOutOfSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1377,7 +1412,7 @@ class _WeekGrid extends StatelessWidget {
   }
 
   bool _isSelectedAdjacent(DateTime date, Duration offset) {
-    if (controller.selectionMode != CalendarSelectionMode.range ||
+    if (controller.selectionMode == CalendarSelectionMode.range &&
         controller.rangeSelection.end == null) {
       return false;
     }
@@ -1386,6 +1421,11 @@ class _WeekGrid extends StatelessWidget {
 
   void _handleDayTap(DateTime date) {
     if (handleDaySelection) {
+      if (controller.selectionMode == CalendarSelectionMode.multi &&
+          controller.isMultiSelectOutOfSize(date)) {
+        onMultiSelectOutOfSize?.call(date, controller.maxMultiSelectSize);
+        return;
+      }
       final violation = controller.rangeSelectionLimitViolation(date);
       if (violation != null) {
         onSelectOutOfRange?.call(date, violation);
@@ -1397,6 +1437,12 @@ class _WeekGrid extends StatelessWidget {
       }
       if (controller.selectionMode == CalendarSelectionMode.range) {
         onRangeSelected?.call(controller.rangeSelection);
+      } else if (controller.selectionMode == CalendarSelectionMode.multi) {
+        onMultiSelected?.call(
+          date,
+          controller.selectedMultiDates.length,
+          controller.maxMultiSelectSize,
+        );
       }
     }
     onDaySelected(date);

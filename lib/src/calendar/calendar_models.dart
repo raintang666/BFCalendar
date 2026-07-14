@@ -17,6 +17,14 @@ typedef CalendarRangeSelectedCallback = void Function(DateRangeValue range);
 typedef CalendarRangeLimitViolationCallback =
     void Function(DateTime day, CalendarRangeLimitViolation violation);
 
+typedef CalendarMultiSelectedCallback =
+    void Function(DateTime day, int selectedSize, int maxSize);
+
+typedef CalendarMultiSelectOutOfSizeCallback =
+    void Function(DateTime day, int maxSize);
+
+typedef CalendarDatePredicate = bool Function(DateTime day);
+
 @immutable
 class CalendarBounds {
   const CalendarBounds({this.min, this.max});

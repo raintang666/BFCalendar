@@ -8,6 +8,7 @@ import '../dark_list/dark_list_calendar_page.dart';
 import '../flip/flip_simulation_calendar_page.dart';
 import '../full/full_calendar_page.dart';
 import '../ios_calendar/ios_calendar_page.dart';
+import '../multi_select/multi_select_page.dart';
 import '../range/range_page.dart';
 import '../simple/simple_calendar_page.dart';
 import '../vertical_list/vertical_list_calendar_page.dart';
@@ -411,6 +412,11 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
         Navigator.of(
           context,
         ).push(MaterialPageRoute<void>(builder: (_) => const RangePage()));
+        break;
+      case 8:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const MultiSelectPage()),
+        );
         break;
       case 19:
         Navigator.of(context).push(

@@ -32,6 +32,20 @@ void main() {
     expect(find.byType(CalendarView), findsOneWidget);
   });
 
+  testWidgets('multi select entry navigates to multi page', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 2200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const CalendarViewFlutterApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('多选风格'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CalendarView), findsOneWidget);
+    expect(find.text('Article 01'), findsOneWidget);
+  });
+
   testWidgets('demo toggles reusable month year view cleanly', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));

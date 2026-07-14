@@ -10,18 +10,22 @@ class CalendarController extends ChangeNotifier {
     DateTime? maxDate,
     int minSelectRange = -1,
     int maxSelectRange = -1,
+    int maxMultiSelectSize = -1,
     Map<DateTime, List<CalendarMarker>> markers = const {},
     Set<DateTime> disabledDates = const {},
+    CalendarDatePredicate? disabledDatePredicate,
   }) : _minDate = _normalizeNullableDate(minDate),
        _maxDate = _normalizeNullableDate(maxDate),
        _focusedDay = CalendarDateUtils.stripTime(focusedDay ?? DateTime.now()),
        _minSelectRange = _normalizeSelectRangeLimit(minSelectRange),
        _maxSelectRange = _normalizeSelectRangeLimit(maxSelectRange),
+       _maxMultiSelectSize = _normalizeSelectRangeLimit(maxMultiSelectSize),
        _markers = {
          for (final entry in markers.entries)
            CalendarDateUtils.stripTime(entry.key): entry.value,
        },
-       _disabledDates = disabledDates.map(CalendarDateUtils.stripTime).toSet() {
+       _disabledDates = disabledDates.map(CalendarDateUtils.stripTime).toSet(),
+       _disabledDatePredicate = disabledDatePredicate {
     if (_minDate != null && _maxDate != null && _minDate!.isAfter(_maxDate!)) {
       throw ArgumentError('minDate must be on or before maxDate');
     }
@@ -44,10 +48,12 @@ class CalendarController extends ChangeNotifier {
   CalendarSelectionState _selection = const CalendarSelectionState();
   Map<DateTime, List<CalendarMarker>> _markers;
   final Set<DateTime> _disabledDates;
+  CalendarDatePredicate? _disabledDatePredicate;
   MonthViewShowMode _monthViewShowMode = MonthViewShowMode.onlyCurrentMonth;
   bool _interceptBlocked = true;
   int _minSelectRange;
   int _maxSelectRange;
+  int _maxMultiSelectSize;
 
   DateTime? _minDate;
   DateTime? _maxDate;
@@ -58,6 +64,11 @@ class CalendarController extends ChangeNotifier {
   int get firstWeekday => _firstWeekday;
   CalendarSelectionState get selection => _selection;
   DateRangeValue get rangeSelection => _selection.range;
+  List<DateTime> get selectedMultiDates {
+    final dates = _selection.multi.toList()..sort();
+    return List.unmodifiable(dates);
+  }
+
   List<DateTime> get selectedRangeDates {
     final start = _selection.range.start;
     final end = _selection.range.end;
@@ -74,6 +85,7 @@ class CalendarController extends ChangeNotifier {
   bool get interceptBlocked => _interceptBlocked;
   int get minSelectRange => _minSelectRange;
   int get maxSelectRange => _maxSelectRange;
+  int get maxMultiSelectSize => _maxMultiSelectSize;
   DateTime? get minDate => _minDate;
   DateTime? get maxDate => _maxDate;
   DateTime? get minRangeCalendar => _minDate;
@@ -167,6 +179,21 @@ class CalendarController extends ChangeNotifier {
     return true;
   }
 
+  void setMaxMultiSelectSize(int maxSize) {
+    final normalizedMaxSize = _normalizeSelectRangeLimit(maxSize);
+    if (_maxMultiSelectSize == normalizedMaxSize) {
+      return;
+    }
+    _maxMultiSelectSize = normalizedMaxSize;
+    if (_selectionMode == CalendarSelectionMode.multi &&
+        _maxMultiSelectSize > 0 &&
+        _selection.multi.length > _maxMultiSelectSize) {
+      final dates = selectedMultiDates.take(_maxMultiSelectSize).toSet();
+      _selection = _selection.copyWith(multi: dates);
+    }
+    notifyListeners();
+  }
+
   void setDisplayMode(CalendarDisplayMode mode) {
     if (_displayMode == mode) {
       return;
@@ -210,6 +237,14 @@ class CalendarController extends ChangeNotifier {
       return;
     }
     _interceptBlocked = value;
+    notifyListeners();
+  }
+
+  void setDisabledDatePredicate(CalendarDatePredicate? predicate) {
+    if (_disabledDatePredicate == predicate) {
+      return;
+    }
+    _disabledDatePredicate = predicate;
     notifyListeners();
   }
 
@@ -296,6 +331,10 @@ class CalendarController extends ChangeNotifier {
         return true;
       }
     }
+    final disabledDatePredicate = _disabledDatePredicate;
+    if (disabledDatePredicate != null && disabledDatePredicate(normalized)) {
+      return true;
+    }
     return _disabledDates.any(
       (item) => CalendarDateUtils.isSameDay(item, normalized),
     );
@@ -368,6 +407,9 @@ class CalendarController extends ChangeNotifier {
         }
         break;
       case CalendarSelectionMode.multi:
+        if (isMultiSelectOutOfSize(normalized)) {
+          return false;
+        }
         _focusedDay = normalized;
         final next = Set<DateTime>.from(_selection.multi);
         final existing = next.lookup(normalized);
@@ -382,6 +424,18 @@ class CalendarController extends ChangeNotifier {
 
     notifyListeners();
     return true;
+  }
+
+  bool isMultiSelectOutOfSize(DateTime day) {
+    if (_selectionMode != CalendarSelectionMode.multi ||
+        _maxMultiSelectSize <= 0) {
+      return false;
+    }
+    final normalized = CalendarDateUtils.stripTime(day);
+    final existing = _selection.multi.any(
+      (item) => CalendarDateUtils.isSameDay(item, normalized),
+    );
+    return !existing && _selection.multi.length >= _maxMultiSelectSize;
   }
 
   CalendarRangeLimitViolation? rangeSelectionLimitViolation(
