@@ -1,4 +1,5 @@
 import 'package:calendarview_flutter/src/app.dart';
+import 'package:calendarview_flutter/calendarview_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -28,6 +29,7 @@ void main() {
     expect(find.text('结束日期'), findsOneWidget);
     expect(find.text('min range = -1'), findsOneWidget);
     expect(find.text('max range = -1'), findsOneWidget);
+    expect(find.byType(CalendarView), findsOneWidget);
   });
 
   testWidgets('demo toggles reusable month year view cleanly', (tester) async {

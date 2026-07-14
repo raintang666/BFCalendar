@@ -118,6 +118,9 @@ class CalendarView extends StatefulWidget {
     this.calendarHeight = 62,
     this.weekBarHeight = 46,
     this.monthHeaderHeight = 60,
+    this.handleDaySelection = false,
+    this.onRangeSelected,
+    this.onSelectOutOfRange,
   });
 
   final CalendarController controller;
@@ -133,6 +136,9 @@ class CalendarView extends StatefulWidget {
   final double calendarHeight;
   final double weekBarHeight;
   final double monthHeaderHeight;
+  final bool handleDaySelection;
+  final CalendarRangeSelectedCallback? onRangeSelected;
+  final CalendarRangeLimitViolationCallback? onSelectOutOfRange;
 
   @override
   State<CalendarView> createState() => _CalendarViewState();
@@ -291,7 +297,6 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
           Expanded(
             child: _CalendarPage(
               anchorDate: month,
-              selectedDate: widget.controller.focusedDay,
               controller: widget.controller,
               onDaySelected: widget.onDaySelected,
               componentBuilder: _resolvedComponentBuilder,
@@ -300,6 +305,9 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
               rowHeight: widget.calendarHeight,
               bodyHeight: bodyHeight,
               monthBodyHeightOverride: null,
+              handleDaySelection: false,
+              onRangeSelected: null,
+              onSelectOutOfRange: null,
             ),
           ),
         ],
@@ -655,6 +663,9 @@ class _CalendarViewState extends State<CalendarView> {
       rowHeight: widget.calendarHeight,
       bodyHeight: bodyHeight,
       monthBodyHeightOverride: widget.monthBodyHeightOverride,
+      handleDaySelection: widget.handleDaySelection,
+      onRangeSelected: widget.onRangeSelected,
+      onSelectOutOfRange: widget.onSelectOutOfRange,
     );
   }
 
@@ -1096,7 +1107,6 @@ class _CalendarPage extends StatelessWidget {
   const _CalendarPage({
     super.key,
     required this.anchorDate,
-    this.selectedDate,
     required this.controller,
     required this.onDaySelected,
     required this.componentBuilder,
@@ -1105,10 +1115,12 @@ class _CalendarPage extends StatelessWidget {
     required this.rowHeight,
     required this.bodyHeight,
     required this.monthBodyHeightOverride,
+    required this.handleDaySelection,
+    required this.onRangeSelected,
+    required this.onSelectOutOfRange,
   });
 
   final DateTime anchorDate;
-  final DateTime? selectedDate;
   final CalendarController controller;
   final ValueChanged<DateTime> onDaySelected;
   final CalendarComponentBuilder componentBuilder;
@@ -1117,11 +1129,13 @@ class _CalendarPage extends StatelessWidget {
   final double rowHeight;
   final double bodyHeight;
   final double? monthBodyHeightOverride;
+  final bool handleDaySelection;
+  final CalendarRangeSelectedCallback? onRangeSelected;
+  final CalendarRangeLimitViolationCallback? onSelectOutOfRange;
 
   @override
   Widget build(BuildContext context) {
     final focusedMonth = DateTime(anchorDate.year, anchorDate.month, 1);
-    final resolvedSelectedDate = selectedDate ?? anchorDate;
     final monthDays = CalendarDateUtils.visibleMonthDays(
       focusedMonth,
       firstWeekday: controller.firstWeekday,
@@ -1162,10 +1176,12 @@ class _CalendarPage extends StatelessWidget {
                       lineCount: monthLineCount,
                       focusedMonth: focusedMonth,
                       controller: controller,
-                      visibleAnchorDate: resolvedSelectedDate,
                       onDaySelected: onDaySelected,
                       componentBuilder: componentBuilder,
                       rowHeight: monthRowHeight,
+                      handleDaySelection: handleDaySelection,
+                      onRangeSelected: onRangeSelected,
+                      onSelectOutOfRange: onSelectOutOfRange,
                     ),
                   ),
                 ),
@@ -1179,10 +1195,12 @@ class _CalendarPage extends StatelessWidget {
                   days: weekDays,
                   focusedMonth: focusedMonth,
                   controller: controller,
-                  visibleAnchorDate: resolvedSelectedDate,
                   onDaySelected: onDaySelected,
                   componentBuilder: componentBuilder,
                   rowHeight: rowHeight,
+                  handleDaySelection: handleDaySelection,
+                  onRangeSelected: onRangeSelected,
+                  onSelectOutOfRange: onSelectOutOfRange,
                 ),
               ),
             ),
@@ -1196,20 +1214,24 @@ class _MonthGrid extends StatelessWidget {
     required this.lineCount,
     required this.focusedMonth,
     required this.controller,
-    required this.visibleAnchorDate,
     required this.onDaySelected,
     required this.componentBuilder,
     required this.rowHeight,
+    required this.handleDaySelection,
+    required this.onRangeSelected,
+    required this.onSelectOutOfRange,
   });
 
   final List<DateTime> days;
   final int lineCount;
   final DateTime focusedMonth;
   final CalendarController controller;
-  final DateTime visibleAnchorDate;
   final ValueChanged<DateTime> onDaySelected;
   final CalendarComponentBuilder componentBuilder;
   final double rowHeight;
+  final bool handleDaySelection;
+  final CalendarRangeSelectedCallback? onRangeSelected;
+  final CalendarRangeLimitViolationCallback? onSelectOutOfRange;
 
   @override
   Widget build(BuildContext context) {
@@ -1237,14 +1259,24 @@ class _MonthGrid extends StatelessWidget {
                           date,
                           CalendarDateUtils.stripTime(DateTime.now()),
                         ),
-                        isSelected: CalendarDateUtils.isSameDay(
+                        isSelected: controller.isSelected(date),
+                        isRangeStart: controller.isRangeStart(date),
+                        isRangeEnd: controller.isRangeEnd(date),
+                        isSelectedPrevious: _isSelectedAdjacent(
                           date,
-                          visibleAnchorDate,
+                          const Duration(days: -1),
                         ),
+                        isSelectedNext: _isSelectedAdjacent(
+                          date,
+                          const Duration(days: 1),
+                        ),
+                        isOutOfSelectableRange:
+                            controller.rangeSelectionLimitViolation(date) !=
+                            null,
                         isDisabled: controller.isDisabled(date),
                         componentBuilder: componentBuilder,
                         showBottomDivider: rowIndex < lineCount - 1,
-                        onTap: () => onDaySelected(date),
+                        onTap: () => _handleDayTap(date),
                       ),
               );
             }),
@@ -1253,6 +1285,32 @@ class _MonthGrid extends StatelessWidget {
       }),
     );
   }
+
+  bool _isSelectedAdjacent(DateTime date, Duration offset) {
+    if (controller.selectionMode != CalendarSelectionMode.range ||
+        controller.rangeSelection.end == null) {
+      return false;
+    }
+    return controller.isSelected(date.add(offset));
+  }
+
+  void _handleDayTap(DateTime date) {
+    if (handleDaySelection) {
+      final violation = controller.rangeSelectionLimitViolation(date);
+      if (violation != null) {
+        onSelectOutOfRange?.call(date, violation);
+        return;
+      }
+      final selected = controller.selectDay(date);
+      if (!selected) {
+        return;
+      }
+      if (controller.selectionMode == CalendarSelectionMode.range) {
+        onRangeSelected?.call(controller.rangeSelection);
+      }
+    }
+    onDaySelected(date);
+  }
 }
 
 class _WeekGrid extends StatelessWidget {
@@ -1260,19 +1318,23 @@ class _WeekGrid extends StatelessWidget {
     required this.days,
     required this.focusedMonth,
     required this.controller,
-    required this.visibleAnchorDate,
     required this.onDaySelected,
     required this.componentBuilder,
     required this.rowHeight,
+    required this.handleDaySelection,
+    required this.onRangeSelected,
+    required this.onSelectOutOfRange,
   });
 
   final List<DateTime> days;
   final DateTime focusedMonth;
   final CalendarController controller;
-  final DateTime visibleAnchorDate;
   final ValueChanged<DateTime> onDaySelected;
   final CalendarComponentBuilder componentBuilder;
   final double rowHeight;
+  final bool handleDaySelection;
+  final CalendarRangeSelectedCallback? onRangeSelected;
+  final CalendarRangeLimitViolationCallback? onSelectOutOfRange;
 
   @override
   Widget build(BuildContext context) {
@@ -1290,16 +1352,54 @@ class _WeekGrid extends StatelessWidget {
                 date,
                 CalendarDateUtils.stripTime(DateTime.now()),
               ),
-              isSelected: CalendarDateUtils.isSameDay(date, visibleAnchorDate),
+              isSelected: controller.isSelected(date),
+              isRangeStart: controller.isRangeStart(date),
+              isRangeEnd: controller.isRangeEnd(date),
+              isSelectedPrevious: _isSelectedAdjacent(
+                date,
+                const Duration(days: -1),
+              ),
+              isSelectedNext: _isSelectedAdjacent(
+                date,
+                const Duration(days: 1),
+              ),
+              isOutOfSelectableRange:
+                  controller.rangeSelectionLimitViolation(date) != null,
               isDisabled: controller.isDisabled(date),
               componentBuilder: componentBuilder,
               showBottomDivider: false,
-              onTap: () => onDaySelected(date),
+              onTap: () => _handleDayTap(date),
             ),
           );
         }).toList(),
       ),
     );
+  }
+
+  bool _isSelectedAdjacent(DateTime date, Duration offset) {
+    if (controller.selectionMode != CalendarSelectionMode.range ||
+        controller.rangeSelection.end == null) {
+      return false;
+    }
+    return controller.isSelected(date.add(offset));
+  }
+
+  void _handleDayTap(DateTime date) {
+    if (handleDaySelection) {
+      final violation = controller.rangeSelectionLimitViolation(date);
+      if (violation != null) {
+        onSelectOutOfRange?.call(date, violation);
+        return;
+      }
+      final selected = controller.selectDay(date);
+      if (!selected) {
+        return;
+      }
+      if (controller.selectionMode == CalendarSelectionMode.range) {
+        onRangeSelected?.call(controller.rangeSelection);
+      }
+    }
+    onDaySelected(date);
   }
 }
 
@@ -1311,6 +1411,11 @@ class _CalendarDayCell extends StatelessWidget {
     required this.lunarText,
     required this.isToday,
     required this.isSelected,
+    required this.isRangeStart,
+    required this.isRangeEnd,
+    required this.isSelectedPrevious,
+    required this.isSelectedNext,
+    required this.isOutOfSelectableRange,
     required this.isDisabled,
     required this.componentBuilder,
     required this.showBottomDivider,
@@ -1323,6 +1428,11 @@ class _CalendarDayCell extends StatelessWidget {
   final String lunarText;
   final bool isToday;
   final bool isSelected;
+  final bool isRangeStart;
+  final bool isRangeEnd;
+  final bool isSelectedPrevious;
+  final bool isSelectedNext;
+  final bool isOutOfSelectableRange;
   final bool isDisabled;
   final CalendarComponentBuilder componentBuilder;
   final bool showBottomDivider;
@@ -1341,6 +1451,11 @@ class _CalendarDayCell extends StatelessWidget {
         isSelected: isSelected,
         isDisabled: isDisabled,
         showBottomDivider: showBottomDivider,
+        isRangeStart: isRangeStart,
+        isRangeEnd: isRangeEnd,
+        isSelectedPrevious: isSelectedPrevious,
+        isSelectedNext: isSelectedNext,
+        isOutOfSelectableRange: isOutOfSelectableRange,
       ),
     );
     return GestureDetector(

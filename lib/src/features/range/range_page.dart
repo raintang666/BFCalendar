@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../calendar/calendar_components.dart';
 import '../../calendar/calendar_controller.dart';
 import '../../calendar/calendar_models.dart';
+import '../../calendar/calendar_view.dart';
 import '../../calendar/date_utils_ext.dart';
-import '../../calendar/range_calendar_view.dart';
 
 class RangePage extends StatefulWidget {
   const RangePage({super.key});
@@ -16,7 +17,6 @@ class _RangePageState extends State<RangePage> {
   static const _weekLabels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   static const _lineColor = Color(0xFFE7E7E7);
   static const _contentBackground = Color(0xFFF2F2F2);
-  static const _horizontalSwipeVelocity = 320.0;
 
   late final CalendarController _controller;
   double _calendarItemHeight = 46;
@@ -25,11 +25,15 @@ class _RangePageState extends State<RangePage> {
   void initState() {
     super.initState();
     final today = CalendarDateUtils.stripTime(DateTime.now());
-    _controller = CalendarController(
-      focusedDay: today,
-      minDate: DateTime(2004, 1, 1),
-      maxDate: DateTime(9999, 12, 31),
-    )..setSelectionMode(CalendarSelectionMode.range);
+    _controller =
+        CalendarController(
+            focusedDay: today,
+            minDate: DateTime(2004, 1, 1),
+            maxDate: DateTime(9999, 12, 31),
+          )
+          ..setSelectionMode(CalendarSelectionMode.range)
+          ..setMonthViewShowMode(MonthViewShowMode.allMonth)
+          ..setInterceptBlocked(false);
   }
 
   @override
@@ -53,16 +57,16 @@ class _RangePageState extends State<RangePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onHorizontalDragEnd: _handleCalendarSwipe,
-                      child: RangeCalendarView(
-                        controller: _controller,
-                        calendarHeight: _calendarItemHeight,
-                        minRange: null,
-                        maxRange: null,
-                        onDaySelected: _handleDaySelected,
-                      ),
+                    CalendarView(
+                      controller: _controller,
+                      pageOrientation: CalendarPageOrientation.horizontal,
+                      componentBuilder: const RangeCalendarComponentBuilder(),
+                      calendarHeight: _calendarItemHeight,
+                      weekBarHeight: 40,
+                      monthHeaderHeight: 0,
+                      handleDaySelection: true,
+                      onDaySelected: (_) {},
+                      onSelectOutOfRange: _handleSelectOutOfRange,
                     ),
                     const SizedBox(height: 12),
                     const Divider(height: 1, thickness: 1, color: _lineColor),
@@ -106,33 +110,38 @@ class _RangePageState extends State<RangePage> {
                     const Divider(height: 1, thickness: 1, color: _lineColor),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 22, 16, 22),
-                      child: Row(
-                        children: const [
-                          Expanded(
-                            child: Center(
-                              child: Text(
-                                'min range = -1',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                      child: AnimatedBuilder(
+                        animation: _controller,
+                        builder: (context, _) {
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: Center(
+                                  child: Text(
+                                    'min range = ${_controller.minSelectRange}',
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Center(
-                              child: Text(
-                                'max range = -1',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                              Expanded(
+                                child: Center(
+                                  child: Text(
+                                    'max range = ${_controller.maxSelectRange}',
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ],
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -218,17 +227,8 @@ class _RangePageState extends State<RangePage> {
     );
   }
 
-  void _handleDaySelected(DateTime day) {
-    if (!CalendarDateUtils.isSameMonth(day, _controller.focusedDay)) {
-      _controller.jumpToMonth(DateTime(day.year, day.month, 1));
-    }
-    _controller.selectDay(day);
-  }
-
   void _handleClear() {
-    setState(() {
-      _controller.clearSelection();
-    });
+    _controller.clearSelection();
   }
 
   void _handleReduce() {
@@ -243,25 +243,27 @@ class _RangePageState extends State<RangePage> {
     });
   }
 
-  void _handleCalendarSwipe(DragEndDetails details) {
-    final velocity = details.primaryVelocity ?? 0;
-    if (velocity.abs() < _horizontalSwipeVelocity) {
-      return;
-    }
-    if (velocity < 0) {
-      _controller.nextPage();
-    } else {
-      _controller.previousPage();
-    }
+  void _handleSelectOutOfRange(
+    DateTime day,
+    CalendarRangeLimitViolation violation,
+  ) {
+    final message = violation == CalendarRangeLimitViolation.belowMinRange
+        ? '${_fullDateLabel(day)} 小于最小选择范围'
+        : '${_fullDateLabel(day)} 超过最大选择范围';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+      );
   }
 
   void _handleCommit() {
-    final start = _controller.rangeSelection.start;
-    final end = _controller.rangeSelection.end;
-    if (start == null || end == null) {
+    final dates = _controller.selectedRangeDates;
+    if (dates.isEmpty) {
       return;
     }
-    final dates = CalendarDateUtils.eachDay(start, end);
+    final start = dates.first;
+    final end = dates.last;
     final message =
         '选择了${dates.length}个日期: ${_fullDateLabel(start)} —— ${_fullDateLabel(end)}';
     ScaffoldMessenger.of(context)

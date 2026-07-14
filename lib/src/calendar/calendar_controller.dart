@@ -8,11 +8,15 @@ class CalendarController extends ChangeNotifier {
     DateTime? focusedDay,
     DateTime? minDate,
     DateTime? maxDate,
+    int minSelectRange = -1,
+    int maxSelectRange = -1,
     Map<DateTime, List<CalendarMarker>> markers = const {},
     Set<DateTime> disabledDates = const {},
   }) : _minDate = _normalizeNullableDate(minDate),
        _maxDate = _normalizeNullableDate(maxDate),
        _focusedDay = CalendarDateUtils.stripTime(focusedDay ?? DateTime.now()),
+       _minSelectRange = _normalizeSelectRangeLimit(minSelectRange),
+       _maxSelectRange = _normalizeSelectRangeLimit(maxSelectRange),
        _markers = {
          for (final entry in markers.entries)
            CalendarDateUtils.stripTime(entry.key): entry.value,
@@ -20,6 +24,9 @@ class CalendarController extends ChangeNotifier {
        _disabledDates = disabledDates.map(CalendarDateUtils.stripTime).toSet() {
     if (_minDate != null && _maxDate != null && _minDate!.isAfter(_maxDate!)) {
       throw ArgumentError('minDate must be on or before maxDate');
+    }
+    if (!_isValidSelectRangeLimitPair(_minSelectRange, _maxSelectRange)) {
+      throw ArgumentError('minSelectRange must be less than maxSelectRange');
     }
     _focusedDay = _snapDateToRangeStart(
       _focusedDay,
@@ -39,6 +46,8 @@ class CalendarController extends ChangeNotifier {
   final Set<DateTime> _disabledDates;
   MonthViewShowMode _monthViewShowMode = MonthViewShowMode.onlyCurrentMonth;
   bool _interceptBlocked = true;
+  int _minSelectRange;
+  int _maxSelectRange;
 
   DateTime? _minDate;
   DateTime? _maxDate;
@@ -49,11 +58,22 @@ class CalendarController extends ChangeNotifier {
   int get firstWeekday => _firstWeekday;
   CalendarSelectionState get selection => _selection;
   DateRangeValue get rangeSelection => _selection.range;
+  List<DateTime> get selectedRangeDates {
+    final start = _selection.range.start;
+    final end = _selection.range.end;
+    if (start == null || end == null) {
+      return const <DateTime>[];
+    }
+    return CalendarDateUtils.eachDay(start, end);
+  }
+
   Map<DateTime, List<CalendarMarker>> get markers => _markers;
   MonthViewShowMode get monthViewShowMode => _monthViewShowMode;
   bool get onlyCurrentMonth =>
       _monthViewShowMode == MonthViewShowMode.onlyCurrentMonth;
   bool get interceptBlocked => _interceptBlocked;
+  int get minSelectRange => _minSelectRange;
+  int get maxSelectRange => _maxSelectRange;
   DateTime? get minDate => _minDate;
   DateTime? get maxDate => _maxDate;
   DateTime? get minRangeCalendar => _minDate;
@@ -126,6 +146,25 @@ class CalendarController extends ChangeNotifier {
       minDate: DateTime(minYear, minYearMonth, minYearDay),
       maxDate: DateTime(maxYear, maxYearMonth, maxYearDay),
     );
+  }
+
+  bool setRangeSelectionLimits({int minRange = -1, int maxRange = -1}) {
+    final normalizedMin = _normalizeSelectRangeLimit(minRange);
+    final normalizedMax = _normalizeSelectRangeLimit(maxRange);
+    if (!_isValidSelectRangeLimitPair(normalizedMin, normalizedMax)) {
+      return false;
+    }
+    if (_minSelectRange == normalizedMin && _maxSelectRange == normalizedMax) {
+      return true;
+    }
+    _minSelectRange = normalizedMin;
+    _maxSelectRange = normalizedMax;
+    if (_selectionMode == CalendarSelectionMode.range &&
+        !_isCurrentRangeSelectionWithinLimits()) {
+      _selection = _selection.copyWith(range: const DateRangeValue());
+    }
+    notifyListeners();
+    return true;
   }
 
   void setDisplayMode(CalendarDisplayMode mode) {
@@ -293,34 +332,43 @@ class CalendarController extends ChangeNotifier {
         CalendarDateUtils.isSameDay(_selection.range.end!, day);
   }
 
-  void selectDay(DateTime day) {
+  bool selectDay(DateTime day) {
     final normalized = CalendarDateUtils.stripTime(day);
     if (isDisabled(normalized)) {
-      return;
+      return false;
     }
-    _focusedDay = normalized;
 
     switch (_selectionMode) {
       case CalendarSelectionMode.single:
+        _focusedDay = normalized;
         _selection = _selection.copyWith(single: normalized);
         break;
       case CalendarSelectionMode.range:
         final current = _selection.range;
         if (current.start == null || current.isComplete) {
+          _focusedDay = normalized;
           _selection = _selection.copyWith(
             range: DateRangeValue(start: normalized),
           );
-        } else if (normalized.isBefore(current.start!)) {
-          _selection = _selection.copyWith(
-            range: DateRangeValue(start: normalized, end: current.start),
-          );
         } else {
-          _selection = _selection.copyWith(
-            range: DateRangeValue(start: current.start, end: normalized),
-          );
+          final violation = rangeSelectionLimitViolation(normalized);
+          if (violation != null) {
+            return false;
+          }
+          _focusedDay = normalized;
+          if (normalized.isBefore(current.start!)) {
+            _selection = _selection.copyWith(
+              range: DateRangeValue(start: normalized, end: current.start),
+            );
+          } else {
+            _selection = _selection.copyWith(
+              range: DateRangeValue(start: current.start, end: normalized),
+            );
+          }
         }
         break;
       case CalendarSelectionMode.multi:
+        _focusedDay = normalized;
         final next = Set<DateTime>.from(_selection.multi);
         final existing = next.lookup(normalized);
         if (existing != null) {
@@ -333,6 +381,44 @@ class CalendarController extends ChangeNotifier {
     }
 
     notifyListeners();
+    return true;
+  }
+
+  CalendarRangeLimitViolation? rangeSelectionLimitViolation(
+    DateTime day, {
+    int? minRange,
+    int? maxRange,
+  }) {
+    final start = _selection.range.start;
+    if (_selectionMode != CalendarSelectionMode.range ||
+        start == null ||
+        _selection.range.end != null) {
+      return null;
+    }
+    final normalized = CalendarDateUtils.stripTime(day);
+    final effectiveMin = _normalizeSelectRangeLimit(
+      minRange ?? _minSelectRange,
+    );
+    final effectiveMax = _normalizeSelectRangeLimit(
+      maxRange ?? _maxSelectRange,
+    );
+    final distance = normalized.difference(start).inDays.abs() + 1;
+    if (effectiveMin > 0 && distance < effectiveMin) {
+      return CalendarRangeLimitViolation.belowMinRange;
+    }
+    if (effectiveMax > 0 && distance > effectiveMax) {
+      return CalendarRangeLimitViolation.aboveMaxRange;
+    }
+    return null;
+  }
+
+  bool canSelectRangeEnd(DateTime day, {int? minRange, int? maxRange}) {
+    return rangeSelectionLimitViolation(
+          day,
+          minRange: minRange,
+          maxRange: maxRange,
+        ) ==
+        null;
   }
 
   void clearSelection() {
@@ -476,6 +562,22 @@ class CalendarController extends ChangeNotifier {
     return selection;
   }
 
+  bool _isCurrentRangeSelectionWithinLimits() {
+    final start = _selection.range.start;
+    final end = _selection.range.end;
+    if (start == null || end == null) {
+      return true;
+    }
+    final distance = end.difference(start).inDays.abs() + 1;
+    if (_minSelectRange > 0 && distance < _minSelectRange) {
+      return false;
+    }
+    if (_maxSelectRange > 0 && distance > _maxSelectRange) {
+      return false;
+    }
+    return true;
+  }
+
   CalendarSelectionState _adjustMultiSelectionToBounds(
     CalendarSelectionState selection,
   ) {
@@ -491,6 +593,14 @@ class CalendarController extends ChangeNotifier {
       return null;
     }
     return CalendarDateUtils.stripTime(date);
+  }
+
+  static int _normalizeSelectRangeLimit(int value) {
+    return value > 0 ? value : -1;
+  }
+
+  static bool _isValidSelectRangeLimitPair(int minRange, int maxRange) {
+    return minRange <= 0 || maxRange <= 0 || minRange <= maxRange;
   }
 
   static DateTime _clampDate(

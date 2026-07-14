@@ -10,6 +10,13 @@ enum MonthViewShowMode { allMonth, onlyCurrentMonth, fitMonth }
 
 enum CalendarComponentStyle { custom, meizu, ios }
 
+enum CalendarRangeLimitViolation { belowMinRange, aboveMaxRange }
+
+typedef CalendarRangeSelectedCallback = void Function(DateRangeValue range);
+
+typedef CalendarRangeLimitViolationCallback =
+    void Function(DateTime day, CalendarRangeLimitViolation violation);
+
 @immutable
 class CalendarBounds {
   const CalendarBounds({this.min, this.max});
