@@ -8,6 +8,7 @@ import '../custom/custom_calendar_page.dart';
 import '../dark_list/dark_list_calendar_page.dart';
 import '../flip/flip_simulation_calendar_page.dart';
 import '../full/full_calendar_page.dart';
+import '../index/index_calendar_page.dart';
 import '../ios_calendar/ios_calendar_page.dart';
 import '../multi_select/multi_select_page.dart';
 import '../progress/progress_calendar_page.dart';
@@ -442,6 +443,11 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
       case 12:
         Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const ProgressCalendarPage()),
+        );
+        break;
+      case 13:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const IndexCalendarPage()),
         );
         break;
       case 19:

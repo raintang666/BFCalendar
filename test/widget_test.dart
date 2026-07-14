@@ -107,6 +107,20 @@ void main() {
     expect(find.text('Todo 01'), findsOneWidget);
   });
 
+  testWidgets('index entry navigates to index page', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 2200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const CalendarViewFlutterApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('下标订阅风格'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CalendarView), findsOneWidget);
+    expect(find.text('新西兰克马德克群岛发生5.7级地震 震源深度10千米'), findsWidgets);
+  });
+
   testWidgets('demo toggles reusable month year view cleanly', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
