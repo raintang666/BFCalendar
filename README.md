@@ -8,7 +8,6 @@
 
 如果这个库对你有帮助，可以请作者喝杯咖啡。
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-ffdd00?logo=buymeacoffee&logoColor=000000)](https://www.buymeacoffee.com/raintang666)
 
 | 支付宝 | 微信 |
 | --- | --- |
