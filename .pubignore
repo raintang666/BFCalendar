@@ -1,0 +1,17 @@
+.DS_Store
+.dart_tool/
+.idea/
+.claude/
+build/
+*.iml
+.flutter-plugins-dependencies
+.metadata
+android/
+ios/
+assets/
+screenshots/
+test/
+lib/main.dart
+lib/src/app.dart
+lib/src/theme.dart
+lib/src/features/
