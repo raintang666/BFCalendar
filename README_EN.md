@@ -4,6 +4,14 @@
 
 This document only covers the calendar SDK APIs published to pub. Demo pages and concrete business styles stay in the repository demo and are not included in the published package.
 
+## Support
+
+If this package helps you, you can support the author with a coffee.
+
+| Alipay | WeChat Pay |
+| --- | --- |
+| <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_alipay.jpg" width="180" /> | <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_wechat.png" width="180" /> |
+
 ## Screenshots
 
 |  |  |  |  |
@@ -390,3 +398,11 @@ await showYearOverviewSheet(
   },
 );
 ```
+
+## Thanks For Supporting
+
+If this package saved you development time, your support helps keep it maintained.
+
+| Alipay | WeChat Pay |
+| --- | --- |
+| <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_alipay.jpg" width="180" /> | <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_wechat.png" width="180" /> |

@@ -4,6 +4,14 @@
 
 本文档只描述发布到 pub 的日历 SDK API。示例页面和具体业务样式仅保留在仓库 demo 中，不属于发布包内容。
 
+## 支持作者
+
+如果这个库对你有帮助，可以请作者喝杯咖啡。
+
+| 支付宝 | 微信 |
+| --- | --- |
+| <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_alipay.jpg" width="180" /> | <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_wechat.png" width="180" /> |
+
 ## 界面截图
 
 |  |  |  |  |
@@ -390,3 +398,11 @@ await showYearOverviewSheet(
   },
 );
 ```
+
+## 再次感谢支持
+
+如果这个库节省了你的开发时间，欢迎支持作者持续维护。
+
+| 支付宝 | 微信 |
+| --- | --- |
+| <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_alipay.jpg" width="180" /> | <img src="https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/support_wechat.png" width="180" /> |
