@@ -15,6 +15,7 @@ import '../progress/progress_calendar_page.dart';
 import '../range/range_page.dart';
 import '../single_select/single_select_page.dart';
 import '../simple/simple_calendar_page.dart';
+import '../solar/solar_calendar_page.dart';
 import '../vertical_list/vertical_list_calendar_page.dart';
 import '../view_pager/view_pager_calendar_page.dart';
 import 'demo_entries.dart';
@@ -448,6 +449,11 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
       case 13:
         Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const IndexCalendarPage()),
+        );
+        break;
+      case 14:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const SolarCalendarPage()),
         );
         break;
       case 19:

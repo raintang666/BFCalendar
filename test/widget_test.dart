@@ -121,6 +121,21 @@ void main() {
     expect(find.text('新西兰克马德克群岛发生5.7级地震 震源深度10千米'), findsWidgets);
   });
 
+  testWidgets('solar entry navigates to solar page', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 2200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const CalendarViewFlutterApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('星系风格'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CalendarView), findsOneWidget);
+    expect(find.text('Sun'), findsOneWidget);
+    expect(find.text('新西兰克马德克群岛发生5.7级地震 震源深度10千米'), findsWidgets);
+  });
+
   testWidgets('demo toggles reusable month year view cleanly', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
