@@ -102,7 +102,9 @@ class _DirectionalPagePhysics extends ScrollPhysics {
   }
 }
 
+/// 核心月/周日历视图。
 class CalendarView extends StatefulWidget {
+  /// 创建核心日历视图。
   const CalendarView({
     super.key,
     required this.controller,
@@ -124,29 +126,64 @@ class CalendarView extends StatefulWidget {
     this.onMultiSelectOutOfSize,
   });
 
+  /// 日历状态控制器。
   final CalendarController controller;
+
+  /// 日期点击回调。
   final ValueChanged<DateTime> onDaySelected;
+
+  /// 页面滑动方向。
   final CalendarPageOrientation pageOrientation;
+
+  /// 自定义日历样式构建器。
   final CalendarComponentBuilder? componentBuilder;
+
+  /// 页面切换完成后的回调。
   final ValueChanged<DateTime>? onPageChanged;
+
+  /// 当前显示高度变化回调。
   final ValueChanged<double>? onDisplayedHeightChanged;
+
+  /// 折叠预览进度。
   final double? collapsePreviewProgress;
+
+  /// 是否从周视图预览展开。
   final bool previewExpandFromWeek;
+
+  /// 月视图主体高度覆盖值。
   final double? monthBodyHeightOverride;
+
+  /// 单行日期高度。
   final double calendarHeight;
+
+  /// 星期栏高度。
   final double weekBarHeight;
+
+  /// 月份头高度。
   final double monthHeaderHeight;
+
+  /// 是否由视图内部处理选择逻辑。
   final bool handleDaySelection;
+
+  /// 范围选择回调。
   final CalendarRangeSelectedCallback? onRangeSelected;
+
+  /// 范围选择超限回调。
   final CalendarRangeLimitViolationCallback? onSelectOutOfRange;
+
+  /// 多选成功回调。
   final CalendarMultiSelectedCallback? onMultiSelected;
+
+  /// 多选超出数量限制回调。
   final CalendarMultiSelectOutOfSizeCallback? onMultiSelectOutOfSize;
 
   @override
   State<CalendarView> createState() => _CalendarViewState();
 }
 
+/// 按月份连续滚动的日历列表。
 class CalendarMonthListView extends StatefulWidget {
+  /// 创建月份列表视图。
   const CalendarMonthListView({
     super.key,
     required this.controller,
@@ -157,11 +194,22 @@ class CalendarMonthListView extends StatefulWidget {
     this.onFocusedMonthChanged,
   });
 
+  /// 日历状态控制器。
   final CalendarController controller;
+
+  /// 日期点击回调。
   final ValueChanged<DateTime> onDaySelected;
+
+  /// 单行日期高度。
   final double calendarHeight;
+
+  /// 星期栏高度。
   final double weekBarHeight;
+
+  /// 自定义日历样式构建器。
   final CalendarComponentBuilder? componentBuilder;
+
+  /// 当前聚焦月份变化回调。
   final ValueChanged<DateTime>? onFocusedMonthChanged;
 
   @override

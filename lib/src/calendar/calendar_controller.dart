@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'calendar_models.dart';
 import 'date_utils_ext.dart';
 
+/// 日历状态控制器。
 class CalendarController extends ChangeNotifier {
+  /// 创建日历控制器。
   CalendarController({
     DateTime? focusedDay,
     DateTime? minDate,
@@ -58,17 +60,31 @@ class CalendarController extends ChangeNotifier {
   DateTime? _minDate;
   DateTime? _maxDate;
 
+  /// 当前聚焦日期。
   DateTime get focusedDay => _focusedDay;
+
+  /// 当前显示模式。
   CalendarDisplayMode get displayMode => _displayMode;
+
+  /// 当前选择模式。
   CalendarSelectionMode get selectionMode => _selectionMode;
+
+  /// 周起始日。
   int get firstWeekday => _firstWeekday;
+
+  /// 当前完整选择状态。
   CalendarSelectionState get selection => _selection;
+
+  /// 范围选择值。
   DateRangeValue get rangeSelection => _selection.range;
+
+  /// 多选日期列表，按日期升序返回。
   List<DateTime> get selectedMultiDates {
     final dates = _selection.multi.toList()..sort();
     return List.unmodifiable(dates);
   }
 
+  /// 已完成范围选择内的所有日期。
   List<DateTime> get selectedRangeDates {
     final start = _selection.range.start;
     final end = _selection.range.end;
@@ -78,21 +94,45 @@ class CalendarController extends ChangeNotifier {
     return CalendarDateUtils.eachDay(start, end);
   }
 
+  /// 日期标记数据。
   Map<DateTime, List<CalendarMarker>> get markers => _markers;
+
+  /// 月视图显示模式。
   MonthViewShowMode get monthViewShowMode => _monthViewShowMode;
+
+  /// 是否只显示当前月日期。
   bool get onlyCurrentMonth =>
       _monthViewShowMode == MonthViewShowMode.onlyCurrentMonth;
+
+  /// 是否启用内置演示禁用日期。
   bool get interceptBlocked => _interceptBlocked;
+
+  /// 范围选择最小天数。
   int get minSelectRange => _minSelectRange;
+
+  /// 范围选择最大天数。
   int get maxSelectRange => _maxSelectRange;
+
+  /// 多选最大数量。
   int get maxMultiSelectSize => _maxMultiSelectSize;
+
+  /// 可显示、可选择的最小日期。
   DateTime? get minDate => _minDate;
+
+  /// 可显示、可选择的最大日期。
   DateTime? get maxDate => _maxDate;
+
+  /// 兼容原 Android 命名的最小日期。
   DateTime? get minRangeCalendar => _minDate;
+
+  /// 兼容原 Android 命名的最大日期。
   DateTime? get maxRangeCalendar => _maxDate;
+
+  /// 当前日期边界。
   CalendarBounds get calendarRange =>
       CalendarBounds(min: _minDate, max: _maxDate);
 
+  /// 当前日期边界的文本描述。
   String get rangeDescription {
     final minText = _minDate == null
         ? 'unbounded'
@@ -103,6 +143,7 @@ class CalendarController extends ChangeNotifier {
     return 'Calendar Range: $minText —— $maxText';
   }
 
+  /// 设置日历日期边界。
   bool setCalendarRange({
     DateTime? minDate,
     DateTime? maxDate,
@@ -146,6 +187,7 @@ class CalendarController extends ChangeNotifier {
     return true;
   }
 
+  /// 使用原 Android 风格参数设置日历日期边界。
   bool setRange(
     int minYear,
     int minYearMonth,
@@ -160,6 +202,7 @@ class CalendarController extends ChangeNotifier {
     );
   }
 
+  /// 设置范围选择天数限制。
   bool setRangeSelectionLimits({int minRange = -1, int maxRange = -1}) {
     final normalizedMin = _normalizeSelectRangeLimit(minRange);
     final normalizedMax = _normalizeSelectRangeLimit(maxRange);
@@ -179,6 +222,7 @@ class CalendarController extends ChangeNotifier {
     return true;
   }
 
+  /// 设置多选最大数量。
   void setMaxMultiSelectSize(int maxSize) {
     final normalizedMaxSize = _normalizeSelectRangeLimit(maxSize);
     if (_maxMultiSelectSize == normalizedMaxSize) {
@@ -194,6 +238,7 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 设置月/周显示模式。
   void setDisplayMode(CalendarDisplayMode mode) {
     if (_displayMode == mode) {
       return;
@@ -202,6 +247,7 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 切换月/周显示模式。
   void toggleDisplayMode() {
     setDisplayMode(
       _displayMode == CalendarDisplayMode.month
@@ -210,6 +256,7 @@ class CalendarController extends ChangeNotifier {
     );
   }
 
+  /// 设置周起始日。
   void setWeekStart(int weekday) {
     if (_firstWeekday == weekday) {
       return;
@@ -218,12 +265,14 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 设置是否只显示当前月日期。
   void setOnlyCurrentMonth(bool value) {
     setMonthViewShowMode(
       value ? MonthViewShowMode.onlyCurrentMonth : MonthViewShowMode.allMonth,
     );
   }
 
+  /// 设置月视图日期显示模式。
   void setMonthViewShowMode(MonthViewShowMode mode) {
     if (_monthViewShowMode == mode) {
       return;
@@ -232,6 +281,7 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 设置是否启用内置演示禁用日期。
   void setInterceptBlocked(bool value) {
     if (_interceptBlocked == value) {
       return;
@@ -240,6 +290,7 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 设置动态禁用日期判断。
   void setDisabledDatePredicate(CalendarDatePredicate? predicate) {
     if (_disabledDatePredicate == predicate) {
       return;
@@ -248,6 +299,7 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 设置选择模式。
   void setSelectionMode(CalendarSelectionMode mode) {
     if (_selectionMode == mode) {
       return;
@@ -265,6 +317,7 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 跳转到指定日期。
   void jumpToDay(DateTime day) {
     final normalized = CalendarDateUtils.stripTime(day);
     if (_isOutOfBounds(normalized)) {
@@ -274,6 +327,7 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 跳转到指定月份。
   void jumpToMonth(DateTime month) {
     final normalized = CalendarDateUtils.stripTime(month);
     if (!canShowMonth(normalized)) {
@@ -288,6 +342,7 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 跳转到下一页。
   void nextPage() {
     final target = resolvedPageAnchorForRelative(1);
     if (target == null) {
@@ -300,6 +355,7 @@ class CalendarController extends ChangeNotifier {
     }
   }
 
+  /// 跳转到上一页。
   void previousPage() {
     final target = resolvedPageAnchorForRelative(-1);
     if (target == null) {
@@ -312,6 +368,7 @@ class CalendarController extends ChangeNotifier {
     }
   }
 
+  /// 替换日期标记数据。
   void setMarkers(Map<DateTime, List<CalendarMarker>> markers) {
     _markers = {
       for (final entry in markers.entries)
@@ -320,6 +377,7 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 判断日期是否不可选。
   bool isDisabled(DateTime day) {
     final normalized = CalendarDateUtils.stripTime(day);
     if (_isOutOfBounds(normalized)) {
@@ -340,6 +398,7 @@ class CalendarController extends ChangeNotifier {
     );
   }
 
+  /// 判断日期是否处于选中状态。
   bool isSelected(DateTime day) {
     final normalized = CalendarDateUtils.stripTime(day);
     return switch (_selectionMode) {
@@ -361,16 +420,19 @@ class CalendarController extends ChangeNotifier {
     };
   }
 
+  /// 判断日期是否是范围选择开始日期。
   bool isRangeStart(DateTime day) {
     return _selection.range.start != null &&
         CalendarDateUtils.isSameDay(_selection.range.start!, day);
   }
 
+  /// 判断日期是否是范围选择结束日期。
   bool isRangeEnd(DateTime day) {
     return _selection.range.end != null &&
         CalendarDateUtils.isSameDay(_selection.range.end!, day);
   }
 
+  /// 选择指定日期。
   bool selectDay(DateTime day) {
     final normalized = CalendarDateUtils.stripTime(day);
     if (isDisabled(normalized)) {
@@ -426,6 +488,7 @@ class CalendarController extends ChangeNotifier {
     return true;
   }
 
+  /// 判断多选指定日期是否会超出数量上限。
   bool isMultiSelectOutOfSize(DateTime day) {
     if (_selectionMode != CalendarSelectionMode.multi ||
         _maxMultiSelectSize <= 0) {
@@ -438,6 +501,7 @@ class CalendarController extends ChangeNotifier {
     return !existing && _selection.multi.length >= _maxMultiSelectSize;
   }
 
+  /// 判断范围选择结束日期是否违反天数限制。
   CalendarRangeLimitViolation? rangeSelectionLimitViolation(
     DateTime day, {
     int? minRange,
@@ -466,6 +530,7 @@ class CalendarController extends ChangeNotifier {
     return null;
   }
 
+  /// 判断指定日期能否作为范围选择结束日期。
   bool canSelectRangeEnd(DateTime day, {int? minRange, int? maxRange}) {
     return rangeSelectionLimitViolation(
           day,
@@ -475,6 +540,7 @@ class CalendarController extends ChangeNotifier {
         null;
   }
 
+  /// 清空当前选择模式下的选择状态。
   void clearSelection() {
     _selection = switch (_selectionMode) {
       CalendarSelectionMode.single => const CalendarSelectionState(),
@@ -486,6 +552,7 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 判断是否可以跳转到上一页。
   bool canNavigateToPreviousPage({
     DateTime? referenceDay,
     CalendarDisplayMode? displayMode,
@@ -498,6 +565,7 @@ class CalendarController extends ChangeNotifier {
         null;
   }
 
+  /// 判断是否可以跳转到下一页。
   bool canNavigateToNextPage({
     DateTime? referenceDay,
     CalendarDisplayMode? displayMode,
@@ -510,6 +578,7 @@ class CalendarController extends ChangeNotifier {
         null;
   }
 
+  /// 根据相对页数计算目标页锚点日期。
   DateTime? resolvedPageAnchorForRelative(
     int relative, {
     DateTime? referenceDay,
@@ -541,6 +610,7 @@ class CalendarController extends ChangeNotifier {
     );
   }
 
+  /// 判断指定月份是否在可显示范围内。
   bool canShowMonth(DateTime month) {
     final normalizedMonth = DateTime(month.year, month.month, 1);
     final monthStart = normalizedMonth;
@@ -554,6 +624,7 @@ class CalendarController extends ChangeNotifier {
     return true;
   }
 
+  /// 判断包含指定日期的周是否在可显示范围内。
   bool canShowWeek(DateTime anchorDay) {
     final weekDays = CalendarDateUtils.visibleWeekDays(
       anchorDay,

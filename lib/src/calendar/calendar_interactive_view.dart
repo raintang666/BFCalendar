@@ -9,6 +9,7 @@ import 'calendar_models.dart';
 import 'calendar_view.dart';
 import 'date_utils_ext.dart';
 
+/// 构建与日历联动滚动的内容区域。
 typedef CalendarInteractiveContentBuilder =
     Widget Function(
       BuildContext context,
@@ -16,7 +17,9 @@ typedef CalendarInteractiveContentBuilder =
       ScrollPhysics physics,
     );
 
+/// 日历交互控制器。
 class CalendarInteractiveController extends ChangeNotifier {
+  /// 创建交互控制器。
   CalendarInteractiveController({
     CalendarPageOrientation pageOrientation =
         CalendarPageOrientation.horizontal,
@@ -28,14 +31,26 @@ class CalendarInteractiveController extends ChangeNotifier {
   double _collapseProgress = 0;
   bool _isFullScreenExpanded = false;
 
+  /// 当前分页方向。
   CalendarPageOrientation get pageOrientation => _pageOrientation;
+
+  /// 当前月/周显示模式。
   CalendarDisplayMode get displayMode => _displayMode;
+
+  /// 当前折叠进度。
   double get collapseProgress => _collapseProgress;
+
+  /// 是否处于全屏展开状态。
   bool get isFullScreenExpanded => _isFullScreenExpanded;
+
+  /// 是否已折叠为周视图。
   bool get isCollapsed =>
       _displayMode == CalendarDisplayMode.week || _collapseProgress >= 0.9999;
+
+  /// 是否处于展开状态。
   bool get isExpanded => !isCollapsed;
 
+  /// 设置分页方向。
   void setPageOrientation(CalendarPageOrientation orientation) {
     if (_pageOrientation == orientation) {
       return;
@@ -44,6 +59,7 @@ class CalendarInteractiveController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 切换分页方向。
   void togglePageOrientation() {
     setPageOrientation(
       _pageOrientation == CalendarPageOrientation.horizontal
@@ -52,18 +68,22 @@ class CalendarInteractiveController extends ChangeNotifier {
     );
   }
 
+  /// 展开日历。
   void expand() {
     _actions?.expand.call();
   }
 
+  /// 收起日历。
   void collapse() {
     _actions?.collapse.call();
   }
 
+  /// 收起日历，等同于 [collapse]。
   void shrink() {
     collapse();
   }
 
+  /// 切换全屏展开状态。
   void toggleFullScreen() {
     _actions?.toggleFullScreen.call();
   }
@@ -117,7 +137,9 @@ class _CalendarInteractiveActions {
   final VoidCallback collapse;
 }
 
+/// 日历与内容列表联动的交互视图。
 class CalendarInteractiveView extends StatefulWidget {
+  /// 创建日历交互视图。
   const CalendarInteractiveView({
     super.key,
     required this.controller,
@@ -134,17 +156,40 @@ class CalendarInteractiveView extends StatefulWidget {
     this.contentVerticalDragLocked = false,
   });
 
+  /// 日历状态控制器。
   final CalendarController controller;
+
+  /// 日期点击回调。
   final ValueChanged<DateTime> onDaySelected;
+
+  /// 聚焦日期变化回调。
   final ValueChanged<DateTime>? onFocusedDayChanged;
+
+  /// 内容区域构建器。
   final CalendarInteractiveContentBuilder contentBuilder;
+
+  /// 外部交互控制器。
   final CalendarInteractiveController? interactionController;
+
+  /// 分页方向覆盖值。
   final CalendarPageOrientation? pageOrientation;
+
+  /// 是否处于年视图模式。
   final bool yearMode;
+
+  /// 单行日期高度。
   final double calendarHeight;
+
+  /// 星期栏高度。
   final double weekBarHeight;
+
+  /// 月份头高度。
   final double monthHeaderHeight;
+
+  /// 自定义日历样式构建器。
   final CalendarComponentBuilder? componentBuilder;
+
+  /// 是否锁定内容区域分发给日历的纵向拖拽。
   final bool contentVerticalDragLocked;
 
   @override

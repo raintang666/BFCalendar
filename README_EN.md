@@ -2,16 +2,16 @@
 
 [中文](README.md) | English
 
-This document only covers the calendar library APIs under `lib/src/calendar/`. Pages and styles under `lib/src/features/` are demo implementations and are not part of the core library.
+This document only covers the calendar SDK APIs published to pub. Demo pages and concrete business styles stay in the repository demo and are not included in the published package.
 
 ## Screenshots
 
 |  |  |  |  |
 | --- | --- | --- | --- |
-| ![](screenshots/screenshot_01.png) | ![](screenshots/screenshot_02.png) | ![](screenshots/screenshot_03.png) | ![](screenshots/screenshot_04.png) |
-| ![](screenshots/screenshot_05.png) | ![](screenshots/screenshot_06.png) | ![](screenshots/screenshot_07.png) | ![](screenshots/screenshot_08.png) |
-| ![](screenshots/screenshot_09.png) | ![](screenshots/screenshot_10.png) | ![](screenshots/screenshot_11.png) | ![](screenshots/screenshot_12.png) |
-| ![](screenshots/screenshot_13.png) | ![](screenshots/screenshot_14.png) | ![](screenshots/screenshot_15.png) | ![](screenshots/screenshot_16.png) |
+| ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_01.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_02.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_03.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_04.png) |
+| ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_05.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_06.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_07.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_08.png) |
+| ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_09.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_10.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_11.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_12.png) |
+| ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_13.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_14.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_15.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_16.png) |
 
 ## Import
 
@@ -390,19 +390,3 @@ await showYearOverviewSheet(
   },
 );
 ```
-
-## Demo Style Locations
-
-Concrete styles live in `lib/src/features/**/_calendar_components.dart`, for example:
-
-| Style | File |
-| --- | --- |
-| Main demo / Meizu | `features/calendar_demo/demo_calendar_components.dart` |
-| iOS | `features/ios_calendar/ios_calendar_components.dart` |
-| Range selection | `features/range/range_calendar_components.dart` |
-| Multi-select | `features/multi_select/multi_select_calendar_components.dart` |
-| Colorful | `features/colorful/colorful_calendar_components.dart` |
-| Single-select | `features/single_select/single_select_calendar_components.dart` |
-| Progress | `features/progress/progress_calendar_components.dart` |
-| Index subscription | `features/index/index_calendar_components.dart` |
-| Solar system | `features/solar/solar_calendar_components.dart` |

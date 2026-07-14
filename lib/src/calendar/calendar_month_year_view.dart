@@ -6,22 +6,29 @@ import 'calendar_interactive_view.dart';
 import 'calendar_models.dart';
 import 'date_utils_ext.dart';
 
+/// 月/年视图控制器。
 class CalendarMonthYearController extends ChangeNotifier {
   _CalendarMonthYearActions? _actions;
   bool _isYearMode = false;
   int _visibleYear = DateTime.now().year;
 
+  /// 是否正在显示年视图。
   bool get isYearMode => _isYearMode;
+
+  /// 当前年视图可见年份。
   int get visibleYear => _visibleYear;
 
+  /// 显示年视图。
   void showYearMode() {
     _actions?.showYearMode();
   }
 
+  /// 隐藏年视图。
   void hideYearMode() {
     _actions?.hideYearMode();
   }
 
+  /// 设置是否显示年视图。
   void setYearMode(bool value) {
     if (value) {
       showYearMode();
@@ -30,6 +37,7 @@ class CalendarMonthYearController extends ChangeNotifier {
     hideYearMode();
   }
 
+  /// 切换年视图显示状态。
   void toggleYearMode() {
     setYearMode(!_isYearMode);
   }
@@ -58,8 +66,10 @@ class CalendarMonthYearController extends ChangeNotifier {
   }
 }
 
+/// 年视图样式配置。
 @immutable
 class CalendarYearModeStyle {
+  /// 创建年视图样式配置。
   const CalendarYearModeStyle({
     required this.backgroundColor,
     required this.primaryColor,
@@ -92,23 +102,55 @@ class CalendarYearModeStyle {
     ],
   });
 
+  /// 背景色。
   final Color backgroundColor;
+
+  /// 主色。
   final Color primaryColor;
+
+  /// 日期文本色。
   final Color dayColor;
+
+  /// 非当前月日期文本色。
   final Color outsideMonthDayColor;
+
+  /// 选中背景色。
   final Color selectedColor;
+
+  /// 选中文本色。
   final Color selectedTextColor;
+
+  /// 分割线颜色。
   final Color dividerColor;
+
+  /// 非激活边框色。
   final Color inactiveBorderColor;
+
+  /// 禁用月份背景色。
   final Color disabledMonthBackgroundColor;
+
+  /// 禁用月份边框色。
   final Color disabledMonthBorderColor;
+
+  /// 禁用月份标题色。
   final Color disabledMonthTextColor;
+
+  /// 禁用月份日期色。
   final Color disabledMonthDayColor;
+
+  /// 禁用月份外日期色。
   final Color disabledMonthOutsideDayColor;
+
+  /// 头部高度。
   final double headerHeight;
+
+  /// 月份卡片圆角。
   final double monthCardRadius;
+
+  /// 月份名称。
   final List<String> monthNames;
 
+  /// 深色年视图样式。
   static const dark = CalendarYearModeStyle(
     backgroundColor: Colors.black,
     primaryColor: Colors.white,
@@ -125,6 +167,7 @@ class CalendarYearModeStyle {
     disabledMonthOutsideDayColor: Color(0xFF2A2A2A),
   );
 
+  /// 竖向列表年视图样式。
   static const vertical = CalendarYearModeStyle(
     backgroundColor: Colors.white,
     primaryColor: Color(0xFFB66974),
@@ -142,7 +185,9 @@ class CalendarYearModeStyle {
   );
 }
 
+/// 为页面内容增加年视图覆盖层。
 class CalendarYearModeLayout extends StatefulWidget {
+  /// 创建年视图覆盖布局。
   const CalendarYearModeLayout({
     super.key,
     required this.controller,
@@ -154,12 +199,25 @@ class CalendarYearModeLayout extends StatefulWidget {
     this.style = CalendarYearModeStyle.vertical,
   });
 
+  /// 年视图控制器。
   final CalendarMonthYearController controller;
+
+  /// 当前选中日期。
   final DateTime selectedDate;
+
+  /// 月份选择回调。
   final ValueChanged<DateTime> onMonthSelected;
+
+  /// 被覆盖的页面内容。
   final Widget child;
+
+  /// 可选最小日期。
   final DateTime? minDate;
+
+  /// 可选最大日期。
   final DateTime? maxDate;
+
+  /// 年视图样式。
   final CalendarYearModeStyle style;
 
   @override
@@ -302,7 +360,9 @@ class _CalendarMonthYearActions {
   final VoidCallback hideYearMode;
 }
 
+/// 支持年视图切换的日历交互视图。
 class CalendarMonthYearView extends StatefulWidget {
+  /// 创建月/年日历视图。
   const CalendarMonthYearView({
     super.key,
     required this.controller,
@@ -320,18 +380,43 @@ class CalendarMonthYearView extends StatefulWidget {
     this.componentBuilder,
   });
 
+  /// 日历状态控制器。
   final CalendarController controller;
+
+  /// 日期点击回调。
   final ValueChanged<DateTime> onDaySelected;
+
+  /// 聚焦日期变化回调。
   final ValueChanged<DateTime>? onFocusedDayChanged;
+
+  /// 年视图显示状态变化回调。
   final ValueChanged<bool>? onYearModeChanged;
+
+  /// 年视图中选择月份的回调。
   final ValueChanged<DateTime>? onMonthSelected;
+
+  /// 内容区域构建器。
   final CalendarInteractiveContentBuilder contentBuilder;
+
+  /// 日历交互控制器。
   final CalendarInteractiveController? interactionController;
+
+  /// 月/年视图控制器。
   final CalendarMonthYearController? monthYearController;
+
+  /// 页面滑动方向。
   final CalendarPageOrientation? pageOrientation;
+
+  /// 单行日期高度。
   final double calendarHeight;
+
+  /// 星期栏高度。
   final double weekBarHeight;
+
+  /// 月份头高度。
   final double monthHeaderHeight;
+
+  /// 自定义日历样式构建器。
   final CalendarComponentBuilder? componentBuilder;
 
   @override

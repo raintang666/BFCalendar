@@ -2,16 +2,16 @@
 
 中文 | [English](README_EN.md)
 
-本文档只描述 `lib/src/calendar/` 日历库 API。`lib/src/features/` 下的页面和样式是 demo 实现，不属于核心库能力。
+本文档只描述发布到 pub 的日历 SDK API。示例页面和具体业务样式仅保留在仓库 demo 中，不属于发布包内容。
 
 ## 界面截图
 
 |  |  |  |  |
 | --- | --- | --- | --- |
-| ![](screenshots/screenshot_01.png) | ![](screenshots/screenshot_02.png) | ![](screenshots/screenshot_03.png) | ![](screenshots/screenshot_04.png) |
-| ![](screenshots/screenshot_05.png) | ![](screenshots/screenshot_06.png) | ![](screenshots/screenshot_07.png) | ![](screenshots/screenshot_08.png) |
-| ![](screenshots/screenshot_09.png) | ![](screenshots/screenshot_10.png) | ![](screenshots/screenshot_11.png) | ![](screenshots/screenshot_12.png) |
-| ![](screenshots/screenshot_13.png) | ![](screenshots/screenshot_14.png) | ![](screenshots/screenshot_15.png) | ![](screenshots/screenshot_16.png) |
+| ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_01.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_02.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_03.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_04.png) |
+| ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_05.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_06.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_07.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_08.png) |
+| ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_09.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_10.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_11.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_12.png) |
+| ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_13.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_14.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_15.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_16.png) |
 
 ## 导入
 
@@ -390,19 +390,3 @@ await showYearOverviewSheet(
   },
 );
 ```
-
-## Demo 样式位置
-
-具体样式都在 `lib/src/features/**/_calendar_components.dart`，例如：
-
-| 样式 | 文件 |
-| --- | --- |
-| 主 demo / 魅族 | `features/calendar_demo/demo_calendar_components.dart` |
-| iOS | `features/ios_calendar/ios_calendar_components.dart` |
-| 范围选择 | `features/range/range_calendar_components.dart` |
-| 多选 | `features/multi_select/multi_select_calendar_components.dart` |
-| 多彩 | `features/colorful/colorful_calendar_components.dart` |
-| 单选 | `features/single_select/single_select_calendar_components.dart` |
-| 进度条 | `features/progress/progress_calendar_components.dart` |
-| 下标订阅 | `features/index/index_calendar_components.dart` |
-| 星系 | `features/solar/solar_calendar_components.dart` |
