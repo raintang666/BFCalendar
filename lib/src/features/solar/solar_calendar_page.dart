@@ -4,6 +4,7 @@ import 'package:calendarview_flutter/calendarview_flutter.dart';
 
 import '../../calendar/date_utils_ext.dart';
 import '../../calendar/lunar_service.dart';
+import 'solar_calendar_components.dart';
 
 class SolarCalendarPage extends StatefulWidget {
   const SolarCalendarPage({super.key});

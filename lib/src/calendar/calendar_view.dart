@@ -109,7 +109,6 @@ class CalendarView extends StatefulWidget {
     required this.onDaySelected,
     required this.pageOrientation,
     this.componentBuilder,
-    this.componentStyle = CalendarComponentStyle.custom,
     this.onPageChanged,
     this.onDisplayedHeightChanged,
     this.collapsePreviewProgress,
@@ -129,7 +128,6 @@ class CalendarView extends StatefulWidget {
   final ValueChanged<DateTime> onDaySelected;
   final CalendarPageOrientation pageOrientation;
   final CalendarComponentBuilder? componentBuilder;
-  final CalendarComponentStyle componentStyle;
   final ValueChanged<DateTime>? onPageChanged;
   final ValueChanged<double>? onDisplayedHeightChanged;
   final double? collapsePreviewProgress;
@@ -156,7 +154,6 @@ class CalendarMonthListView extends StatefulWidget {
     required this.calendarHeight,
     required this.weekBarHeight,
     this.componentBuilder,
-    this.componentStyle = CalendarComponentStyle.custom,
     this.onFocusedMonthChanged,
   });
 
@@ -165,7 +162,6 @@ class CalendarMonthListView extends StatefulWidget {
   final double calendarHeight;
   final double weekBarHeight;
   final CalendarComponentBuilder? componentBuilder;
-  final CalendarComponentStyle componentStyle;
   final ValueChanged<DateTime>? onFocusedMonthChanged;
 
   @override
@@ -184,11 +180,7 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
     if (override != null) {
       return override;
     }
-    return switch (widget.componentStyle) {
-      CalendarComponentStyle.meizu => const MeizuCalendarComponentBuilder(),
-      CalendarComponentStyle.ios => const IOSCalendarComponentBuilder(),
-      CalendarComponentStyle.custom => const CustomCalendarComponentBuilder(),
-    };
+    return const DefaultCalendarComponentBuilder();
   }
 
   @override
@@ -256,9 +248,7 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
 
   Widget _buildInlineMonthLabel(DateTime month) {
     final firstDayColumn = _firstDayColumnForMonth(month);
-    final textColor = widget.componentStyle == CalendarComponentStyle.meizu
-        ? const Color(0xFF222222)
-        : const Color(0xFF333333);
+    const textColor = Color(0xFF333333);
     final resolvedPadding = _resolvedComponentBuilder.contentPadding.resolve(
       Directionality.of(context),
     );
@@ -372,13 +362,6 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
 class _CalendarViewState extends State<CalendarView> {
   static const int _verticalInitialPage = 10000;
 
-  static const CalendarComponentBuilder _customComponentBuilder =
-      CustomCalendarComponentBuilder();
-  static const CalendarComponentBuilder _meizuComponentBuilder =
-      MeizuCalendarComponentBuilder();
-  static const CalendarComponentBuilder _iosComponentBuilder =
-      IOSCalendarComponentBuilder();
-
   late PageController _pageController;
   late final PageController _verticalPageController;
   double _pageOffset = 0;
@@ -397,11 +380,7 @@ class _CalendarViewState extends State<CalendarView> {
     if (override != null) {
       return override;
     }
-    return switch (widget.componentStyle) {
-      CalendarComponentStyle.meizu => _meizuComponentBuilder,
-      CalendarComponentStyle.ios => _iosComponentBuilder,
-      CalendarComponentStyle.custom => _customComponentBuilder,
-    };
+    return const DefaultCalendarComponentBuilder();
   }
 
   @override

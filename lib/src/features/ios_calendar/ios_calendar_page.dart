@@ -5,6 +5,7 @@ import 'package:lunar/calendar/Lunar.dart';
 import 'package:calendarview_flutter/calendarview_flutter.dart';
 
 import '../../calendar/date_utils_ext.dart';
+import 'ios_calendar_components.dart';
 
 class IOSCalendarPage extends StatefulWidget {
   const IOSCalendarPage({super.key});

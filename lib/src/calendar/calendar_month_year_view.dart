@@ -318,7 +318,6 @@ class CalendarMonthYearView extends StatefulWidget {
     this.weekBarHeight = 46,
     this.monthHeaderHeight = 60,
     this.componentBuilder,
-    this.componentStyle = CalendarComponentStyle.custom,
   });
 
   final CalendarController controller;
@@ -334,7 +333,6 @@ class CalendarMonthYearView extends StatefulWidget {
   final double weekBarHeight;
   final double monthHeaderHeight;
   final CalendarComponentBuilder? componentBuilder;
-  final CalendarComponentStyle componentStyle;
 
   @override
   State<CalendarMonthYearView> createState() => _CalendarMonthYearViewState();
@@ -464,7 +462,6 @@ class _CalendarMonthYearViewState extends State<CalendarMonthYearView>
           weekBarHeight: widget.weekBarHeight,
           monthHeaderHeight: widget.monthHeaderHeight,
           componentBuilder: widget.componentBuilder,
-          componentStyle: widget.componentStyle,
         ),
         if (_yearOverlayVisible)
           IgnorePointer(

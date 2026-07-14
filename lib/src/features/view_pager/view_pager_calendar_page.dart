@@ -4,6 +4,7 @@ import 'package:calendarview_flutter/calendarview_flutter.dart';
 
 import '../../calendar/date_utils_ext.dart';
 import '../../calendar/lunar_service.dart';
+import '../calendar_demo/demo_calendar_components.dart';
 
 class ViewPagerCalendarPage extends StatefulWidget {
   const ViewPagerCalendarPage({super.key});

@@ -43,10 +43,10 @@ class CalendarDateUtils {
       MonthViewShowMode.allMonth => 42,
       MonthViewShowMode.onlyCurrentMonth || MonthViewShowMode.fitMonth =>
         visibleMonthRowCount(
-          month,
-          firstWeekday: firstWeekday,
-          monthViewShowMode: monthViewShowMode,
-        ) *
+              month,
+              firstWeekday: firstWeekday,
+              monthViewShowMode: monthViewShowMode,
+            ) *
             7,
     };
     return List<DateTime>.generate(
@@ -127,10 +127,7 @@ class CalendarDateUtils {
     int firstWeekday = DateTime.sunday,
   }) {
     final normalized = stripTime(day);
-    final preDiff = monthViewStartDiff(
-      normalized,
-      firstWeekday: firstWeekday,
-    );
+    final preDiff = monthViewStartDiff(normalized, firstWeekday: firstWeekday);
     return ((normalized.day + preDiff - 1) ~/ 7);
   }
 

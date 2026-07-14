@@ -131,7 +131,6 @@ class CalendarInteractiveView extends StatefulWidget {
     this.weekBarHeight = 46,
     this.monthHeaderHeight = 60,
     this.componentBuilder,
-    this.componentStyle = CalendarComponentStyle.custom,
     this.contentVerticalDragLocked = false,
   });
 
@@ -146,7 +145,6 @@ class CalendarInteractiveView extends StatefulWidget {
   final double weekBarHeight;
   final double monthHeaderHeight;
   final CalendarComponentBuilder? componentBuilder;
-  final CalendarComponentStyle componentStyle;
   final bool contentVerticalDragLocked;
 
   @override
@@ -481,7 +479,6 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
                 calendarHeight: widget.calendarHeight,
                 weekBarHeight: widget.weekBarHeight,
                 componentBuilder: widget.componentBuilder,
-                componentStyle: widget.componentStyle,
                 onFocusedMonthChanged: widget.onFocusedDayChanged,
               );
             }
@@ -579,7 +576,6 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
                                 controller: widget.controller,
                                 onDaySelected: widget.onDaySelected,
                                 componentBuilder: widget.componentBuilder,
-                                componentStyle: widget.componentStyle,
                                 onPageChanged: (_) {
                                   widget.onFocusedDayChanged?.call(
                                     widget.controller.focusedDay,

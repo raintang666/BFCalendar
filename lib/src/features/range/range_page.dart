@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../calendar/calendar_components.dart';
 import '../../calendar/calendar_controller.dart';
 import '../../calendar/calendar_models.dart';
 import '../../calendar/calendar_view.dart';
 import '../../calendar/date_utils_ext.dart';
+import 'range_calendar_components.dart';
 
 class RangePage extends StatefulWidget {
   const RangePage({super.key});

@@ -18,6 +18,7 @@ import '../simple/simple_calendar_page.dart';
 import '../solar/solar_calendar_page.dart';
 import '../vertical_list/vertical_list_calendar_page.dart';
 import '../view_pager/view_pager_calendar_page.dart';
+import 'demo_calendar_components.dart';
 import 'demo_entries.dart';
 
 class CalendarDemoPage extends StatefulWidget {
@@ -33,7 +34,7 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
       CalendarInteractiveController();
   final CalendarMonthYearController _monthYearController =
       CalendarMonthYearController();
-  CalendarComponentStyle _componentStyle = CalendarComponentStyle.custom;
+  bool _useMeizuStyle = false;
   static const double _calendarRowHeight = 62;
   static const double _weekBarHeight = 46;
   static const double _monthHeaderHeight = 0;
@@ -125,11 +126,9 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
                   controller: _controller,
                   interactionController: _interactiveController,
                   monthYearController: _monthYearController,
-                  componentBuilder:
-                      _componentStyle == CalendarComponentStyle.meizu
+                  componentBuilder: _useMeizuStyle
                       ? const MeizuCalendarComponentBuilder()
                       : const CustomCalendarComponentBuilder(),
-                  componentStyle: _componentStyle,
                   onFocusedDayChanged: (_) {
                     _rebuildMarkersForFocusedMonth();
                   },
@@ -310,14 +309,8 @@ class _CalendarDemoPageState extends State<CalendarDemoPage> {
           );
           break;
         case 4:
-          _componentStyle = _componentStyle == CalendarComponentStyle.custom
-              ? CalendarComponentStyle.meizu
-              : CalendarComponentStyle.custom;
-          _showMessage(
-            _componentStyle == CalendarComponentStyle.meizu
-                ? '已切换为魅族周月视图'
-                : '已切换为自定义周月视图',
-          );
+          _useMeizuStyle = !_useMeizuStyle;
+          _showMessage(_useMeizuStyle ? '已切换为魅族周月视图' : '已切换为自定义周月视图');
           break;
         case 5:
           _controller.setMonthViewShowMode(MonthViewShowMode.allMonth);

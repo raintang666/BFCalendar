@@ -8,8 +8,6 @@ enum CalendarPageOrientation { horizontal, vertical }
 
 enum MonthViewShowMode { allMonth, onlyCurrentMonth, fitMonth }
 
-enum CalendarComponentStyle { custom, meizu, ios }
-
 enum CalendarRangeLimitViolation { belowMinRange, aboveMaxRange }
 
 typedef CalendarRangeSelectedCallback = void Function(DateRangeValue range);
