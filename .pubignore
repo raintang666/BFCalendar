@@ -1,8 +1,10 @@
 .DS_Store
+.github/
 .dart_tool/
 .idea/
 .claude/
 build/
+release/
 *.iml
 .flutter-plugins-dependencies
 .metadata

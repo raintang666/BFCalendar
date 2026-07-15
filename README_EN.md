@@ -4,10 +4,13 @@
 
 This document only covers the calendar SDK APIs published to pub. Demo pages and concrete business styles stay in the repository demo and are not included in the published package.
 
+[![Download Demo APK](https://img.shields.io/badge/Download-Demo%20APK-2ea44f?logo=android&logoColor=white)](https://github.com/raintang666/BFCalendar/releases/latest/download/calendarview_flutter_demo.apk)
+
 ## Support
 
 If this package helps you, you can support the author with a coffee.
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-ffdd00?logo=buymeacoffee&logoColor=000000)](https://www.buymeacoffee.com/raintang666)
 
 | Alipay | WeChat Pay |
 | --- | --- |
