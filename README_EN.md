@@ -35,6 +35,8 @@ import 'package:calendarview_flutter/calendarview_flutter.dart';
 
 ## Minimal Usage
 
+Run the [minimal example](example/main.dart) with `flutter run -t example/main.dart` to swipe between months and select a date.
+
 ```dart
 final controller = CalendarController(focusedDay: DateTime.now());
 

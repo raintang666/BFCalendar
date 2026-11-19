@@ -35,6 +35,8 @@ import 'package:calendarview_flutter/calendarview_flutter.dart';
 
 ## 最小使用
 
+可以用 `flutter run -t example/main.dart` 运行[最小示例](example/main.dart)，体验滑动切换月份和点击选择日期。
+
 ```dart
 final controller = CalendarController(focusedDay: DateTime.now());
 

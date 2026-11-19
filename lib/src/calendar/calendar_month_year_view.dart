@@ -1,3 +1,5 @@
+// Keep the year view compatible with apps using Flutter's built-in Material library.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 
 import 'calendar_components.dart';
@@ -8,6 +10,9 @@ import 'date_utils_ext.dart';
 
 /// 月/年视图控制器。
 class CalendarMonthYearController extends ChangeNotifier {
+  /// Creates a controller with the month view active.
+  CalendarMonthYearController();
+
   _CalendarMonthYearActions? _actions;
   bool _isYearMode = false;
   int _visibleYear = DateTime.now().year;

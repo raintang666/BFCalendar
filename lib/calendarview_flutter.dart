@@ -1,3 +1,6 @@
+/// Customizable month, week, and year calendars for Flutter.
+library;
+
 export 'src/calendar/calendar_components.dart';
 export 'src/calendar/calendar_controller.dart';
 export 'src/calendar/calendar_interactive_view.dart';

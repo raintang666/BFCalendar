@@ -1,5 +1,9 @@
-import 'package:flutter/material.dart';
+// Preserve the calendar's date announcements in apps using Flutter's built-in Material library.
+// ignore: deprecated_member_use
+import 'package:flutter/material.dart'
+    show DefaultMaterialLocalizations, MaterialLocalizations;
 import 'package:flutter/semantics.dart';
+import 'package:flutter/widgets.dart';
 
 import 'calendar_components.dart';
 

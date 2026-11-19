@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import 'calendar_canvas_labels.dart';
 import 'calendar_models.dart';
@@ -121,7 +121,7 @@ abstract class CalendarComponentBuilder {
       const EdgeInsets.symmetric(horizontal: kCalendarHorizontalPadding);
 
   /// 星期栏背景色。
-  Color get weekBarBackgroundColor => Colors.transparent;
+  Color get weekBarBackgroundColor => const Color(0x00000000);
 
   /// 按照周起始日返回星期文本。
   List<String> orderedWeekLabels(int firstWeekday);
@@ -261,7 +261,7 @@ class _DefaultCalendarDayPainter extends CustomPainter {
     final textColor = data.isDisabled || !data.isCurrentMonth
         ? const Color(0xFFE1E1E1)
         : data.isSelected
-        ? Colors.white
+        ? const Color(0xFFFFFFFF)
         : data.isToday
         ? const Color(0xFFFF0000)
         : const Color(0xFF333333);

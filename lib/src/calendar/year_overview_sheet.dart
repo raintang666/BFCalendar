@@ -1,3 +1,5 @@
+// Preserve the bottom sheet's theme and navigation in apps using Flutter's built-in Material library.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 
 import 'date_utils_ext.dart';

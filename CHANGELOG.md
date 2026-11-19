@@ -1,3 +1,9 @@
+## 0.2.1
+
+- Add a runnable example that demonstrates month paging and date selection.
+- Support Cupertino Icons 2.x alongside 1.x and retain compatibility with the existing Flutter SDK range for Material-dependent calendar widgets.
+- Document the library and the default month/year controller constructor.
+
 ## 0.2.0
 
 - Render month headers, weekday labels, and compatible day cells on Canvas in month and week views. Custom widget cells keep their layout, interaction, and accessibility support.

@@ -1,6 +1,6 @@
 import 'dart:collection';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 /// 日历选择模式。
 enum CalendarSelectionMode { single, range, multi }

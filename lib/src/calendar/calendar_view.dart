@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import 'calendar_canvas_grid.dart';
 import 'calendar_canvas_labels.dart';
