@@ -10,8 +10,11 @@ release/
 .metadata
 android/
 ios/
-assets/
-screenshots/
+benchmark/
+screenshots/*
+!screenshots/holiday_spring_festival.gif
+!screenshots/holiday_new_years_eve.gif
+!screenshots/holiday_christmas.gif
 test/
 tool/
 lib/main.dart

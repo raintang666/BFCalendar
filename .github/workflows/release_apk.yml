@@ -58,8 +58,13 @@ jobs:
             exit 1
           fi
 
-          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release upload "$TAG_NAME" release/calendarview_flutter_demo.apk --clobber
+          if HAS_APK=$(gh release view "$TAG_NAME" --json assets \
+            --jq 'any(.assets[]; .name == "calendarview_flutter_demo.apk")' 2>/dev/null); then
+            if [[ "$HAS_APK" == true ]]; then
+              echo "Release $TAG_NAME already has an APK. Keeping the existing asset."
+              exit 0
+            fi
+            gh release upload "$TAG_NAME" release/calendarview_flutter_demo.apk
           else
             gh release create "$TAG_NAME" release/calendarview_flutter_demo.apk \
               --title "$TAG_NAME" \

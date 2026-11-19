@@ -16,6 +16,10 @@ If this package helps you, you can support the author with a coffee.
 
 ## Screenshots
 
+| Spring Festival | New Year's Eve | Christmas |
+| --- | --- | --- |
+| ![Spring Festival lanterns](https://raw.githubusercontent.com/raintang666/BFCalendar/v0.2.0/screenshots/holiday_spring_festival.gif) | ![New Year's Eve fireworks](https://raw.githubusercontent.com/raintang666/BFCalendar/v0.2.0/screenshots/holiday_new_years_eve.gif) | ![Christmas snowfall](https://raw.githubusercontent.com/raintang666/BFCalendar/v0.2.0/screenshots/holiday_christmas.gif) |
+
 |  |  |  |  |
 | --- | --- | --- | --- |
 | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_01.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_02.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_03.png) | ![](https://raw.githubusercontent.com/raintang666/BFCalendar/main/screenshots/screenshot_04.png) |

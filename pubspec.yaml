@@ -1,6 +1,6 @@
 name: calendarview_flutter
 description: A customizable Flutter calendar view with single selection, range selection, multi-selection, year view, and pluggable calendar cell builders.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/raintang666/BFCalendar
 repository: https://github.com/raintang666/BFCalendar
 issue_tracker: https://github.com/raintang666/BFCalendar/issues
@@ -9,6 +9,13 @@ topics:
   - flutter
   - date-picker
   - calendar-view
+screenshots:
+  - description: Spring Festival lanterns in the Holiday Lights calendar demo.
+    path: screenshots/holiday_spring_festival.gif
+  - description: New Year's Eve fireworks in the Holiday Lights calendar demo.
+    path: screenshots/holiday_new_years_eve.gif
+  - description: Christmas snowfall in the Holiday Lights calendar demo.
+    path: screenshots/holiday_christmas.gif
 
 environment:
   sdk: ^3.9.2
