@@ -369,6 +369,12 @@ class MyCalendarBuilder extends CalendarComponentBuilder {
 | `calendarOrderedWeekLabels(labels, firstWeekday)` | 根据周起始重排星期文本 |
 | `kCalendarHorizontalPadding` | 默认水平边距 |
 
+## Canvas 日历绘制
+
+内置月视图和周视图的月份标题、星期栏和日期网格都使用 Canvas。日期网格按原绘制顺序合并相邻的纯 `CustomPaint` 单元格，并缓存日期数据和画笔。带子组件、前景画笔、自定义语义或 Key 的日期格，以及返回其他 Widget 的日期格，保留原位布局和交互，周围的日期格继续合并绘制。
+
+仍可通过 `CalendarComponentBuilder` 的原有方法自定义日期格、月份标题和星期栏。测试可通过 `find.semantics.byLabel` 查询 Canvas 绘制的月份、星期和日期，也可以按网格坐标点击日期。
+
 ## 数据模型与回调
 
 | API | 说明 |
@@ -379,7 +385,8 @@ class MyCalendarBuilder extends CalendarComponentBuilder {
 | `MonthViewShowMode.allMonth/onlyCurrentMonth/fitMonth` | 月视图显示模式 |
 | `CalendarRangeLimitViolation.belowMinRange/aboveMaxRange` | 范围选择限制类型 |
 | `CalendarBounds(min, max)` | 日期边界 |
-| `CalendarMarker(label, color)` | 日期标记 |
+| `CalendarMarker(label, color, data)` | 日期标记，`data` 为可选的业务对象 |
+| `CalendarMarkerIndex(markersByDate)` | 已按日期建立索引的标记，只读且无需复制 |
 | `LunarMetadata(lunarText, solarTerm)` | 农历/节气文本 |
 | `DateRangeValue(start, end)` | 范围选择值 |
 | `CalendarSelectionState(single, range, multi)` | 完整选择状态 |
@@ -388,6 +395,70 @@ class MyCalendarBuilder extends CalendarComponentBuilder {
 | `CalendarRangeLimitViolationCallback` | 范围选择限制回调 |
 | `CalendarMultiSelectedCallback` | 多选回调 |
 | `CalendarMultiSelectOutOfSizeCallback` | 多选超限回调 |
+
+### 日期标记与大数据量
+
+`CalendarMarker.data` 的类型是 `Object?`，默认值为 `null`。自定义日期格可以从 `CalendarDayCellData.markers` 读取原业务对象。已有构造和继承用法继续有效。如果直接 `implements CalendarMarker`，请实现 `Object? get data`，默认可以返回 `null`。
+
+```dart
+final controller = CalendarController();
+final day = DateTime(2026, 11, 19);
+final meeting = (id: 'meeting-42', title: '项目会议');
+final markersByDate = <DateTime, List<CalendarMarker>>{
+  day: [
+    CalendarMarker(label: meeting.title, color: Colors.blue, data: meeting),
+    const CalendarMarker(label: '待办', color: Colors.orange),
+  ],
+};
+```
+
+1. **大数据快速设置（推荐）**。大数据集优先使用 `CalendarMarkerIndex`，日期键使用 `DateTime(year, month, day)`。日历借用原 Map 和列表的只读视图，提交时无需遍历日期键，渲染时按可见日期查找。提交后保持原 Map 和列表内容稳定。
+
+   ```dart
+   controller.setMarkers(CalendarMarkerIndex(markersByDate));
+   ```
+
+2. **普通设置**。适合标记较少或需要自动归一化日期键的场景。直接传 Map，控制器会同步归一化日期键并建立独立的日期映射。在原生平台，已归一化的大 Map 可走批量复制路径。
+
+   ```dart
+   controller.setMarkers(markersByDate);
+   ```
+
+3. **创建控制器时传入**。`markers` 参数接受普通 Map 和 `CalendarMarkerIndex`。
+
+   ```dart
+   final preloadedController = CalendarController(
+     markers: CalendarMarkerIndex(markersByDate),
+   );
+   ```
+
+4. **读取业务对象**。自定义日期格可以从 `CalendarDayCellData` 读取标记。点击日期后，可以用回调提供的日期查询当天的标记列表。
+
+   ```dart
+   // 在 buildDayCell 中，cell 是 CalendarDayCellData。
+   final payload = cell.primaryMarker?.data;
+
+   // 在 onDaySelected 中，用选中的日期查询标记。
+   final dayMarkers = controller.markers[day] ?? const <CalendarMarker>[];
+   ```
+
+5. **更新或清空**。`setMarkers` 每次替换整份标记。使用快速路径更新时，将变更后的列表放入新的 Map，再传入新索引。
+
+   ```dart
+   final nextMarkersByDate = <DateTime, List<CalendarMarker>>{
+     ...markersByDate,
+     day: [const CalendarMarker(label: '已完成', color: Colors.green)],
+   };
+   controller.setMarkers(CalendarMarkerIndex(nextMarkersByDate));
+   ```
+
+   清空全部日期标记。
+
+   ```dart
+   controller.setMarkers({});
+   ```
+
+Canvas 无障碍描述最多读取前 8 条标记并附上剩余数量。自定义构建器可以访问完整列表，普通 Map 提供只读快照，`CalendarMarkerIndex` 提供只读视图。
 
 ## 年概览弹层
 

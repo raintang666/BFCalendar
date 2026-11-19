@@ -1,8 +1,64 @@
+import 'dart:ui' show Tristate;
+
 import 'package:calendarview_flutter/calendarview_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('swiping to another month follows the selected day of month', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final controller = CalendarController(
+      focusedDay: DateTime(2024, 6, 12),
+      minDate: DateTime(2024, 6, 1),
+      maxDate: DateTime(2024, 8, 31),
+    )..setInterceptBlocked(false);
+    final tappedDays = <DateTime>[];
+    final pageChanges = <DateTime>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CalendarView(
+            controller: controller,
+            pageOrientation: CalendarPageOrientation.horizontal,
+            handleDaySelection: true,
+            onDaySelected: tappedDays.add,
+            onPageChanged: pageChanges.add,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final localizations = MaterialLocalizations.of(
+      tester.element(find.byType(CalendarView)),
+    );
+    final originalDay = DateTime(2024, 6, 18);
+    tester.semantics.tap(
+      find.semantics.byLabel(localizations.formatFullDate(originalDay)),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.selection.single, originalDay);
+
+    await tester.drag(find.byType(PageView).first, const Offset(-240, 0));
+    await tester.pumpAndSettle();
+
+    final nextDay = DateTime(2024, 7, 18);
+    expect(controller.selection.single, nextDay);
+    expect(controller.focusedDay, nextDay);
+    expect(tappedDays, [originalDay]);
+    expect(pageChanges, [nextDay]);
+    final selectedCell = find.semantics
+        .byLabel(localizations.formatFullDate(nextDay))
+        .evaluate()
+        .single;
+    expect(selectedCell.flagsCollection.isSelected, Tristate.isTrue);
+  });
+
   testWidgets('year mode clamps pages and disables months outside range', (
     tester,
   ) async {
@@ -94,7 +150,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('8月'), findsOneWidget);
+      expect(find.semantics.byLabel('8月'), findsOne);
 
       await tester.drag(find.byType(PageView).first, const Offset(240, 0));
       await tester.pump();
@@ -106,7 +162,7 @@ void main() {
         isNot(contains(8)),
       );
       expect(controller.focusedDay.month, 7);
-      expect(find.text('7月'), findsOneWidget);
+      expect(find.semantics.byLabel('7月'), findsOne);
     },
   );
 
@@ -135,14 +191,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('4月'), findsOneWidget);
+    expect(find.semantics.byLabel('4月'), findsOne);
 
     await tester.drag(find.byType(PageView).first, const Offset(-240, 0));
     await tester.pump();
     await tester.pumpAndSettle();
 
     expect(controller.focusedDay, DateTime(2019, 4, 28));
-    expect(find.text('4月'), findsOneWidget);
+    expect(find.semantics.byLabel('4月'), findsOne);
   });
 
   testWidgets(
@@ -170,21 +226,21 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('3月'), findsOneWidget);
+      expect(find.semantics.byLabel('3月'), findsOne);
 
       await tester.drag(find.byType(PageView).first, const Offset(-240, 0));
       await tester.pump();
       await tester.pumpAndSettle();
 
       expect(controller.focusedDay.month, 4);
-      expect(find.text('4月'), findsOneWidget);
+      expect(find.semantics.byLabel('4月'), findsOne);
 
       await tester.drag(find.byType(PageView).first, const Offset(240, 0));
       await tester.pump();
       await tester.pumpAndSettle();
 
       expect(controller.focusedDay.month, 3);
-      expect(find.text('3月'), findsOneWidget);
+      expect(find.semantics.byLabel('3月'), findsOne);
     },
   );
 
@@ -217,7 +273,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('4月'), findsOneWidget);
+      expect(find.semantics.byLabel('4月'), findsOne);
 
       await tester.drag(find.byType(PageView).first, const Offset(240, 0));
       await tester.pump();
@@ -251,7 +307,7 @@ void main() {
         12,
         reason: 'focusedHistory=$focusedHistory',
       );
-      expect(find.text('12月'), findsOneWidget);
+      expect(find.semantics.byLabel('12月'), findsOne);
     },
   );
 }

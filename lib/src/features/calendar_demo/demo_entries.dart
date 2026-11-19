@@ -1,18 +1,30 @@
+import 'package:flutter/widgets.dart';
+
+import '../holiday/holiday_demo_icon.dart';
+
 class DemoEntry {
   const DemoEntry({
     required this.title,
     required this.desc,
-    required this.iconAsset,
+    this.iconAsset = '',
+    this.icon,
     required this.indexType,
   });
 
   final String title;
   final String desc;
   final String iconAsset;
+  final Widget? icon;
   final int indexType;
 }
 
 const demoEntries = <DemoEntry>[
+  DemoEntry(
+    title: '节日光影',
+    desc: '飘雪烟花 · 春雨新芽 · 万物初醒',
+    icon: HolidayDemoIcon(),
+    indexType: 20,
+  ),
   DemoEntry(
     title: 'iOS日历',
     desc: 'iOS系统垂直日历',

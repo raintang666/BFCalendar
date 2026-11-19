@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../calendar/calendar_canvas_labels.dart';
 import '../../calendar/calendar_components.dart';
+import '../../calendar/calendar_text_layout.dart';
 
 class RangeCalendarComponentBuilder extends CalendarComponentBuilder {
   const RangeCalendarComponentBuilder();
@@ -31,7 +33,7 @@ class RangeCalendarComponentBuilder extends CalendarComponentBuilder {
   @override
   Widget buildWeekBarCell(BuildContext context, CalendarWeekBarCellData data) {
     final isWeekend = data.index == 0 || data.index == 6;
-    return Text(
+    return CalendarCanvasLabel(
       data.label,
       style: TextStyle(
         color: isWeekend ? const Color(0xFF9F9F9F) : const Color(0xFF666666),
@@ -176,7 +178,7 @@ class _RangeCellPainter extends CustomPainter {
       textColor = const Color(0xFF4F4F4F);
     }
 
-    final textPainter = TextPainter(
+    final textPainter = CalendarTextLayout.layout(
       text: TextSpan(
         text: dayText,
         style: TextStyle(
@@ -186,7 +188,7 @@ class _RangeCellPainter extends CustomPainter {
         ),
       ),
       textDirection: TextDirection.ltr,
-    )..layout();
+    );
 
     textPainter.paint(
       canvas,

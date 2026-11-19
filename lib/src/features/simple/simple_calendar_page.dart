@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import 'package:calendarview_flutter/calendarview_flutter.dart';
 
+import '../../calendar/calendar_canvas_labels.dart';
+import '../../calendar/calendar_text_layout.dart';
 import '../../calendar/date_utils_ext.dart';
 
 class SimpleCalendarPage extends StatefulWidget {
@@ -153,7 +155,7 @@ class _SimpleCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildWeekBarCell(BuildContext context, CalendarWeekBarCellData data) {
-    return Text(
+    return CalendarCanvasLabel(
       data.label,
       style: const TextStyle(
         color: Color(0xFF19181E),
@@ -165,31 +167,45 @@ class _SimpleCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildDayCell(BuildContext context, CalendarDayCellData data) {
+    return CustomPaint(
+      painter: _SimpleDayPainter(data, CalendarCanvasText.of(context)),
+    );
+  }
+}
+
+class _SimpleDayPainter extends CustomPainter {
+  const _SimpleDayPainter(this.data, this.text);
+
+  final CalendarDayCellData data;
+  final CalendarCanvasText text;
+
+  @override
+  void paint(Canvas canvas, Size size) {
     final textColor = data.isSelected
         ? Colors.white
         : data.isCurrentMonth
         ? const Color(0xFF333333)
         : const Color(0xFFE1E1E1);
-    return Center(
-      child: Container(
-        width: 44,
-        height: 44,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: data.isSelected ? const Color(0xFF8168E2) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          '${data.date.day}',
-          style: TextStyle(
-            color: textColor,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
+    final bounds = Rect.fromCenter(
+      center: size.center(Offset.zero),
+      width: size.width.clamp(0.0, 44.0),
+      height: size.height.clamp(0.0, 44.0),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bounds, const Radius.circular(16)),
+      Paint()..color = data.isSelected ? const Color(0xFF8168E2) : Colors.white,
+    );
+    text.paint(
+      canvas,
+      '${data.date.day}',
+      TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600),
+      bounds,
     );
   }
+
+  @override
+  bool shouldRepaint(covariant _SimpleDayPainter oldDelegate) =>
+      oldDelegate.data != data || oldDelegate.text != text;
 }
 
 class _SimpleGreeting extends StatelessWidget {

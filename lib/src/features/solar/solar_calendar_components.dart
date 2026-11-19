@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../calendar/calendar_canvas_labels.dart';
 import '../../calendar/calendar_components.dart';
+import '../../calendar/calendar_text_layout.dart';
 import '../../calendar/calendar_models.dart';
 
 class SolarCalendarComponentBuilder extends CalendarComponentBuilder {
@@ -36,7 +38,7 @@ class SolarCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildWeekBarCell(BuildContext context, CalendarWeekBarCellData data) {
-    return Text(
+    return CalendarCanvasLabel(
       data.label,
       style: const TextStyle(
         color: Colors.white,
@@ -101,7 +103,7 @@ class _SolarCellPainter extends CustomPainter {
     }
 
     final textColor = isSelected ? _backgroundColor : Colors.white;
-    final textPainter = TextPainter(
+    final textPainter = CalendarTextLayout.layout(
       text: TextSpan(
         text: dayText,
         style: TextStyle(
@@ -112,7 +114,7 @@ class _SolarCellPainter extends CustomPainter {
         ),
       ),
       textDirection: TextDirection.ltr,
-    )..layout();
+    );
     textPainter.paint(
       canvas,
       Offset(

@@ -30,7 +30,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('2月'), findsOneWidget);
+      expect(find.semantics.byLabel('2月'), findsOne);
 
       interactiveController.toggleFullScreen();
       await tester.pumpAndSettle();
@@ -272,11 +272,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controller.focusedDay, DateTime(2026, 2, 28));
+      expect(controller.selection.single, DateTime(2026, 2, 28));
     },
   );
 
   testWidgets(
-    'vertical month paging clamps selected day to last day of target month',
+    'vertical month paging clamps and restores the selected day of month',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -286,6 +287,7 @@ void main() {
         minDate: DateTime(2026, 1, 1),
         maxDate: DateTime(2026, 12, 31),
       )..setMonthViewShowMode(MonthViewShowMode.onlyCurrentMonth);
+      controller.selectDay(DateTime(2026, 1, 31));
       final interactiveController = CalendarInteractiveController(
         pageOrientation: CalendarPageOrientation.vertical,
       );
@@ -304,14 +306,18 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.fling(
-        find.byKey(const ValueKey('calendar-vertical-pager')),
-        const Offset(0, -500),
-        900,
-      );
+      final pager = find.byKey(const ValueKey('calendar-vertical-pager'));
+      await tester.fling(pager, const Offset(0, -500), 900);
       await tester.pumpAndSettle();
 
       expect(controller.focusedDay, DateTime(2026, 2, 28));
+      expect(controller.selection.single, DateTime(2026, 2, 28));
+
+      await tester.drag(pager, Offset(0, -tester.getSize(pager).height * .8));
+      await tester.pumpAndSettle();
+
+      expect(controller.focusedDay, DateTime(2026, 3, 31));
+      expect(controller.selection.single, DateTime(2026, 3, 31));
     },
   );
 

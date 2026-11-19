@@ -28,3 +28,12 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icons/
+    - assets/fonts/holiday_calendar/OFL-HostGrotesk.txt
+    - assets/fonts/holiday_calendar/OFL-Geist.txt
+  fonts:
+    - family: HolidayHostGrotesk
+      fonts:
+        - asset: assets/fonts/holiday_calendar/HostGrotesk-Variable.ttf
+    - family: HolidayGeistMono
+      fonts:
+        - asset: assets/fonts/holiday_calendar/GeistMono-Variable.ttf

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:calendarview_flutter/calendarview_flutter.dart';
 
+import '../../calendar/calendar_canvas_labels.dart';
+import '../../calendar/calendar_text_layout.dart';
 import '../../calendar/date_utils_ext.dart';
 import '../../calendar/lunar_service.dart';
 
@@ -265,23 +267,19 @@ class _ChinaCalendarComponentBuilder extends CalendarComponentBuilder {
   Widget buildMonthHeader(BuildContext context, DateTime month, double height) {
     return SizedBox(
       height: height,
-      child: Stack(
-        children: [
-          Align(
+      child: CalendarCanvasLabels(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        bottomDivider: const Color(0xFFE5E5E5),
+        labels: [
+          CalendarCanvasLabel(
+            '${month.month}月',
             alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: Text(
-                '${month.month}月',
-                style: const TextStyle(
-                  color: Color(0xFF333333),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            style: const TextStyle(
+              color: Color(0xFF333333),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const Positioned(left: 10, right: 10, bottom: 2, child: _Hairline()),
         ],
       ),
     );
@@ -289,7 +287,7 @@ class _ChinaCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildWeekBarCell(BuildContext context, CalendarWeekBarCellData data) {
-    return Text(
+    return CalendarCanvasLabel(
       data.label,
       style: const TextStyle(color: Color(0xFFE1E1E1), fontSize: 12),
     );
@@ -297,7 +295,9 @@ class _ChinaCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildDayCell(BuildContext context, CalendarDayCellData data) {
-    return _ChinaDayCell(data: data);
+    return CustomPaint(
+      painter: _ChinaDayPainter(data, CalendarCanvasText.of(context)),
+    );
   }
 
   static String lunarTextFor(DateTime day) {
@@ -305,13 +305,14 @@ class _ChinaCalendarComponentBuilder extends CalendarComponentBuilder {
   }
 }
 
-class _ChinaDayCell extends StatelessWidget {
-  const _ChinaDayCell({required this.data});
+class _ChinaDayPainter extends CustomPainter {
+  const _ChinaDayPainter(this.data, this.text);
 
   final CalendarDayCellData data;
+  final CalendarCanvasText text;
 
   @override
-  Widget build(BuildContext context) {
+  void paint(Canvas canvas, Size size) {
     final marker = data.primaryMarker;
     final isWeekend = data.isWeekend && data.isCurrentMonth;
     final textColor = data.isSelected
@@ -330,86 +331,59 @@ class _ChinaDayCell extends StatelessWidget {
         : data.isCurrentMonth
         ? const Color(0xFFCFCFCF)
         : const Color(0xFFE1E1E1);
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        if (data.showBottomDivider)
-          const Positioned(left: 0, right: 0, bottom: 0, child: _Hairline()),
-        Center(
-          child: Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: data.isSelected
-                  ? const Color(0xFF046CEA)
-                  : data.isToday
-                  ? const Color(0xFFEAEAEA)
-                  : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-          ),
+    final fill = Paint();
+    if (data.showBottomDivider) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, size.height - 0.5, size.width, 0.5),
+        fill..color = const Color(0xFFE5E5E5),
+      );
+    }
+    if (data.isSelected || data.isToday) {
+      canvas.drawCircle(
+        size.center(Offset.zero),
+        size.shortestSide.clamp(0.0, 54.0) / 2,
+        fill
+          ..color = data.isSelected
+              ? const Color(0xFF046CEA)
+              : const Color(0xFFEAEAEA),
+      );
+    }
+    if (marker != null) {
+      final badge = Rect.fromLTWH(size.width - 18, 8, 14, 14);
+      canvas.drawCircle(badge.center, 7, fill..color = Colors.white);
+      text.paint(
+        canvas,
+        marker.label,
+        TextStyle(
+          color: marker.color,
+          fontSize: 8,
+          fontWeight: FontWeight.bold,
+          height: 1,
         ),
-        if (marker != null)
-          Positioned(
-            top: 8,
-            right: 4,
-            child: Container(
-              width: 14,
-              height: 14,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                marker.label,
-                style: TextStyle(
-                  color: marker.color,
-                  fontSize: 8,
-                  fontWeight: FontWeight.bold,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-        Positioned.fill(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '${data.date.day}',
-                style: TextStyle(color: textColor, fontSize: 16, height: 1),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                data.lunarText,
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                style: TextStyle(color: lunarColor, fontSize: 10, height: 1),
-              ),
-            ],
-          ),
-        ),
-        if (marker != null)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 9,
-            child: Center(
-              child: Container(
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: data.isSelected ? Colors.white : Colors.grey,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-      ],
+        badge,
+      );
+    }
+    text.paintDayAndLunar(
+      canvas,
+      Offset.zero & size,
+      day: '${data.date.day}',
+      dayStyle: TextStyle(color: textColor, fontSize: 16, height: 1),
+      lunar: data.lunarText,
+      lunarStyle: TextStyle(color: lunarColor, fontSize: 10, height: 1),
+      gap: 8,
     );
+    if (marker != null) {
+      canvas.drawCircle(
+        Offset(size.width / 2, size.height - 11),
+        2,
+        fill..color = data.isSelected ? Colors.white : Colors.grey,
+      );
+    }
   }
+
+  @override
+  bool shouldRepaint(covariant _ChinaDayPainter oldDelegate) =>
+      oldDelegate.data != data || oldDelegate.text != text;
 }
 
 class _ArticleList extends StatefulWidget {
@@ -669,18 +643,6 @@ class _TodayButton extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _Hairline extends StatelessWidget {
-  const _Hairline();
-
-  @override
-  Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Color(0xFFE5E5E5),
-      child: SizedBox(height: 0.5),
     );
   }
 }

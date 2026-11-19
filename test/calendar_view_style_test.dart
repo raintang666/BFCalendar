@@ -28,18 +28,31 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(CalendarView),
+          matching: find.byType(Text),
+        ),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('calendar-canvas-grid')), findsWidgets);
     }
 
     await pumpCalendar(const CustomCalendarComponentBuilder());
-    expect(find.text('周日'), findsOneWidget);
-    expect(find.text('SUN'), findsNothing);
+    expect(find.semantics.byLabel('周日'), findsOne);
+    expect(find.semantics.byLabel('SUN'), findsNothing);
 
     await pumpCalendar(const MeizuCalendarComponentBuilder());
-    expect(find.text('SUN'), findsOneWidget);
-    expect(find.text('周日'), findsNothing);
+    expect(find.semantics.byLabel('SUN'), findsOne);
+    expect(find.semantics.byLabel('周日'), findsNothing);
 
     await pumpCalendar(const IOSCalendarComponentBuilder());
-    expect(find.text('日'), findsOneWidget);
-    expect(find.text('SUN'), findsNothing);
+    expect(find.semantics.byLabel('日'), findsOne);
+    expect(find.semantics.byLabel('SUN'), findsNothing);
+
+    controller.setDisplayMode(CalendarDisplayMode.week);
+    await pumpCalendar(const CustomCalendarComponentBuilder());
+    expect(find.semantics.byLabel('7月'), findsOne);
+    expect(find.semantics.byLabel('周日'), findsOne);
   });
 }

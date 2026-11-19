@@ -369,6 +369,12 @@ Helper APIs:
 | `calendarOrderedWeekLabels(labels, firstWeekday)` | Reorder week labels by first weekday |
 | `kCalendarHorizontalPadding` | Default horizontal padding |
 
+## Canvas Calendar Rendering
+
+The built-in month and week views paint their month headers, weekday bars, and date grids on Canvas. The grid batches consecutive pure `CustomPaint` cells in paint order and caches day data and painters. Each custom Widget cell keeps its own layout and interactions, including cells with children, foreground painters, custom semantics, or keys. Surrounding painter cells continue to render in batches.
+
+Continue customizing date cells, month headers, and weekday bars through the existing `CalendarComponentBuilder` methods. Tests can use `find.semantics.byLabel` to find Canvas-rendered month, weekday, and date labels, or tap the date grid by coordinate.
+
 ## Data Models And Callbacks
 
 | API | Description |
@@ -379,7 +385,8 @@ Helper APIs:
 | `MonthViewShowMode.allMonth/onlyCurrentMonth/fitMonth` | Month view display mode |
 | `CalendarRangeLimitViolation.belowMinRange/aboveMaxRange` | Range-selection violation type |
 | `CalendarBounds(min, max)` | Date bounds |
-| `CalendarMarker(label, color)` | Date marker |
+| `CalendarMarker(label, color, data)` | Date marker with an optional business object |
+| `CalendarMarkerIndex(markersByDate)` | Read-only view of an existing date index with no copy |
 | `LunarMetadata(lunarText, solarTerm)` | Lunar/solar-term text |
 | `DateRangeValue(start, end)` | Range selection value |
 | `CalendarSelectionState(single, range, multi)` | Full selection state |
@@ -388,6 +395,70 @@ Helper APIs:
 | `CalendarRangeLimitViolationCallback` | Range limit callback |
 | `CalendarMultiSelectedCallback` | Multi-selection callback |
 | `CalendarMultiSelectOutOfSizeCallback` | Multi-select overflow callback |
+
+### Date markers and large datasets
+
+`CalendarMarker.data` is an optional `Object?` that defaults to `null`. A custom day cell can read the original object from `CalendarDayCellData.markers`. Existing constructor and subclass calls still work. Classes declared with `implements CalendarMarker` need an `Object? get data` getter, which can return `null` by default.
+
+```dart
+final controller = CalendarController();
+final day = DateTime(2026, 11, 19);
+final meeting = (id: 'meeting-42', title: 'Project meeting');
+final markersByDate = <DateTime, List<CalendarMarker>>{
+  day: [
+    CalendarMarker(label: meeting.title, color: Colors.blue, data: meeting),
+    const CalendarMarker(label: 'To-do', color: Colors.orange),
+  ],
+};
+```
+
+1. **Fast setup for large datasets (recommended).** Use `CalendarMarkerIndex` for large datasets and `DateTime(year, month, day)` for the keys. The calendar borrows read-only views of the map and lists, skips key traversal at registration, and looks up visible dates as it renders. Keep the backing map and lists stable after registration.
+
+   ```dart
+   controller.setMarkers(CalendarMarkerIndex(markersByDate));
+   ```
+
+2. **Set markers with a plain map.** Use this for smaller datasets or when keys need automatic date normalization. The controller synchronously normalizes the keys and creates an independent date map. On native platforms, large maps with normalized keys can use a bulk copy.
+
+   ```dart
+   controller.setMarkers(markersByDate);
+   ```
+
+3. **Initialize the controller with markers.** The `markers` argument accepts plain maps and `CalendarMarkerIndex`.
+
+   ```dart
+   final preloadedController = CalendarController(
+     markers: CalendarMarkerIndex(markersByDate),
+   );
+   ```
+
+4. **Read the business object.** A custom day cell can read markers from `CalendarDayCellData`. When a date is selected, use the date supplied by the callback to look up its markers.
+
+   ```dart
+   // In buildDayCell, cell is a CalendarDayCellData.
+   final payload = cell.primaryMarker?.data;
+
+   // In onDaySelected, look up markers for the selected date.
+   final dayMarkers = controller.markers[day] ?? const <CalendarMarker>[];
+   ```
+
+5. **Update or clear markers.** Each `setMarkers` call replaces the entire set. On the fast path, put changed lists in a new map and pass a new index.
+
+   ```dart
+   final nextMarkersByDate = <DateTime, List<CalendarMarker>>{
+     ...markersByDate,
+     day: [const CalendarMarker(label: 'Done', color: Colors.green)],
+   };
+   controller.setMarkers(CalendarMarkerIndex(nextMarkersByDate));
+   ```
+
+   Clear all date markers.
+
+   ```dart
+   controller.setMarkers({});
+   ```
+
+Canvas accessibility descriptions read up to the first eight markers and the remaining count. Custom builders can access the full list as a read-only snapshot from a plain map or a read-only view from `CalendarMarkerIndex`.
 
 ## Year Overview Sheet
 

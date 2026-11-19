@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 
 /// 日历选择模式。
@@ -72,13 +74,44 @@ class CalendarBounds {
 @immutable
 class CalendarMarker {
   /// 创建一个日期标记。
-  const CalendarMarker({required this.label, required this.color});
+  const CalendarMarker({required this.label, required this.color, this.data});
 
   /// 标记文本，可由样式层自行解释。
   final String label;
 
   /// 标记颜色。
   final Color color;
+
+  /// 自定义样式可读取的业务对象，默认样式只使用文本和颜色。
+  final Object? data;
+}
+
+/// 已按本地日期建立索引的标记数据，可直接传给日历控制器。
+///
+/// 以 [DateTime.new] 的年月日参数构造日期键，例如 `DateTime(2026, 7, 9)`。
+/// 索引借用原 Map 和列表的只读视图，创建和交给控制器时无需遍历数据。
+/// 调用方须保持原 Map 和各列表的内容稳定，更新时传入新的索引。
+final class CalendarMarkerIndex
+    extends UnmodifiableMapBase<DateTime, List<CalendarMarker>> {
+  /// 包装已有的日期索引。建议使用支持快速按键查询的 Map。
+  CalendarMarkerIndex(this._byDate);
+
+  final Map<DateTime, List<CalendarMarker>> _byDate;
+
+  @override
+  Iterable<DateTime> get keys => _byDate.keys;
+
+  @override
+  int get length => _byDate.length;
+
+  @override
+  bool containsKey(Object? key) => _byDate.containsKey(key);
+
+  @override
+  List<CalendarMarker>? operator [](Object? key) {
+    final markers = _byDate[key];
+    return markers == null ? null : UnmodifiableListView(markers);
+  }
 }
 
 /// 农历和节气显示数据。

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../calendar/calendar_canvas_labels.dart';
 import '../../calendar/calendar_components.dart';
+import '../../calendar/calendar_text_layout.dart';
 
 class IndexCalendarComponentBuilder extends CalendarComponentBuilder {
   const IndexCalendarComponentBuilder();
@@ -32,7 +34,7 @@ class IndexCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildWeekBarCell(BuildContext context, CalendarWeekBarCellData data) {
-    return Text(
+    return CalendarCanvasLabel(
       data.label,
       style: const TextStyle(
         color: Color(0xFF111111),
@@ -153,7 +155,7 @@ class _IndexCellPainter extends CustomPainter {
     required Offset center,
     required double maxWidth,
   }) {
-    final textPainter = TextPainter(
+    final textPainter = CalendarTextLayout.layout(
       text: TextSpan(
         text: text,
         style: TextStyle(
@@ -166,7 +168,8 @@ class _IndexCellPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
       maxLines: 1,
       ellipsis: '',
-    )..layout(maxWidth: maxWidth);
+      maxWidth: maxWidth,
+    );
     textPainter.paint(
       canvas,
       Offset(

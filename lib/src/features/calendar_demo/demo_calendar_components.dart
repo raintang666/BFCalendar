@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../calendar/calendar_canvas_labels.dart';
 import '../../calendar/calendar_components.dart';
+import '../../calendar/calendar_text_layout.dart';
 
 class CustomCalendarComponentBuilder extends CalendarComponentBuilder {
   const CustomCalendarComponentBuilder();
@@ -23,7 +25,7 @@ class CustomCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildWeekBarCell(BuildContext context, CalendarWeekBarCellData data) {
-    return Text(
+    return CalendarCanvasLabel(
       data.label,
       style: const TextStyle(color: Color(0xFFE1E1E1), fontSize: 12),
     );
@@ -31,7 +33,9 @@ class CustomCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildDayCell(BuildContext context, CalendarDayCellData data) {
-    return _CustomDayCellContent(data: data);
+    return CustomPaint(
+      painter: _CustomDayPainter(data, CalendarCanvasText.of(context)),
+    );
   }
 }
 
@@ -56,7 +60,7 @@ class MeizuCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildWeekBarCell(BuildContext context, CalendarWeekBarCellData data) {
-    return Text(
+    return CalendarCanvasLabel(
       data.label,
       style: const TextStyle(
         color: Color(0xFF666666),
@@ -68,242 +72,159 @@ class MeizuCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildDayCell(BuildContext context, CalendarDayCellData data) {
-    return _MeizuDayCellContent(data: data);
-  }
-}
-
-class _CustomDayCellContent extends StatelessWidget {
-  const _CustomDayCellContent({required this.data});
-
-  final CalendarDayCellData data;
-
-  @override
-  Widget build(BuildContext context) {
-    Color dayColor;
-    Color lunarColor;
-
-    if (data.isWeekend && data.isCurrentMonth) {
-      dayColor = const Color(0xFF489DFF);
-      lunarColor = const Color(0xFF489DFF);
-    } else if (!data.isCurrentMonth) {
-      dayColor = const Color(0xFFE1E1E1);
-      lunarColor = const Color(0xFFE1E1E1);
-    } else {
-      dayColor = const Color(0xFF333333);
-      lunarColor = const Color(0xFFCFCFCF);
-    }
-
-    if (data.isToday) {
-      dayColor = const Color(0xFFFF0000);
-      lunarColor = const Color(0xFFFF0000);
-    }
-
-    if (data.isSelected) {
-      dayColor = const Color(0xFF128C4B);
-      lunarColor = const Color(0xFF128C4B);
-    }
-
-    final schemeColor = data.primaryMarker?.color;
-    final schemeText = data.primaryMarker?.label;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cellWidth = constraints.maxWidth;
-        final circleSize = cellWidth.clamp(36.0, 42.0);
-        const circleTop = 6.0;
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            if (data.isSelected || data.isToday)
-              Positioned(
-                top: circleTop,
-                left: (cellWidth - circleSize) / 2,
-                child: Container(
-                  width: circleSize,
-                  height: circleSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: data.isSelected
-                        ? const Color(0x80CFCFCF)
-                        : const Color(0xFFEAEAEA),
-                  ),
-                ),
-              ),
-            if (schemeText != null && schemeColor != null)
-              Positioned(
-                top: 4,
-                right: 0,
-                child: SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: DecoratedBox(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        schemeText,
-                        style: TextStyle(
-                          fontSize: 8,
-                          color: schemeColor,
-                          fontWeight: FontWeight.bold,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            Positioned(
-              top: 10,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  '${data.date.day}',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: dayColor,
-                    fontWeight: FontWeight.bold,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 33,
-              left: 2,
-              right: 2,
-              child: Center(
-                child: Text(
-                  data.lunarText,
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: TextStyle(fontSize: 10, color: lunarColor, height: 1),
-                ),
-              ),
-            ),
-            if (data.showBottomDivider)
-              const Positioned(
-                left: 0,
-                right: 0,
-                bottom: 5,
-                child: Divider(
-                  height: 0.3,
-                  thickness: 0.3,
-                  color: Color(0xFFE5E5E5),
-                ),
-              ),
-          ],
-        );
-      },
+    return CustomPaint(
+      painter: _MeizuDayPainter(data, CalendarCanvasText.of(context)),
     );
   }
 }
 
-class _MeizuDayCellContent extends StatelessWidget {
-  const _MeizuDayCellContent({required this.data});
+class _CustomDayPainter extends CustomPainter {
+  const _CustomDayPainter(this.data, this.text);
 
   final CalendarDayCellData data;
+  final CalendarCanvasText text;
 
   @override
-  Widget build(BuildContext context) {
-    final schemeColor = data.primaryMarker?.color;
-    final schemeText = data.primaryMarker?.label;
-
-    var dayColor = data.isCurrentMonth
-        ? const Color(0xFF333333)
-        : const Color(0xFFE1E1E1);
-    var lunarColor = data.isCurrentMonth
+  void paint(Canvas canvas, Size size) {
+    final dayColor = switch (data) {
+      _ when data.isSelected => const Color(0xFF128C4B),
+      _ when data.isToday => const Color(0xFFFF0000),
+      _ when !data.isCurrentMonth => const Color(0xFFE1E1E1),
+      _ when data.isWeekend => const Color(0xFF489DFF),
+      _ => const Color(0xFF333333),
+    };
+    final lunarColor = dayColor == const Color(0xFF333333)
         ? const Color(0xFFCFCFCF)
-        : const Color(0xFFE1E1E1);
-
-    if (data.isToday) {
-      dayColor = const Color(0xFFFF0000);
-      lunarColor = const Color(0xFFFF0000);
+        : dayColor;
+    final fill = Paint();
+    if (data.isSelected || data.isToday) {
+      final radius = size.width.clamp(36.0, 42.0) / 2;
+      canvas.drawCircle(
+        Offset(size.width / 2, 6 + radius),
+        radius,
+        fill
+          ..color = data.isSelected
+              ? const Color(0x80CFCFCF)
+              : const Color(0xFFEAEAEA),
+      );
     }
-    if (data.isSelected) {
-      dayColor = const Color(0xFF128C4B);
-      lunarColor = const Color(0xFF128C4B);
+    if (data.primaryMarker case final marker?) {
+      final badge = Rect.fromLTWH(size.width - 14, 4, 14, 14);
+      canvas.drawCircle(badge.center, 7, fill..color = Colors.white);
+      text.paint(
+        canvas,
+        marker.label,
+        TextStyle(
+          fontSize: 8,
+          color: marker.color,
+          fontWeight: FontWeight.bold,
+          height: 1,
+        ),
+        badge,
+      );
     }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: AnimatedContainer(
-              duration: Duration.zero,
-              decoration: data.isSelected
-                  ? BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFF128C4B),
-                        width: 1.6,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x12000000),
-                          blurRadius: 10,
-                          offset: Offset(2, 6),
-                        ),
-                      ],
-                    )
-                  : null,
-            ),
-          ),
-          if (schemeText != null && schemeColor != null)
-            Positioned(
-              top: 2,
-              right: 4,
-              child: Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: schemeColor,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  schemeText,
-                  style: const TextStyle(
-                    fontSize: 8,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${data.date.day}',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: dayColor,
-                    fontWeight: FontWeight.bold,
-                    height: 1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  data.lunarText,
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: TextStyle(fontSize: 10, color: lunarColor, height: 1),
-                ),
-              ],
-            ),
-          ),
-        ],
+    final day = text.layout(
+      '${data.date.day}',
+      TextStyle(
+        color: dayColor,
+        fontSize: 15,
+        fontWeight: FontWeight.bold,
+        height: 1,
       ),
+      size.width,
+    );
+    day.paint(canvas, Offset((size.width - day.width) / 2, 10));
+    final lunar = text.layout(
+      data.lunarText,
+      TextStyle(color: lunarColor, fontSize: 10, height: 1),
+      size.width - 4,
+      maxLines: 1,
+    );
+    lunar.paint(canvas, Offset((size.width - lunar.width) / 2, 33));
+    if (data.showBottomDivider) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, size.height - 5.3, size.width, .3),
+        fill..color = const Color(0xFFE5E5E5),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CustomDayPainter oldDelegate) =>
+      oldDelegate.data != data || oldDelegate.text != text;
+}
+
+class _MeizuDayPainter extends CustomPainter {
+  const _MeizuDayPainter(this.data, this.text);
+
+  static final _selectedBackground = BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(8),
+    border: Border.all(color: const Color(0xFF128C4B), width: 1.6),
+    boxShadow: const [
+      BoxShadow(color: Color(0x12000000), blurRadius: 10, offset: Offset(2, 6)),
+    ],
+  ).createBoxPainter();
+
+  final CalendarDayCellData data;
+  final CalendarCanvasText text;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cell = const EdgeInsets.symmetric(
+      horizontal: 2,
+      vertical: 4,
+    ).deflateRect(Offset.zero & size);
+    if (cell.isEmpty) return;
+    final dayColor = switch (data) {
+      _ when data.isSelected => const Color(0xFF128C4B),
+      _ when data.isToday => const Color(0xFFFF0000),
+      _ when data.isCurrentMonth => const Color(0xFF333333),
+      _ => const Color(0xFFE1E1E1),
+    };
+    final lunarColor = dayColor == const Color(0xFF333333)
+        ? const Color(0xFFCFCFCF)
+        : dayColor;
+    if (data.isSelected) {
+      _selectedBackground.paint(
+        canvas,
+        cell.topLeft,
+        ImageConfiguration(size: cell.size),
+      );
+    }
+    if (data.primaryMarker case final marker?) {
+      final badge = Rect.fromLTWH(cell.right - 20, cell.top + 2, 16, 16);
+      canvas.drawCircle(badge.center, 8, Paint()..color = marker.color);
+      text.paint(
+        canvas,
+        marker.label,
+        const TextStyle(
+          fontSize: 8,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          height: 1,
+        ),
+        badge,
+      );
+    }
+    text.paintDayAndLunar(
+      canvas,
+      const EdgeInsets.symmetric(horizontal: 4, vertical: 6).deflateRect(cell),
+      day: '${data.date.day}',
+      dayStyle: TextStyle(
+        fontSize: 15,
+        color: dayColor,
+        fontWeight: FontWeight.bold,
+        height: 1,
+      ),
+      lunar: data.lunarText,
+      lunarStyle: TextStyle(fontSize: 10, color: lunarColor, height: 1),
+      gap: 8,
+      alignment: AlignmentDirectional.centerStart,
     );
   }
+
+  @override
+  bool shouldRepaint(covariant _MeizuDayPainter oldDelegate) =>
+      oldDelegate.data != data || oldDelegate.text != text;
 }

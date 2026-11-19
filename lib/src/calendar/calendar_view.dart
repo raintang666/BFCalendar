@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import 'calendar_canvas_grid.dart';
+import 'calendar_canvas_labels.dart';
 import 'calendar_components.dart';
 import 'calendar_controller.dart';
 import 'calendar_models.dart';
@@ -296,35 +298,24 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
 
   Widget _buildInlineMonthLabel(DateTime month) {
     final firstDayColumn = _firstDayColumnForMonth(month);
-    const textColor = Color(0xFF333333);
     final resolvedPadding = _resolvedComponentBuilder.contentPadding.resolve(
       Directionality.of(context),
     );
     return SizedBox(
       height: _inlineMonthLabelHeight,
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: resolvedPadding.left,
-          right: resolvedPadding.right,
-        ),
-        child: Row(
-          children: List.generate(7, (index) {
-            return Expanded(
-              child: Center(
-                child: index == firstDayColumn
-                    ? Text(
-                        '${month.month}月',
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            );
-          }),
-        ),
+      child: CalendarCanvasLabels(
+        padding: resolvedPadding.copyWith(top: 0, bottom: 0),
+        labels: List.generate(7, (index) {
+          if (index != firstDayColumn) return null;
+          return CalendarCanvasLabel(
+            '${month.month}月',
+            style: const TextStyle(
+              color: Color(0xFF333333),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          );
+        }),
       ),
     );
   }
@@ -410,7 +401,7 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
 class _CalendarViewState extends State<CalendarView> {
   static const int _verticalInitialPage = 10000;
 
-  late PageController _pageController;
+  late final PageController _pageController;
   late final PageController _verticalPageController;
   double _pageOffset = 0;
   double _verticalPageOffset = 0;
@@ -422,6 +413,19 @@ class _CalendarViewState extends State<CalendarView> {
   late DateTime _verticalReferenceDate;
   int _verticalCurrentPage = _verticalInitialPage;
   bool _isResettingPage = false;
+  Widget? _monthHeader;
+  Widget? _weekBar;
+  DateTime? _headerDate;
+
+  void _invalidateChrome() {
+    _monthHeader = null;
+    _weekBar = null;
+  }
+
+  void _handleControllerChanged() {
+    _invalidateChrome();
+    _schedulePageWarmUp();
+  }
 
   CalendarComponentBuilder get _resolvedComponentBuilder {
     final override = widget.componentBuilder;
@@ -434,27 +438,18 @@ class _CalendarViewState extends State<CalendarView> {
   @override
   void initState() {
     super.initState();
-    _createHorizontalPageController(initialPage: _horizontalCurrentPageIndex);
+    widget.controller.addListener(_handleControllerChanged);
+    _pageController = PageController(initialPage: _horizontalCurrentPageIndex)
+      ..addListener(_handlePageScroll);
     _verticalReferenceDate = widget.controller.focusedDay;
     _verticalPageController = PageController(initialPage: _verticalCurrentPage)
       ..addListener(_handleVerticalPageScroll);
     _schedulePageWarmUp();
   }
 
-  void _createHorizontalPageController({required int initialPage}) {
-    _pageController = PageController(initialPage: initialPage)
-      ..addListener(_handlePageScroll);
-  }
-
-  void _resetHorizontalPageController({required int initialPage}) {
-    final oldController = _pageController;
-    oldController.removeListener(_handlePageScroll);
-    _createHorizontalPageController(initialPage: initialPage);
-    oldController.dispose();
-  }
-
   @override
   void dispose() {
+    widget.controller.removeListener(_handleControllerChanged);
     _pageController
       ..removeListener(_handlePageScroll)
       ..dispose();
@@ -467,9 +462,27 @@ class _CalendarViewState extends State<CalendarView> {
   @override
   void didUpdateWidget(covariant CalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleControllerChanged);
+      widget.controller.addListener(_handleControllerChanged);
+      _lastWarmUpSignature = null;
+      _schedulePageWarmUp();
+    }
+    if (oldWidget.controller != widget.controller ||
+        oldWidget.componentBuilder != widget.componentBuilder ||
+        oldWidget.monthHeaderHeight != widget.monthHeaderHeight ||
+        oldWidget.weekBarHeight != widget.weekBarHeight) {
+      _invalidateChrome();
+    }
     if (oldWidget.pageOrientation != widget.pageOrientation) {
       _syncPagerStateForOrientationChange();
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _invalidateChrome();
   }
 
   void _handlePageScroll() {
@@ -532,7 +545,6 @@ class _CalendarViewState extends State<CalendarView> {
       builder: (context, _) {
         _syncPagerAnchorFromController();
         _syncHorizontalPagerIndexIfNeeded();
-        _schedulePageWarmUp();
         final collapseProgress =
             widget.collapsePreviewProgress ??
             (widget.controller.displayMode == CalendarDisplayMode.week
@@ -540,6 +552,10 @@ class _CalendarViewState extends State<CalendarView> {
                 : 0.0);
         final useVerticalPaging = _useVerticalPaging(collapseProgress);
         final activeBaseDate = _activeBaseDate(useVerticalPaging);
+        if (_headerDate != activeBaseDate) {
+          _headerDate = activeBaseDate;
+          _monthHeader = null;
+        }
         final bodyHeight = useVerticalPaging
             ? _buildVerticalBodyHeight(collapseProgress)
             : _buildHorizontalBodyHeight(collapseProgress);
@@ -555,16 +571,21 @@ class _CalendarViewState extends State<CalendarView> {
           height: totalHeight,
           child: Column(
             children: [
-              _resolvedComponentBuilder.buildMonthHeader(
-                context,
-                activeBaseDate,
-                widget.monthHeaderHeight,
+              _monthHeader ??= Builder(
+                builder: (context) =>
+                    _resolvedComponentBuilder.buildMonthHeader(
+                      context,
+                      activeBaseDate,
+                      widget.monthHeaderHeight,
+                    ),
               ),
-              _resolvedComponentBuilder.buildWeekBar(
-                context,
-                CalendarWeekBarData(
-                  firstWeekday: widget.controller.firstWeekday,
-                  height: widget.weekBarHeight,
+              _weekBar ??= Builder(
+                builder: (context) => _resolvedComponentBuilder.buildWeekBar(
+                  context,
+                  CalendarWeekBarData(
+                    firstWeekday: widget.controller.firstWeekday,
+                    height: widget.weekBarHeight,
+                  ),
                 ),
               ),
               SizedBox(
@@ -902,7 +923,10 @@ class _CalendarViewState extends State<CalendarView> {
   }
 
   void _syncHorizontalPagerIndexIfNeeded() {
-    if (widget.pageOrientation != CalendarPageOrientation.horizontal) {
+    final collapseProgress =
+        widget.collapsePreviewProgress ??
+        (widget.controller.displayMode == CalendarDisplayMode.week ? 1.0 : 0.0);
+    if (_useVerticalPaging(collapseProgress)) {
       return;
     }
     if (!_pageController.hasClients) {
@@ -1015,19 +1039,14 @@ class _CalendarViewState extends State<CalendarView> {
       widget.controller.nextPage();
     }
     widget.onPageChanged?.call(widget.controller.focusedDay);
-    _resetHorizontalPageController(
-      initialPage: _horizontalCurrentPageIndexForBase(
-        widget.controller.focusedDay,
-      ),
-    );
     if (!mounted) {
       return;
     }
     setState(() {
       _transitionAnchorDate = null;
-      _pendingHorizontalPageJump = null;
       _pageOffset = 0;
-      _isResettingPage = false;
+      // Keep the reset guard until the pending jump runs after layout. At a
+      // date boundary the rebuilt pager first attaches at the initial page.
     });
   }
 
@@ -1210,9 +1229,10 @@ class _CalendarPage extends StatelessWidget {
                   height: monthBodyHeight,
                   child: Padding(
                     padding: componentBuilder.contentPadding,
-                    child: _MonthGrid(
+                    child: _CalendarGrid(
                       days: monthDays,
                       lineCount: monthLineCount,
+                      hideOutsideMonth: controller.onlyCurrentMonth,
                       focusedMonth: focusedMonth,
                       controller: controller,
                       onDaySelected: onDaySelected,
@@ -1232,8 +1252,10 @@ class _CalendarPage extends StatelessWidget {
               height: bodyHeight,
               child: Padding(
                 padding: componentBuilder.contentPadding,
-                child: _WeekGrid(
+                child: _CalendarGrid(
                   days: weekDays,
+                  lineCount: 1,
+                  hideOutsideMonth: false,
                   focusedMonth: focusedMonth,
                   controller: controller,
                   onDaySelected: onDaySelected,
@@ -1251,10 +1273,11 @@ class _CalendarPage extends StatelessWidget {
   }
 }
 
-class _MonthGrid extends StatelessWidget {
-  const _MonthGrid({
+class _CalendarGrid extends StatefulWidget {
+  const _CalendarGrid({
     required this.days,
     required this.lineCount,
+    required this.hideOutsideMonth,
     required this.focusedMonth,
     required this.controller,
     required this.onDaySelected,
@@ -1269,6 +1292,7 @@ class _MonthGrid extends StatelessWidget {
 
   final List<DateTime> days;
   final int lineCount;
+  final bool hideOutsideMonth;
   final DateTime focusedMonth;
   final CalendarController controller;
   final ValueChanged<DateTime> onDaySelected;
@@ -1281,260 +1305,193 @@ class _MonthGrid extends StatelessWidget {
   final CalendarMultiSelectOutOfSizeCallback? onMultiSelectOutOfSize;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: List.generate(lineCount, (rowIndex) {
-        final rowDays = days.skip(rowIndex * 7).take(7).toList();
-        return SizedBox(
-          height: rowHeight,
-          child: Row(
-            children: List.generate(7, (columnIndex) {
-              final date = rowDays[columnIndex];
-              final shouldHide =
-                  controller.monthViewShowMode ==
-                      MonthViewShowMode.onlyCurrentMonth &&
-                  !CalendarDateUtils.isSameMonth(date, focusedMonth);
-              return Expanded(
-                child: shouldHide
-                    ? const SizedBox.expand()
-                    : _CalendarDayCell(
-                        date: date,
-                        focusedMonth: focusedMonth,
-                        markers: controller.markers[date] ?? const [],
-                        lunarText: LunarService.metadataForDate(date).lunarText,
-                        isToday: CalendarDateUtils.isSameDay(
-                          date,
-                          CalendarDateUtils.stripTime(DateTime.now()),
-                        ),
-                        isSelected: controller.isSelected(date),
-                        isRangeStart: controller.isRangeStart(date),
-                        isRangeEnd: controller.isRangeEnd(date),
-                        isSelectedPrevious: _isSelectedAdjacent(
-                          date,
-                          const Duration(days: -1),
-                        ),
-                        isSelectedNext: _isSelectedAdjacent(
-                          date,
-                          const Duration(days: 1),
-                        ),
-                        isOutOfSelectableRange:
-                            controller.rangeSelectionLimitViolation(date) !=
-                            null,
-                        isDisabled: controller.isDisabled(date),
-                        componentBuilder: componentBuilder,
-                        showBottomDivider: rowIndex < lineCount - 1,
-                        onTap: () => _handleDayTap(date),
-                      ),
-              );
-            }),
-          ),
-        );
-      }),
-    );
-  }
-
-  bool _isSelectedAdjacent(DateTime date, Duration offset) {
-    if (controller.selectionMode == CalendarSelectionMode.range &&
-        controller.rangeSelection.end == null) {
-      return false;
-    }
-    return controller.isSelected(date.add(offset));
-  }
-
-  void _handleDayTap(DateTime date) {
-    if (handleDaySelection) {
-      if (controller.selectionMode == CalendarSelectionMode.multi &&
-          controller.isMultiSelectOutOfSize(date)) {
-        onMultiSelectOutOfSize?.call(date, controller.maxMultiSelectSize);
-        return;
-      }
-      final violation = controller.rangeSelectionLimitViolation(date);
-      if (violation != null) {
-        onSelectOutOfRange?.call(date, violation);
-        return;
-      }
-      final selected = controller.selectDay(date);
-      if (!selected) {
-        return;
-      }
-      if (controller.selectionMode == CalendarSelectionMode.range) {
-        onRangeSelected?.call(controller.rangeSelection);
-      } else if (controller.selectionMode == CalendarSelectionMode.multi) {
-        onMultiSelected?.call(
-          date,
-          controller.selectedMultiDates.length,
-          controller.maxMultiSelectSize,
-        );
-      }
-    }
-    onDaySelected(date);
-  }
+  State<_CalendarGrid> createState() => _CalendarGridState();
 }
 
-class _WeekGrid extends StatelessWidget {
-  const _WeekGrid({
-    required this.days,
-    required this.focusedMonth,
-    required this.controller,
-    required this.onDaySelected,
-    required this.componentBuilder,
-    required this.rowHeight,
-    required this.handleDaySelection,
-    required this.onRangeSelected,
-    required this.onSelectOutOfRange,
-    required this.onMultiSelected,
-    required this.onMultiSelectOutOfSize,
-  });
-
-  final List<DateTime> days;
-  final DateTime focusedMonth;
-  final CalendarController controller;
-  final ValueChanged<DateTime> onDaySelected;
-  final CalendarComponentBuilder componentBuilder;
-  final double rowHeight;
-  final bool handleDaySelection;
-  final CalendarRangeSelectedCallback? onRangeSelected;
-  final CalendarRangeLimitViolationCallback? onSelectOutOfRange;
-  final CalendarMultiSelectedCallback? onMultiSelected;
-  final CalendarMultiSelectOutOfSizeCallback? onMultiSelectOutOfSize;
+class _CalendarGridState extends State<_CalendarGrid> {
+  List<CalendarDayCellData?> _cells = const [];
+  Map<int, int> _markerTotals = const {};
+  List<Widget?> _dayWidgets = const [];
+  List<CustomPainter?> _painters = const [];
+  bool _needsCellUpdate = true;
+  DateTime? _today;
+  Widget? _grid;
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: rowHeight,
-      child: Row(
-        children: days.map((date) {
-          return Expanded(
-            child: _CalendarDayCell(
-              date: date,
-              focusedMonth: focusedMonth,
-              markers: controller.markers[date] ?? const [],
-              lunarText: LunarService.metadataForDate(date).lunarText,
-              isToday: CalendarDateUtils.isSameDay(
-                date,
-                CalendarDateUtils.stripTime(DateTime.now()),
-              ),
-              isSelected: controller.isSelected(date),
-              isRangeStart: controller.isRangeStart(date),
-              isRangeEnd: controller.isRangeEnd(date),
-              isSelectedPrevious: _isSelectedAdjacent(
-                date,
-                const Duration(days: -1),
-              ),
-              isSelectedNext: _isSelectedAdjacent(
-                date,
-                const Duration(days: 1),
-              ),
-              isOutOfSelectableRange:
-                  controller.rangeSelectionLimitViolation(date) != null,
-              isDisabled: controller.isDisabled(date),
-              componentBuilder: componentBuilder,
-              showBottomDivider: false,
-              onTap: () => _handleDayTap(date),
-            ),
-          );
-        }).toList(),
-      ),
-    );
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_invalidateCells);
   }
-
-  bool _isSelectedAdjacent(DateTime date, Duration offset) {
-    if (controller.selectionMode == CalendarSelectionMode.range &&
-        controller.rangeSelection.end == null) {
-      return false;
-    }
-    return controller.isSelected(date.add(offset));
-  }
-
-  void _handleDayTap(DateTime date) {
-    if (handleDaySelection) {
-      if (controller.selectionMode == CalendarSelectionMode.multi &&
-          controller.isMultiSelectOutOfSize(date)) {
-        onMultiSelectOutOfSize?.call(date, controller.maxMultiSelectSize);
-        return;
-      }
-      final violation = controller.rangeSelectionLimitViolation(date);
-      if (violation != null) {
-        onSelectOutOfRange?.call(date, violation);
-        return;
-      }
-      final selected = controller.selectDay(date);
-      if (!selected) {
-        return;
-      }
-      if (controller.selectionMode == CalendarSelectionMode.range) {
-        onRangeSelected?.call(controller.rangeSelection);
-      } else if (controller.selectionMode == CalendarSelectionMode.multi) {
-        onMultiSelected?.call(
-          date,
-          controller.selectedMultiDates.length,
-          controller.maxMultiSelectSize,
-        );
-      }
-    }
-    onDaySelected(date);
-  }
-}
-
-class _CalendarDayCell extends StatelessWidget {
-  const _CalendarDayCell({
-    required this.date,
-    required this.focusedMonth,
-    required this.markers,
-    required this.lunarText,
-    required this.isToday,
-    required this.isSelected,
-    required this.isRangeStart,
-    required this.isRangeEnd,
-    required this.isSelectedPrevious,
-    required this.isSelectedNext,
-    required this.isOutOfSelectableRange,
-    required this.isDisabled,
-    required this.componentBuilder,
-    required this.showBottomDivider,
-    required this.onTap,
-  });
-
-  final DateTime date;
-  final DateTime focusedMonth;
-  final List<CalendarMarker> markers;
-  final String lunarText;
-  final bool isToday;
-  final bool isSelected;
-  final bool isRangeStart;
-  final bool isRangeEnd;
-  final bool isSelectedPrevious;
-  final bool isSelectedNext;
-  final bool isOutOfSelectableRange;
-  final bool isDisabled;
-  final CalendarComponentBuilder componentBuilder;
-  final bool showBottomDivider;
-  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final child = componentBuilder.buildDayCell(
-      context,
-      CalendarDayCellData(
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _needsCellUpdate = true;
+  }
+
+  @override
+  void didUpdateWidget(covariant _CalendarGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.rowHeight != widget.rowHeight) _grid = null;
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_invalidateCells);
+      widget.controller.addListener(_invalidateCells);
+      _needsCellUpdate = true;
+    }
+    if (oldWidget.focusedMonth != widget.focusedMonth ||
+        oldWidget.lineCount != widget.lineCount ||
+        oldWidget.hideOutsideMonth != widget.hideOutsideMonth ||
+        oldWidget.componentBuilder != widget.componentBuilder ||
+        oldWidget.days.length != widget.days.length ||
+        oldWidget.days.first != widget.days.first ||
+        oldWidget.days.last != widget.days.last) {
+      _needsCellUpdate = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_invalidateCells);
+    super.dispose();
+  }
+
+  void _invalidateCells() {
+    setState(() => _needsCellUpdate = true);
+  }
+
+  void _updateCells() {
+    final controller = widget.controller;
+    final today = CalendarDateUtils.stripTime(DateTime.now());
+    if (!_needsCellUpdate && _today == today) {
+      return;
+    }
+    _today = today;
+    _needsCellUpdate = false;
+    _grid = null;
+    final markerMap = controller.markers;
+    final indexedMarkers = markerMap is CalendarMarkerIndex;
+    // The exact default builder only needs markers for Canvas semantics.
+    // For a plain map, custom overrides get a complete list snapshot.
+    final summarizeMarkers =
+        !indexedMarkers &&
+        widget.componentBuilder.runtimeType == DefaultCalendarComponentBuilder;
+    Map<int, int>? markerTotals;
+    _cells = List.generate(widget.days.length, (index) {
+      final date = widget.days[index];
+      if (widget.hideOutsideMonth &&
+          !CalendarDateUtils.isSameMonth(date, widget.focusedMonth)) {
+        return null;
+      }
+      final markers = markerMap[date] ?? const <CalendarMarker>[];
+      Iterable<CalendarMarker> snapshot = markers;
+      if (summarizeMarkers &&
+          markers.length > CalendarCanvasGrid.maxAnnouncedMarkers) {
+        (markerTotals ??= {})[index] = markers.length;
+        snapshot = markers.take(CalendarCanvasGrid.maxAnnouncedMarkers);
+      }
+      return CalendarDayCellData(
         date: date,
-        focusedMonth: focusedMonth,
-        markers: markers,
-        lunarText: lunarText,
-        isToday: isToday,
-        isSelected: isSelected,
-        isDisabled: isDisabled,
-        showBottomDivider: showBottomDivider,
-        isRangeStart: isRangeStart,
-        isRangeEnd: isRangeEnd,
-        isSelectedPrevious: isSelectedPrevious,
-        isSelectedNext: isSelectedNext,
-        isOutOfSelectableRange: isOutOfSelectableRange,
+        focusedMonth: widget.focusedMonth,
+        markers: switch (markers) {
+          _ when markers.isEmpty => const [],
+          _ when indexedMarkers => markers,
+          _ => List.unmodifiable(snapshot),
+        },
+        lunarText: LunarService.metadataForDate(date).lunarText,
+        isToday: date == today,
+        isSelected: controller.isSelected(date),
+        isRangeStart: controller.isRangeStart(date),
+        isRangeEnd: controller.isRangeEnd(date),
+        isSelectedPrevious: _isSelectedAdjacent(date, const Duration(days: -1)),
+        isSelectedNext: _isSelectedAdjacent(date, const Duration(days: 1)),
+        isOutOfSelectableRange:
+            controller.rangeSelectionLimitViolation(date) != null,
+        isDisabled: controller.isDisabled(date),
+        showBottomDivider: index ~/ 7 < widget.lineCount - 1,
+      );
+    });
+    _markerTotals = markerTotals ?? const {};
+    _updateDayWidgets();
+  }
+
+  void _updateDayWidgets() {
+    _dayWidgets = List.filled(_cells.length, null);
+    _painters = List.filled(_cells.length, null);
+    for (var index = 0; index < _cells.length; index++) {
+      final cell = _cells[index];
+      if (cell == null) continue;
+      final child = widget.componentBuilder.buildDayCell(context, cell);
+      // Preserve custom layout, keys, children, layers and semantics in place.
+      if (child is CustomPaint &&
+          child.key == null &&
+          child.child == null &&
+          child.painter != null &&
+          child.foregroundPainter == null &&
+          !child.isComplex &&
+          !child.willChange &&
+          child.painter!.semanticsBuilder == null) {
+        _painters[index] = child.painter;
+      } else {
+        _dayWidgets[index] = child;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _updateCells();
+    return _grid ??= SizedBox(
+      height: widget.lineCount * widget.rowHeight,
+      child: CalendarCanvasGrid(
+        cells: _cells,
+        painters: _painters,
+        dayWidgets: _dayWidgets,
+        rowHeight: widget.rowHeight,
+        onDaySelected: _handleDayTap,
+        markerTotals: _markerTotals,
       ),
     );
-    return GestureDetector(
-      onTap: isDisabled ? null : onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox.expand(child: child),
-    );
+  }
+
+  bool _isSelectedAdjacent(DateTime date, Duration offset) {
+    if (widget.controller.selectionMode == CalendarSelectionMode.range &&
+        widget.controller.rangeSelection.end == null) {
+      return false;
+    }
+    return widget.controller.isSelected(date.add(offset));
+  }
+
+  void _handleDayTap(DateTime date) {
+    if (widget.controller.isDisabled(date)) return;
+    if (widget.handleDaySelection) {
+      if (widget.controller.selectionMode == CalendarSelectionMode.multi &&
+          widget.controller.isMultiSelectOutOfSize(date)) {
+        widget.onMultiSelectOutOfSize?.call(
+          date,
+          widget.controller.maxMultiSelectSize,
+        );
+        return;
+      }
+      final violation = widget.controller.rangeSelectionLimitViolation(date);
+      if (violation != null) {
+        widget.onSelectOutOfRange?.call(date, violation);
+        return;
+      }
+      final selected = widget.controller.selectDay(date);
+      if (!selected) {
+        return;
+      }
+      if (widget.controller.selectionMode == CalendarSelectionMode.range) {
+        widget.onRangeSelected?.call(widget.controller.rangeSelection);
+      } else if (widget.controller.selectionMode ==
+          CalendarSelectionMode.multi) {
+        widget.onMultiSelected?.call(
+          date,
+          widget.controller.selectedMultiDates.length,
+          widget.controller.maxMultiSelectSize,
+        );
+      }
+    }
+    widget.onDaySelected(date);
   }
 }

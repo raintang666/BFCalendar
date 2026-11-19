@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'calendar_canvas_labels.dart';
 import 'calendar_models.dart';
+import 'calendar_text_layout.dart';
 import 'date_utils_ext.dart';
 
 /// 日历默认水平内边距。
@@ -128,15 +130,17 @@ abstract class CalendarComponentBuilder {
   Widget buildMonthHeader(BuildContext context, DateTime month, double height) {
     return SizedBox(
       height: height,
-      child: Center(
-        child: Text(
-          '${month.month}月',
-          style: const TextStyle(
-            color: Color(0xFF333333),
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+      child: CalendarCanvasLabels(
+        labels: [
+          CalendarCanvasLabel(
+            '${month.month}月',
+            style: const TextStyle(
+              color: Color(0xFF333333),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -150,6 +154,28 @@ abstract class CalendarComponentBuilder {
   /// 构建完整星期栏。
   Widget buildWeekBar(BuildContext context, CalendarWeekBarData data) {
     final labels = orderedWeekLabels(data.firstWeekday);
+    final cells = List.generate(labels.length, (index) {
+      return buildWeekBarCell(
+        context,
+        CalendarWeekBarCellData(
+          label: labels[index],
+          index: index,
+          firstWeekday: data.firstWeekday,
+        ),
+      );
+    });
+    if (cells.every(
+      (cell) => cell is CalendarCanvasLabel && cell.key == null,
+    )) {
+      return SizedBox(
+        height: data.height,
+        child: CalendarCanvasLabels(
+          labels: cells.cast<CalendarCanvasLabel>(),
+          padding: contentPadding,
+          background: weekBarBackgroundColor,
+        ),
+      );
+    }
     return Container(
       height: data.height,
       color: weekBarBackgroundColor,
@@ -157,20 +183,9 @@ abstract class CalendarComponentBuilder {
       child: Padding(
         padding: contentPadding,
         child: Row(
-          children: List.generate(labels.length, (index) {
-            return Expanded(
-              child: Center(
-                child: buildWeekBarCell(
-                  context,
-                  CalendarWeekBarCellData(
-                    label: labels[index],
-                    index: index,
-                    firstWeekday: data.firstWeekday,
-                  ),
-                ),
-              ),
-            );
-          }),
+          children: [
+            for (final cell in cells) Expanded(child: Center(child: cell)),
+          ],
         ),
       ),
     );
@@ -197,7 +212,7 @@ class DefaultCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildWeekBarCell(BuildContext context, CalendarWeekBarCellData data) {
-    return Text(
+    return CalendarCanvasLabel(
       data.label,
       style: const TextStyle(color: Color(0xFF666666), fontSize: 12),
     );
@@ -205,6 +220,44 @@ class DefaultCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildDayCell(BuildContext context, CalendarDayCellData data) {
+    return CustomPaint(
+      painter: _DefaultCalendarDayPainter(
+        data: data,
+        textStyle: DefaultTextStyle.of(context).style,
+        textScaler: MediaQuery.textScalerOf(context),
+        textDirection: Directionality.of(context),
+        locale: Localizations.maybeLocaleOf(context),
+      ),
+    );
+  }
+}
+
+class _DefaultCalendarDayPainter extends CustomPainter {
+  _DefaultCalendarDayPainter({
+    required this.data,
+    required this.textStyle,
+    required this.textScaler,
+    required this.textDirection,
+    required this.locale,
+  });
+
+  final CalendarDayCellData data;
+  final TextStyle textStyle;
+  final TextScaler textScaler;
+  final TextDirection textDirection;
+  final Locale? locale;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final diameter = 36.0.clamp(0.0, size.shortestSide);
+    if (data.isSelected) {
+      canvas.drawCircle(
+        center,
+        diameter / 2,
+        Paint()..color = const Color(0xFF128C4B),
+      );
+    }
     final textColor = data.isDisabled || !data.isCurrentMonth
         ? const Color(0xFFE1E1E1)
         : data.isSelected
@@ -212,20 +265,11 @@ class DefaultCalendarComponentBuilder extends CalendarComponentBuilder {
         : data.isToday
         ? const Color(0xFFFF0000)
         : const Color(0xFF333333);
-    return Center(
-      child: Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: data.isSelected
-            ? const BoxDecoration(
-                color: Color(0xFF128C4B),
-                shape: BoxShape.circle,
-              )
-            : null,
-        child: Text(
-          '${data.date.day}',
-          style: TextStyle(
+    final text = CalendarTextLayout.layout(
+      text: TextSpan(
+        text: '${data.date.day}',
+        style: textStyle.merge(
+          TextStyle(
             color: textColor,
             fontSize: 15,
             fontWeight: FontWeight.w500,
@@ -233,7 +277,29 @@ class DefaultCalendarComponentBuilder extends CalendarComponentBuilder {
           ),
         ),
       ),
+      textDirection: textDirection,
+      textScaler: textScaler,
+      locale: locale,
+      maxWidth: diameter,
     );
+    // Match the original 36×36 text box, including clipping at large text scales.
+    final textHeight = text.height.clamp(0.0, diameter);
+    final offset = center - Offset(text.width / 2, textHeight / 2);
+    canvas.save();
+    if (text.height > diameter) {
+      canvas.clipRect(offset & Size(text.width, textHeight));
+    }
+    text.paint(canvas, offset);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _DefaultCalendarDayPainter oldDelegate) {
+    return oldDelegate.data != data ||
+        oldDelegate.textStyle != textStyle ||
+        oldDelegate.textScaler != textScaler ||
+        oldDelegate.textDirection != textDirection ||
+        oldDelegate.locale != locale;
   }
 }
 

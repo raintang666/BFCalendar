@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
@@ -209,6 +207,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   late final AnimationController _fullScreenController;
   final ScrollController _listController = ScrollController();
   late CalendarDisplayMode _lastKnownDisplayMode;
+  late CalendarPageOrientation _lastKnownOrientation;
   bool _isApplyingDisplayModeInternally = false;
 
   double _dragAccumulated = 0;
@@ -226,14 +225,17 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   bool _isListFullScreenDragging = false;
   bool _isCalendarFullScreenDragging = false;
   bool _isVerticalFullScreenExpanded = false;
-  double? _displayedCalendarHeight;
   double? _monthBodyHeightOverride;
   double _fullScreenDragStartBodyHeight = 0;
   double _calendarViewportHeight = 0;
+  Widget? _content;
+  ScrollPhysics? _contentPhysics;
 
   @override
   void initState() {
     super.initState();
+    _lastKnownOrientation = _effectivePageOrientation;
+    widget.interactionController?.addListener(_handleInteractionChanged);
     _lastKnownDisplayMode = widget.controller.displayMode;
     widget.controller.addListener(_handleCalendarControllerChanged);
     _settleController =
@@ -272,6 +274,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   @override
   void didUpdateWidget(covariant CalendarInteractiveView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _content = null;
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_handleCalendarControllerChanged);
       _lastKnownDisplayMode = widget.controller.displayMode;
@@ -279,6 +282,10 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     }
     _syncExternalOrientationToController();
     if (oldWidget.interactionController != widget.interactionController) {
+      oldWidget.interactionController?.removeListener(
+        _handleInteractionChanged,
+      );
+      widget.interactionController?.addListener(_handleInteractionChanged);
       oldWidget.interactionController?._detach();
       widget.interactionController?._attach(
         _CalendarInteractiveActions(
@@ -299,7 +306,35 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _content = null;
+  }
+
+  Widget _buildContent() {
+    final physics = _listPhysics;
+    if (_content == null || _contentPhysics != physics) {
+      _contentPhysics = physics;
+      _content = ClipRect(
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: _handleListPointerDown,
+          onPointerMove: _handleListPointerMove,
+          onPointerUp: _handleListPointerEnd,
+          onPointerCancel: _handleListPointerCancel,
+          child: Builder(
+            builder: (context) =>
+                widget.contentBuilder(context, _listController, physics),
+          ),
+        ),
+      );
+    }
+    return _content!;
+  }
+
+  @override
   void dispose() {
+    widget.interactionController?.removeListener(_handleInteractionChanged);
     widget.interactionController?._detach();
     widget.controller.removeListener(_handleCalendarControllerChanged);
     _fullScreenController.dispose();
@@ -313,12 +348,13 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
       widget.pageOrientation ??
       CalendarPageOrientation.horizontal;
 
-  Listenable get _animationListenable {
-    final interactionController = widget.interactionController;
-    if (interactionController == null) {
-      return widget.controller;
-    }
-    return Listenable.merge([widget.controller, interactionController]);
+  void _handleInteractionChanged() {
+    final orientation = _effectivePageOrientation;
+    if (_lastKnownOrientation == orientation) return;
+    setState(() {
+      _lastKnownOrientation = orientation;
+      _content = null;
+    });
   }
 
   double get _collapseTravel {
@@ -336,27 +372,6 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
       firstWeekday: widget.controller.firstWeekday,
       monthViewShowMode: widget.controller.monthViewShowMode,
     );
-  }
-
-  double get _expandedCalendarHeight {
-    return widget.monthHeaderHeight +
-        widget.weekBarHeight +
-        _effectiveMonthBodyHeight;
-  }
-
-  double get _collapsedCalendarHeight {
-    return widget.monthHeaderHeight +
-        widget.weekBarHeight +
-        widget.calendarHeight;
-  }
-
-  double get _listTopOffset {
-    return _displayedCalendarHeight ??
-        lerpDouble(
-          _expandedCalendarHeight,
-          _collapsedCalendarHeight,
-          _collapsePreviewProgress,
-        )!;
   }
 
   ScrollPhysics get _listPhysics {
@@ -441,6 +456,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   void _handleCalendarControllerChanged() {
+    _content = null;
     final nextMode = widget.controller.displayMode;
     if (_isApplyingDisplayModeInternally) {
       _lastKnownDisplayMode = nextMode;
@@ -501,7 +517,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   Widget build(BuildContext context) {
     _clearFullScreenIfUnavailable();
     return AnimatedBuilder(
-      animation: _animationListenable,
+      animation: widget.controller,
       builder: (context, _) {
         _scheduleInteractionStateSync();
         if (!_canGestureToFullScreen && _monthBodyHeightOverride != null) {
@@ -527,156 +543,116 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
                 onFocusedMonthChanged: widget.onFocusedDayChanged,
               );
             }
-            return Stack(
+            return CustomMultiChildLayout(
+              delegate: _CalendarContentLayoutDelegate(),
               children: [
-                Column(
-                  children: [
-                    Expanded(
-                      child: Stack(
-                        children: [
-                          Listener(
-                            behavior: HitTestBehavior.opaque,
-                            onPointerDown: _handleCalendarPointerDown,
-                            onPointerMove: _handleCalendarPointerMove,
-                            onPointerUp: _handleCalendarPointerEnd,
-                            onPointerCancel: _handleCalendarPointerCancel,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onVerticalDragStart: _isHorizontalCalendarPaging
-                                  ? (_) {
-                                      _stopSettleAnimation();
-                                      _stopFullScreenAnimation();
-                                      _dragAccumulated = 0;
-                                      _isCalendarAreaDragging = true;
-                                      _dragSourceMode =
-                                          widget.controller.displayMode;
-                                      _fullScreenDragStartBodyHeight =
-                                          _effectiveMonthBodyHeight;
-                                      _isCalendarFullScreenDragging =
-                                          _isCalendarFullScreenDragging ||
-                                          (_canGestureToFullScreen &&
-                                              _isFullScreenExpanded);
-                                    }
-                                  : null,
-                              onVerticalDragUpdate: _isHorizontalCalendarPaging
-                                  ? (details) {
-                                      if (_calendarPointerId != null &&
-                                          _isCalendarFullScreenDragging) {
-                                        return;
-                                      }
-                                      _dragAccumulated += details.delta.dy;
-                                      if (widget.controller.displayMode ==
-                                              CalendarDisplayMode.month &&
-                                          _canGestureToFullScreen) {
-                                        final shouldHandleFullScreen =
-                                            _isCalendarFullScreenDragging ||
-                                            _isFullScreenExpanded ||
-                                            _dragAccumulated > 0;
-                                        if (shouldHandleFullScreen) {
-                                          _isCalendarFullScreenDragging = true;
-                                          _updateFullScreenDrag(
-                                            _dragAccumulated,
-                                          );
-                                          return;
-                                        }
-                                      }
-                                      if (_isCalendarFullScreenDragging) {
-                                        _updateFullScreenDrag(_dragAccumulated);
-                                        return;
-                                      }
-                                      _updateCollapsePreview();
-                                    }
-                                  : null,
-                              onVerticalDragEnd: _isHorizontalCalendarPaging
-                                  ? (details) {
-                                      if (_calendarPointerId != null &&
-                                          _isCalendarFullScreenDragging) {
-                                        return;
-                                      }
-                                      if (_isCalendarFullScreenDragging) {
-                                        _finishFullScreenDrag(
-                                          details.primaryVelocity ?? 0,
-                                        );
-                                        return;
-                                      }
-                                      _commitVerticalDrag(
-                                        details.primaryVelocity ?? 0,
-                                      );
-                                    }
-                                  : null,
-                              onVerticalDragCancel: _isHorizontalCalendarPaging
-                                  ? () {
-                                      if (_calendarPointerId != null &&
-                                          _isCalendarFullScreenDragging) {
-                                        return;
-                                      }
-                                      if (_isCalendarFullScreenDragging) {
-                                        _finishFullScreenDrag(0);
-                                        return;
-                                      }
-                                      _resetDragState();
-                                    }
-                                  : null,
-                              child: CalendarView(
-                                controller: widget.controller,
-                                onDaySelected: widget.onDaySelected,
-                                componentBuilder: widget.componentBuilder,
-                                onPageChanged: (_) {
-                                  widget.onFocusedDayChanged?.call(
-                                    widget.controller.focusedDay,
-                                  );
-                                },
-                                onDisplayedHeightChanged: (height) {
-                                  if (_displayedCalendarHeight != null &&
-                                      (_displayedCalendarHeight! - height)
-                                              .abs() <
-                                          0.0001) {
-                                    return;
-                                  }
-                                  setState(() {
-                                    _displayedCalendarHeight = height;
-                                  });
-                                },
-                                pageOrientation: _effectivePageOrientation,
-                                monthBodyHeightOverride: _canGestureToFullScreen
-                                    ? _monthBodyHeightOverride
-                                    : null,
-                                collapsePreviewProgress:
-                                    _collapsePreviewProgress,
-                                previewExpandFromWeek:
-                                    _dragSourceMode ==
-                                        CalendarDisplayMode.week &&
-                                    widget.controller.displayMode ==
-                                        CalendarDisplayMode.week &&
-                                    _collapsePreviewProgress < 1,
-                                calendarHeight: widget.calendarHeight,
-                                weekBarHeight: widget.weekBarHeight,
-                                monthHeaderHeight: widget.monthHeaderHeight,
-                              ),
-                            ),
-                          ),
-                          Positioned.fill(
-                            top: _listTopOffset,
-                            child: ClipRect(
-                              child: Listener(
-                                behavior: HitTestBehavior.translucent,
-                                onPointerDown: _handleListPointerDown,
-                                onPointerMove: _handleListPointerMove,
-                                onPointerUp: _handleListPointerEnd,
-                                onPointerCancel: _handleListPointerCancel,
-                                child: widget.contentBuilder(
-                                  context,
-                                  _listController,
-                                  _listPhysics,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                LayoutId(
+                  id: _CalendarSlot.calendar,
+                  child: Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: _handleCalendarPointerDown,
+                    onPointerMove: _handleCalendarPointerMove,
+                    onPointerUp: _handleCalendarPointerEnd,
+                    onPointerCancel: _handleCalendarPointerCancel,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onVerticalDragStart: _isHorizontalCalendarPaging
+                          ? (_) {
+                              _stopSettleAnimation();
+                              _stopFullScreenAnimation();
+                              _dragAccumulated = 0;
+                              _isCalendarAreaDragging = true;
+                              _dragSourceMode = widget.controller.displayMode;
+                              _fullScreenDragStartBodyHeight =
+                                  _effectiveMonthBodyHeight;
+                              _isCalendarFullScreenDragging =
+                                  _isCalendarFullScreenDragging ||
+                                  (_canGestureToFullScreen &&
+                                      _isFullScreenExpanded);
+                            }
+                          : null,
+                      onVerticalDragUpdate: _isHorizontalCalendarPaging
+                          ? (details) {
+                              if (_calendarPointerId != null &&
+                                  _isCalendarFullScreenDragging) {
+                                return;
+                              }
+                              _dragAccumulated += details.delta.dy;
+                              if (widget.controller.displayMode ==
+                                      CalendarDisplayMode.month &&
+                                  _canGestureToFullScreen) {
+                                final shouldHandleFullScreen =
+                                    _isCalendarFullScreenDragging ||
+                                    _isFullScreenExpanded ||
+                                    _dragAccumulated > 0;
+                                if (shouldHandleFullScreen) {
+                                  _isCalendarFullScreenDragging = true;
+                                  _updateFullScreenDrag(_dragAccumulated);
+                                  return;
+                                }
+                              }
+                              if (_isCalendarFullScreenDragging) {
+                                _updateFullScreenDrag(_dragAccumulated);
+                                return;
+                              }
+                              _updateCollapsePreview();
+                            }
+                          : null,
+                      onVerticalDragEnd: _isHorizontalCalendarPaging
+                          ? (details) {
+                              if (_calendarPointerId != null &&
+                                  _isCalendarFullScreenDragging) {
+                                return;
+                              }
+                              if (_isCalendarFullScreenDragging) {
+                                _finishFullScreenDrag(
+                                  details.primaryVelocity ?? 0,
+                                );
+                                return;
+                              }
+                              _commitVerticalDrag(details.primaryVelocity ?? 0);
+                            }
+                          : null,
+                      onVerticalDragCancel: _isHorizontalCalendarPaging
+                          ? () {
+                              if (_calendarPointerId != null &&
+                                  _isCalendarFullScreenDragging) {
+                                return;
+                              }
+                              if (_isCalendarFullScreenDragging) {
+                                _finishFullScreenDrag(0);
+                                return;
+                              }
+                              _resetDragState();
+                            }
+                          : null,
+                      child: CalendarView(
+                        controller: widget.controller,
+                        onDaySelected: widget.onDaySelected,
+                        componentBuilder: widget.componentBuilder,
+                        onPageChanged: (_) {
+                          widget.onFocusedDayChanged?.call(
+                            widget.controller.focusedDay,
+                          );
+                        },
+                        pageOrientation: _effectivePageOrientation,
+                        monthBodyHeightOverride: _canGestureToFullScreen
+                            ? _monthBodyHeightOverride
+                            : null,
+                        collapsePreviewProgress: _collapsePreviewProgress,
+                        previewExpandFromWeek:
+                            _dragSourceMode == CalendarDisplayMode.week &&
+                            widget.controller.displayMode ==
+                                CalendarDisplayMode.week &&
+                            _collapsePreviewProgress < 1,
+                        calendarHeight: widget.calendarHeight,
+                        weekBarHeight: widget.weekBarHeight,
+                        monthHeaderHeight: widget.monthHeaderHeight,
                       ),
                     ),
-                  ],
+                  ),
                 ),
+                LayoutId(id: _CalendarSlot.content, child: _buildContent()),
               ],
             );
           },
@@ -1225,4 +1201,32 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
       });
     });
   }
+}
+
+// Measure both areas together so the feed follows the calendar in the same
+// frame, including months with different row counts during a page swipe.
+enum _CalendarSlot { calendar, content }
+
+class _CalendarContentLayoutDelegate extends MultiChildLayoutDelegate {
+  @override
+  void performLayout(Size size) {
+    final calendarSize = layoutChild(
+      _CalendarSlot.calendar,
+      BoxConstraints.loose(size),
+    );
+    positionChild(_CalendarSlot.calendar, Offset.zero);
+    layoutChild(
+      _CalendarSlot.content,
+      BoxConstraints.tight(
+        Size(
+          size.width,
+          (size.height - calendarSize.height).clamp(0.0, size.height),
+        ),
+      ),
+    );
+    positionChild(_CalendarSlot.content, Offset(0, calendarSize.height));
+  }
+
+  @override
+  bool shouldRelayout(_CalendarContentLayoutDelegate oldDelegate) => false;
 }

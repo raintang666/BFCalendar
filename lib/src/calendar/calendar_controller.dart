@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 
 import 'calendar_models.dart';
@@ -22,10 +24,7 @@ class CalendarController extends ChangeNotifier {
        _minSelectRange = _normalizeSelectRangeLimit(minSelectRange),
        _maxSelectRange = _normalizeSelectRangeLimit(maxSelectRange),
        _maxMultiSelectSize = _normalizeSelectRangeLimit(maxMultiSelectSize),
-       _markers = {
-         for (final entry in markers.entries)
-           CalendarDateUtils.stripTime(entry.key): entry.value,
-       },
+       _markers = _prepareMarkers(markers),
        _disabledDates = disabledDates.map(CalendarDateUtils.stripTime).toSet(),
        _disabledDatePredicate = disabledDatePredicate {
     if (_minDate != null && _maxDate != null && _minDate!.isAfter(_maxDate!)) {
@@ -48,6 +47,9 @@ class CalendarController extends ChangeNotifier {
   CalendarSelectionMode _selectionMode = CalendarSelectionMode.single;
   int _firstWeekday = DateTime.sunday;
   CalendarSelectionState _selection = const CalendarSelectionState();
+
+  // 短月份临时选中月末，后续切月仍优先使用上次主动选中的日期号。
+  int? _preferredSingleDayOfMonth;
   Map<DateTime, List<CalendarMarker>> _markers;
   final Set<DateTime> _disabledDates;
   CalendarDatePredicate? _disabledDatePredicate;
@@ -94,7 +96,7 @@ class CalendarController extends ChangeNotifier {
     return CalendarDateUtils.eachDay(start, end);
   }
 
-  /// 日期标记数据。
+  /// 日期标记数据。传入 [CalendarMarkerIndex] 时返回该只读索引。
   Map<DateTime, List<CalendarMarker>> get markers => _markers;
 
   /// 月视图显示模式。
@@ -181,7 +183,11 @@ class CalendarController extends ChangeNotifier {
       );
     }
     if (adjustSelection) {
+      final previousSingle = _selection.single;
       _selection = _adjustSelectionToBounds(_selection);
+      if (_selection.single != previousSingle) {
+        _preferredSingleDayOfMonth = null;
+      }
     }
     notifyListeners();
     return true;
@@ -305,6 +311,7 @@ class CalendarController extends ChangeNotifier {
       return;
     }
     _selectionMode = mode;
+    _preferredSingleDayOfMonth = null;
     _selection = switch (mode) {
       CalendarSelectionMode.single => CalendarSelectionState(
         single: _focusedDay,
@@ -328,17 +335,36 @@ class CalendarController extends ChangeNotifier {
   }
 
   /// 跳转到指定月份。
+  ///
+  /// 单选时优先选中目标月份的同一日，日期不存在时选中月末。
+  /// 若日期超出日历范围，使用范围边界。目标日期被禁用时保留原选中日期。
   void jumpToMonth(DateTime month) {
     final normalized = CalendarDateUtils.stripTime(month);
     if (!canShowMonth(normalized)) {
       return;
     }
-    _focusedDay = _clampDate(
-      normalized,
+    final preferredDay =
+        _selectionMode == CalendarSelectionMode.single &&
+            !CalendarDateUtils.isSameMonth(_focusedDay, normalized)
+        ? _preferredSingleDayOfMonth ?? _selection.single?.day
+        : null;
+    final target = preferredDay == null
+        ? normalized
+        : DateTime(
+            normalized.year,
+            normalized.month,
+            preferredDay.clamp(1, CalendarDateUtils.daysInMonth(normalized)),
+          );
+    final nextFocusedDay = _clampDate(
+      target,
       minDate: _minDate,
       maxDate: _maxDate,
       fallback: _focusedDay,
     );
+    if (preferredDay != null && !isDisabled(nextFocusedDay)) {
+      _selection = _selection.copyWith(single: nextFocusedDay);
+    }
+    _focusedDay = nextFocusedDay;
     notifyListeners();
   }
 
@@ -368,13 +394,46 @@ class CalendarController extends ChangeNotifier {
     }
   }
 
-  /// 替换日期标记数据。
+  /// 替换日期标记数据。用 [CalendarMarkerIndex] 可直接使用已归一化的索引。
   void setMarkers(Map<DateTime, List<CalendarMarker>> markers) {
-    _markers = {
+    _markers = _prepareMarkers(markers);
+    notifyListeners();
+  }
+
+  static Map<DateTime, List<CalendarMarker>> _prepareMarkers(
+    Map<DateTime, List<CalendarMarker>> markers,
+  ) {
+    if (markers is CalendarMarkerIndex) return markers;
+    if (!kIsWeb &&
+        markers is LinkedHashMap<DateTime, List<CalendarMarker>> &&
+        markers.length >= 1024) {
+      final keys = markers.keys.iterator;
+      for (var checked = 0; keys.moveNext(); checked++) {
+        final key = keys.current;
+        final day = CalendarDateUtils.stripTime(key);
+        if (key.runtimeType == day.runtimeType && day == key) continue;
+
+        // The checked prefix is already normalized. Copy it in order so
+        // collisions still keep the first position and the last value.
+        final result = <DateTime, List<CalendarMarker>>{};
+        final entries = markers.entries.iterator;
+        for (var i = 0; entries.moveNext(); i++) {
+          final entry = entries.current;
+          final date = i < checked
+              ? entry.key
+              : CalendarDateUtils.stripTime(entry.key);
+          result[date] = entry.value;
+        }
+        return result;
+      }
+      // Copy the backing table when the runtime supports it, while retaining
+      // an independent map and the original per-day lists.
+      return Map.of(markers);
+    }
+    return {
       for (final entry in markers.entries)
         CalendarDateUtils.stripTime(entry.key): entry.value,
     };
-    notifyListeners();
   }
 
   /// 判断日期是否不可选。
@@ -443,6 +502,7 @@ class CalendarController extends ChangeNotifier {
       case CalendarSelectionMode.single:
         _focusedDay = normalized;
         _selection = _selection.copyWith(single: normalized);
+        _preferredSingleDayOfMonth = normalized.day;
         break;
       case CalendarSelectionMode.range:
         final current = _selection.range;
@@ -542,6 +602,7 @@ class CalendarController extends ChangeNotifier {
 
   /// 清空当前选择模式下的选择状态。
   void clearSelection() {
+    _preferredSingleDayOfMonth = null;
     _selection = switch (_selectionMode) {
       CalendarSelectionMode.single => const CalendarSelectionState(),
       CalendarSelectionMode.range => const CalendarSelectionState(

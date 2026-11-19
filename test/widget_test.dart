@@ -132,7 +132,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CalendarView), findsOneWidget);
-    expect(find.text('Sun'), findsOneWidget);
+    expect(find.semantics.byLabel('Sun'), findsOne);
     expect(find.text('新西兰克马德克群岛发生5.7级地震 震源深度10千米'), findsWidgets);
   });
 

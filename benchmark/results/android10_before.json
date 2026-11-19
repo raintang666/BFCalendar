@@ -1,0 +1,72 @@
+{
+  "date": "2026-11-17",
+  "device": "STK TL00",
+  "android": "10",
+  "mode": "profile",
+  "renderer": "Impeller OpenGLES",
+  "flutter": "3.44.9+ohos-1.0.0-beta",
+  "stage": "before",
+  "baseline": "Existing working tree, including the Canvas changes present before this optimization",
+  "samples": [
+    {
+      "style": "Canvas",
+      "motion": "horizontal",
+      "frames": 166,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 12760,
+      "buildP95us": 17147,
+      "rasterP95us": 15614,
+      "overBudget": 17
+    },
+    {
+      "style": "Canvas",
+      "motion": "collapse",
+      "frames": 177,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 9846,
+      "buildP95us": 23286,
+      "rasterP95us": 18010,
+      "overBudget": 42
+    },
+    {
+      "style": "Canvas",
+      "motion": "stretch",
+      "frames": 73,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 10464,
+      "buildP95us": 26520,
+      "rasterP95us": 17943,
+      "overBudget": 14
+    },
+    {
+      "style": "Widget",
+      "motion": "horizontal",
+      "frames": 130,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 16712,
+      "buildP95us": 28719,
+      "rasterP95us": 20638,
+      "overBudget": 83
+    },
+    {
+      "style": "Widget",
+      "motion": "collapse",
+      "frames": 146,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 15971,
+      "buildP95us": 28670,
+      "rasterP95us": 17675,
+      "overBudget": 65
+    },
+    {
+      "style": "Widget",
+      "motion": "stretch",
+      "frames": 67,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 17210,
+      "buildP95us": 37783,
+      "rasterP95us": 18756,
+      "overBudget": 42
+    }
+  ]
+}

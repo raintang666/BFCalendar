@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../calendar/calendar_canvas_labels.dart';
 import '../../calendar/calendar_components.dart';
+import '../../calendar/calendar_text_layout.dart';
 
 class SingleSelectCalendarComponentBuilder extends CalendarComponentBuilder {
   const SingleSelectCalendarComponentBuilder();
@@ -28,7 +30,7 @@ class SingleSelectCalendarComponentBuilder extends CalendarComponentBuilder {
 
   @override
   Widget buildWeekBarCell(BuildContext context, CalendarWeekBarCellData data) {
-    return Text(
+    return CalendarCanvasLabel(
       data.label,
       style: const TextStyle(
         color: Color(0xFF111111),
@@ -111,7 +113,7 @@ class _SingleSelectCellPainter extends CustomPainter {
         : inMonth
         ? const Color(0xFF333333)
         : const Color(0xFFE1E1E1);
-    final textPainter = TextPainter(
+    final textPainter = CalendarTextLayout.layout(
       text: TextSpan(
         text: isSelected ? selectedText : dayText,
         style: TextStyle(
@@ -122,7 +124,7 @@ class _SingleSelectCellPainter extends CustomPainter {
         ),
       ),
       textDirection: TextDirection.ltr,
-    )..layout();
+    );
     textPainter.paint(
       canvas,
       Offset(

@@ -1,0 +1,136 @@
+{
+  "date": "2026-11-19",
+  "device": "STK TL00",
+  "android": "10",
+  "mode": "profile",
+  "renderer": "Impeller OpenGLES",
+  "flutter": "3.44.9+ohos-1.0.0-beta",
+  "stage": "before",
+  "baseline": "Working tree at the start of the Canvas migration (HEAD 5940de0 plus local changes)",
+  "benchmarkSHA256": "fbc8137b78f48df944fe4e9da34db8c49b44a3b2af1b10c168d2db1743a9f8b1",
+  "dependencyLockSHA256": "d79a33564dc3fe7aad57b72939d34c9ce06adf79094ac425e7b38b020520be59",
+  "trialsPerMotion": 3,
+  "mixedRun": "CALENDAR_BENCHMARK_STYLE=one-widget",
+  "samples": [
+    {
+      "style": "default",
+      "motion": "horizontal",
+      "frames": 178,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 4177,
+      "buildP95us": 7474,
+      "rasterP95us": 18969,
+      "overBudget": 54
+    },
+    {
+      "style": "default",
+      "motion": "week",
+      "frames": 187,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 4624,
+      "buildP95us": 8928,
+      "rasterP95us": 17454,
+      "overBudget": 27
+    },
+    {
+      "style": "default",
+      "motion": "collapse",
+      "frames": 67,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 4728,
+      "buildP95us": 25947,
+      "rasterP95us": 19581,
+      "overBudget": 22
+    },
+    {
+      "style": "default",
+      "motion": "stretch",
+      "frames": 121,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 6060,
+      "buildP95us": 12607,
+      "rasterP95us": 18276,
+      "overBudget": 16
+    },
+    {
+      "style": "home",
+      "motion": "horizontal",
+      "frames": 174,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 4332,
+      "buildP95us": 7880,
+      "rasterP95us": 19645,
+      "overBudget": 68
+    },
+    {
+      "style": "home",
+      "motion": "week",
+      "frames": 184,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 4724,
+      "buildP95us": 9020,
+      "rasterP95us": 18006,
+      "overBudget": 55
+    },
+    {
+      "style": "home",
+      "motion": "collapse",
+      "frames": 65,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 4515,
+      "buildP95us": 51332,
+      "rasterP95us": 20003,
+      "overBudget": 23
+    },
+    {
+      "style": "home",
+      "motion": "stretch",
+      "frames": 116,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 10602,
+      "buildP95us": 18168,
+      "rasterP95us": 17483,
+      "overBudget": 27
+    },
+    {
+      "style": "one-widget",
+      "motion": "horizontal",
+      "frames": 173,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 4173,
+      "buildP95us": 6813,
+      "rasterP95us": 18096,
+      "overBudget": 53
+    },
+    {
+      "style": "one-widget",
+      "motion": "week",
+      "frames": 189,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 4663,
+      "buildP95us": 8439,
+      "rasterP95us": 17895,
+      "overBudget": 40
+    },
+    {
+      "style": "one-widget",
+      "motion": "collapse",
+      "frames": 65,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 4590,
+      "buildP95us": 21585,
+      "rasterP95us": 17672,
+      "overBudget": 20
+    },
+    {
+      "style": "one-widget",
+      "motion": "stretch",
+      "frames": 118,
+      "refreshHz": 60.000003814697266,
+      "buildP50us": 8403,
+      "buildP95us": 18201,
+      "rasterP95us": 16833,
+      "overBudget": 13
+    }
+  ]
+}

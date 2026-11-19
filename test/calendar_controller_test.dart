@@ -1,7 +1,85 @@
+import 'dart:ui';
+
 import 'package:calendarview_flutter/calendarview_flutter.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('plain marker maps keep date normalization and payload identity', () {
+    final day = DateTime(2026, 7, 9);
+    const before = _LegacyMarker(label: 'before', color: Color(0xFF000000));
+    final payload = Object();
+    final marker = CalendarMarker(
+      label: 'event',
+      color: const Color(0xFF000000),
+      data: payload,
+    );
+    final list = <CalendarMarker>[marker];
+    final input = {
+      DateTime.utc(2026, 7, 9, 9): [before],
+      DateTime(2026, 7, 9, 12): list,
+    };
+    final controller = CalendarController(markers: input);
+    addTearDown(controller.dispose);
+
+    expect(before.data, isNull);
+    expect(controller.markers.keys, [day]);
+    expect(controller.markers[day], same(list));
+    expect(controller.markers[day]!.single.data, same(payload));
+    input.clear();
+    expect(controller.markers[day], same(list));
+
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+    controller.setMarkers({
+      DateTime(2026, 7, 9, 21): [before],
+    });
+    expect(controller.markers[day], [before]);
+    expect(notifications, 1);
+  });
+
+  test(
+    'large normalized marker maps are detached and preserve insertion order',
+    () {
+      final source = <DateTime, List<CalendarMarker>>{
+        for (var i = 0; i < 1100; i++) DateTime(2026, 1, 1 + i): [],
+      };
+      final originalDays = source.keys.toList();
+      final firstDay = originalDays.first;
+      final firstMarkers = source[firstDay];
+      final controller = CalendarController()..setMarkers(source);
+      addTearDown(controller.dispose);
+      source.clear();
+
+      expect(controller.markers.keys, originalDays);
+      expect(controller.markers[firstDay], same(firstMarkers));
+      expect(controller.markers.remove(firstDay), same(firstMarkers));
+      expect(controller.markers.containsKey(firstDay), isFalse);
+    },
+  );
+
+  test(
+    'large marker maps keep normalized collisions in their first position',
+    () {
+      final source = <DateTime, List<CalendarMarker>>{
+        for (var i = 0; i < 1100; i++) DateTime(2026, 1, 1 + i): [],
+      };
+      final originalDays = source.keys.toList();
+      final firstDay = originalDays.first;
+      final finalDay = DateTime(2030, 1, 1);
+      final laterMarkers = <CalendarMarker>[
+        const CalendarMarker(label: 'later', color: Color(0xFF000000)),
+      ];
+      source[DateTime.utc(2026, 1, 1, 12)] = [];
+      source[DateTime(2030, 1, 1, 12)] = [];
+      source[DateTime(2026, 1, 1, 23)] = laterMarkers;
+      final controller = CalendarController(markers: source);
+      addTearDown(controller.dispose);
+
+      expect(controller.markers.keys, [...originalDays, finalDay]);
+      expect(controller.markers[firstDay], same(laterMarkers));
+    },
+  );
+
   test('setRange clamps focused day and exposes original-style range text', () {
     final controller = CalendarController(
       focusedDay: DateTime(2020, 5, 12),
@@ -176,4 +254,48 @@ void main() {
 
     expect(controller.focusedDay, DateTime(2018, 12, 15));
   });
+
+  test('month navigation restores the last explicitly selected day', () {
+    final controller = CalendarController(focusedDay: DateTime(2024, 1, 10));
+    final selections = <DateTime?>[];
+    controller.addListener(() => selections.add(controller.selection.single));
+
+    expect(controller.selectDay(DateTime(2024, 1, 31)), isTrue);
+    controller.nextPage();
+    expect(controller.focusedDay, DateTime(2024, 2, 29));
+    controller.nextPage();
+    expect(controller.focusedDay, DateTime(2024, 3, 31));
+    controller.jumpToMonth(DateTime(2024, 4));
+    expect(controller.focusedDay, DateTime(2024, 4, 30));
+    controller.previousPage();
+    expect(controller.focusedDay, DateTime(2024, 3, 31));
+
+    expect(selections, [
+      DateTime(2024, 1, 31),
+      DateTime(2024, 2, 29),
+      DateTime(2024, 3, 31),
+      DateTime(2024, 4, 30),
+      DateTime(2024, 3, 31),
+    ]);
+  });
+
+  test('month selection respects disabled dates and partial month bounds', () {
+    final controller = CalendarController(
+      focusedDay: DateTime(2024, 1, 31),
+      maxDate: DateTime(2024, 3, 28),
+      disabledDates: {DateTime(2024, 2, 29)},
+    );
+
+    controller.nextPage();
+    expect(controller.focusedDay, DateTime(2024, 2, 29));
+    expect(controller.selection.single, DateTime(2024, 1, 31));
+
+    controller.nextPage();
+    expect(controller.focusedDay, DateTime(2024, 3, 28));
+    expect(controller.selection.single, DateTime(2024, 3, 28));
+  });
+}
+
+class _LegacyMarker extends CalendarMarker {
+  const _LegacyMarker({required super.label, required super.color});
 }
