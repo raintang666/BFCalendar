@@ -1,9 +1,11 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/widgets.dart';
 
 import 'calendar_components.dart';
 import 'calendar_controller.dart';
 import 'calendar_models.dart';
+import 'calendar_retained_day_painter.dart';
 import 'calendar_view.dart';
 import 'date_utils_ext.dart';
 
@@ -196,7 +198,9 @@ class CalendarInteractiveView extends StatefulWidget {
 }
 
 class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
+  final _stretchImages = CalendarStretchImageCache();
+  static const _snapFlingVelocity = 450.0;
   static const _settleSpring = SpringDescription(
     mass: 1,
     stiffness: 220,
@@ -210,23 +214,18 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   late CalendarPageOrientation _lastKnownOrientation;
   bool _isApplyingDisplayModeInternally = false;
 
-  double _dragAccumulated = 0;
+  Drag? _contentDrag;
+  double _dragBodyHeight = 0;
   double _collapsePreviewProgress = 0;
   CalendarDisplayMode? _dragSourceMode;
   bool _isCalendarAreaDragging = false;
-  int? _calendarPointerId;
-  double _calendarPointerStartX = 0;
-  double _calendarPointerStartY = 0;
   int? _listPointerId;
   double _listPointerStartX = 0;
   double _listPointerStartY = 0;
-  bool _isListCollapseDragging = false;
-  bool _isListPullExpanding = false;
-  bool _isListFullScreenDragging = false;
-  bool _isCalendarFullScreenDragging = false;
+  VelocityTracker? _listVelocity;
+  bool _isListDragging = false;
   bool _isVerticalFullScreenExpanded = false;
   double? _monthBodyHeightOverride;
-  double _fullScreenDragStartBodyHeight = 0;
   double _calendarViewportHeight = 0;
   Widget? _content;
   ScrollPhysics? _contentPhysics;
@@ -234,6 +233,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _lastKnownOrientation = _effectivePageOrientation;
     widget.interactionController?.addListener(_handleInteractionChanged);
     _lastKnownDisplayMode = widget.controller.displayMode;
@@ -321,7 +321,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
           onPointerDown: _handleListPointerDown,
           onPointerMove: _handleListPointerMove,
           onPointerUp: _handleListPointerEnd,
-          onPointerCancel: _handleListPointerCancel,
+          onPointerCancel: _handleListPointerEnd,
           child: Builder(
             builder: (context) =>
                 widget.contentBuilder(context, _listController, physics),
@@ -333,12 +333,18 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   }
 
   @override
+  void didHaveMemoryPressure() => _stretchImages.clear();
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stretchImages.clear();
     widget.interactionController?.removeListener(_handleInteractionChanged);
     widget.interactionController?._detach();
     widget.controller.removeListener(_handleCalendarControllerChanged);
     _fullScreenController.dispose();
     _settleController.dispose();
+    _contentDrag?.cancel();
     _listController.dispose();
     super.dispose();
   }
@@ -389,9 +395,16 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   bool get _isVerticalCalendarPaging =>
       _effectivePageOrientation == CalendarPageOrientation.vertical;
 
+  // Keep the week as the committed mode until the user releases the drag.
+  bool get _previewExpandFromWeek =>
+      _dragSourceMode == CalendarDisplayMode.week &&
+      widget.controller.displayMode == CalendarDisplayMode.week &&
+      _collapsePreviewProgress < 1;
+
   bool get _canGestureToFullScreen =>
       _isHorizontalCalendarPaging &&
-      widget.controller.displayMode == CalendarDisplayMode.month &&
+      (widget.controller.displayMode == CalendarDisplayMode.month ||
+          _previewExpandFromWeek) &&
       _collapsePreviewProgress <= 0.0001;
 
   double get _normalMonthBodyHeight => widget.calendarHeight * _monthRowCount;
@@ -525,6 +538,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
   @override
   Widget build(BuildContext context) {
     _clearFullScreenIfUnavailable();
+    final canDragCalendar = _isHorizontalCalendarPaging && !widget.yearMode;
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, _) {
@@ -557,84 +571,33 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
               children: [
                 LayoutId(
                   id: _CalendarSlot.calendar,
-                  child: Listener(
+                  child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onPointerDown: _handleCalendarPointerDown,
-                    onPointerMove: _handleCalendarPointerMove,
-                    onPointerUp: _handleCalendarPointerEnd,
-                    onPointerCancel: _handleCalendarPointerCancel,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onVerticalDragStart: _isHorizontalCalendarPaging
-                          ? (_) {
-                              _stopSettleAnimation();
-                              _stopFullScreenAnimation();
-                              _dragAccumulated = 0;
-                              _isCalendarAreaDragging = true;
-                              _dragSourceMode = widget.controller.displayMode;
-                              _fullScreenDragStartBodyHeight =
-                                  _effectiveMonthBodyHeight;
-                              _isCalendarFullScreenDragging =
-                                  _isCalendarFullScreenDragging ||
-                                  (_canGestureToFullScreen &&
-                                      _isFullScreenExpanded);
+                    dragStartBehavior: DragStartBehavior.down,
+                    onVerticalDragStart: canDragCalendar
+                        ? (_) => _startVerticalDrag(fromCalendar: true)
+                        : null,
+                    onVerticalDragUpdate: canDragCalendar
+                        ? _updateVerticalDrag
+                        : null,
+                    onVerticalDragEnd: canDragCalendar
+                        ? _endVerticalDrag
+                        : null,
+                    onVerticalDragCancel: canDragCalendar
+                        ? () {
+                            if (_isCalendarAreaDragging) {
+                              _endVerticalDrag(
+                                DragEndDetails(primaryVelocity: 0),
+                              );
                             }
-                          : null,
-                      onVerticalDragUpdate: _isHorizontalCalendarPaging
-                          ? (details) {
-                              if (_calendarPointerId != null &&
-                                  _isCalendarFullScreenDragging) {
-                                return;
-                              }
-                              _dragAccumulated += details.delta.dy;
-                              if (widget.controller.displayMode ==
-                                      CalendarDisplayMode.month &&
-                                  _canGestureToFullScreen) {
-                                final shouldHandleFullScreen =
-                                    _isCalendarFullScreenDragging ||
-                                    _isFullScreenExpanded ||
-                                    _dragAccumulated > 0;
-                                if (shouldHandleFullScreen) {
-                                  _isCalendarFullScreenDragging = true;
-                                  _updateFullScreenDrag(_dragAccumulated);
-                                  return;
-                                }
-                              }
-                              if (_isCalendarFullScreenDragging) {
-                                _updateFullScreenDrag(_dragAccumulated);
-                                return;
-                              }
-                              _updateCollapsePreview();
-                            }
-                          : null,
-                      onVerticalDragEnd: _isHorizontalCalendarPaging
-                          ? (details) {
-                              if (_calendarPointerId != null &&
-                                  _isCalendarFullScreenDragging) {
-                                return;
-                              }
-                              if (_isCalendarFullScreenDragging) {
-                                _finishFullScreenDrag(
-                                  details.primaryVelocity ?? 0,
-                                );
-                                return;
-                              }
-                              _commitVerticalDrag(details.primaryVelocity ?? 0);
-                            }
-                          : null,
-                      onVerticalDragCancel: _isHorizontalCalendarPaging
-                          ? () {
-                              if (_calendarPointerId != null &&
-                                  _isCalendarFullScreenDragging) {
-                                return;
-                              }
-                              if (_isCalendarFullScreenDragging) {
-                                _finishFullScreenDrag(0);
-                                return;
-                              }
-                              _resetDragState();
-                            }
-                          : null,
+                          }
+                        : null,
+                    child: CalendarStretchMotion(
+                      images: _stretchImages,
+                      active:
+                          (_dragSourceMode != null &&
+                              _monthBodyHeightOverride != null) ||
+                          _fullScreenController.isAnimating,
                       child: CalendarView(
                         controller: widget.controller,
                         onDaySelected: widget.onDaySelected,
@@ -649,11 +612,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
                             ? _monthBodyHeightOverride
                             : null,
                         collapsePreviewProgress: _collapsePreviewProgress,
-                        previewExpandFromWeek:
-                            _dragSourceMode == CalendarDisplayMode.week &&
-                            widget.controller.displayMode ==
-                                CalendarDisplayMode.week &&
-                            _collapsePreviewProgress < 1,
+                        previewExpandFromWeek: _previewExpandFromWeek,
                         calendarHeight: widget.calendarHeight,
                         weekBarHeight: widget.weekBarHeight,
                         monthHeaderHeight: widget.monthHeaderHeight,
@@ -670,75 +629,107 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     );
   }
 
-  void _updateCollapsePreview() {
-    if (_dragSourceMode == null ||
-        widget.yearMode ||
-        !_isHorizontalCalendarPaging) {
-      return;
+  void _startVerticalDrag({required bool fromCalendar}) {
+    _stopSettleAnimation();
+    _stopFullScreenAnimation();
+    _isCalendarAreaDragging = fromCalendar;
+    _dragSourceMode = widget.controller.displayMode;
+    _dragBodyHeight =
+        _monthBodyHeightOverride ??
+        _normalMonthBodyHeight - _collapseTravel * _collapsePreviewProgress;
+  }
+
+  void _updateVerticalDrag(DragUpdateDetails details) {
+    if (_dragSourceMode == null) return;
+    var delta = details.delta.dy;
+    // On reversal, unwind the list portion of this drag before opening the week.
+    if (delta > 0 && _contentDrag != null) {
+      delta -= _dragContentBy(delta, details);
+      if (delta == 0) return;
+      _contentDrag?.cancel();
     }
-    if (_dragSourceMode == CalendarDisplayMode.month) {
-      final next = (-_dragAccumulated / _collapseTravel).clamp(0.0, 1.0);
-      if (next != _collapsePreviewProgress) {
-        setState(() {
-          _collapsePreviewProgress = next;
-        });
-      }
-      return;
-    }
-    if (_dragSourceMode == CalendarDisplayMode.week && _isListAtTop()) {
-      final expand = (_dragAccumulated / _collapseTravel).clamp(0.0, 1.0);
-      final next = 1 - expand;
-      if (next != _collapsePreviewProgress) {
-        setState(() {
-          _collapsePreviewProgress = next;
-        });
-      }
-      return;
-    }
-    if (_dragSourceMode == CalendarDisplayMode.week &&
-        _isCalendarAreaDragging) {
-      final expand = (_dragAccumulated / _collapseTravel).clamp(0.0, 1.0);
-      final next = 1 - expand;
-      if (next != _collapsePreviewProgress) {
-        setState(() {
-          _collapsePreviewProgress = next;
-        });
-      }
+    final weekHeight = widget.calendarHeight;
+    final desiredHeight = _dragBodyHeight + delta;
+    _dragBodyHeight = desiredHeight < weekHeight ? weekHeight : desiredHeight;
+    _updateDragBodyHeight(_dragBodyHeight);
+    if (desiredHeight < weekHeight) {
+      _dragContentBy(desiredHeight - weekHeight, details);
     }
   }
 
-  void _commitVerticalDrag(double velocity) {
-    if (widget.yearMode || _dragSourceMode == null) {
+  double _dragContentBy(double delta, DragUpdateDetails details) {
+    final position = _listController.positions.singleOrNull;
+    if (position == null ||
+        !position.hasContentDimensions ||
+        position.axis != Axis.vertical) {
+      return 0;
+    }
+    final reversed = position.axisDirection == AxisDirection.up;
+    final distance = reversed
+        ? delta.clamp(-position.extentBefore, position.extentAfter)
+        : delta.clamp(-position.extentAfter, position.extentBefore);
+    if (distance == 0) return 0;
+    _contentDrag ??= position.drag(
+      DragStartDetails(globalPosition: details.globalPosition),
+      () => _contentDrag = null,
+    );
+    _contentDrag!.update(
+      DragUpdateDetails(
+        globalPosition: details.globalPosition,
+        localPosition: details.localPosition,
+        delta: Offset(0, distance),
+        primaryDelta: distance,
+      ),
+    );
+    return distance;
+  }
+
+  void _endVerticalDrag(DragEndDetails details) {
+    if (widget.yearMode || _dragSourceMode == null) return;
+    if (_contentDrag != null) {
+      _contentDrag!.end(details);
+      _animateCollapseSettle(
+        targetProgress: 1,
+        targetMode: CalendarDisplayMode.week,
+        velocity: 0,
+      );
       return;
     }
-    if (_dragSourceMode == CalendarDisplayMode.month) {
-      final shouldShrink = _collapsePreviewProgress > 0.45 || velocity < -450;
-      _animateCollapseSettle(
-        targetProgress: shouldShrink ? 1 : 0,
-        targetMode: shouldShrink
-            ? CalendarDisplayMode.week
-            : CalendarDisplayMode.month,
-        velocity: velocity,
-      );
-    } else if (_dragSourceMode == CalendarDisplayMode.week) {
-      final shouldExpand =
-          (_collapsePreviewProgress < 0.55 &&
-              (_isCalendarAreaDragging || _isListAtTop())) ||
-          velocity > 450;
-      if (shouldExpand &&
-          _listController.hasClients &&
-          _listController.position.pixels != 0) {
-        _listController.jumpTo(0);
-      }
-      _animateCollapseSettle(
-        targetProgress: shouldExpand ? 0 : 1,
-        targetMode: shouldExpand
-            ? CalendarDisplayMode.month
-            : CalendarDisplayMode.week,
-        velocity: velocity,
-      );
+
+    final velocity = details.primaryVelocity ?? 0;
+    final fromWeek = _dragSourceMode == CalendarDisplayMode.week;
+    final stretched = _monthBodyHeightOverride != null;
+    final bool expand;
+    if (velocity.abs() >= _snapFlingVelocity) {
+      expand = velocity > 0;
+    } else if (stretched) {
+      expand =
+          _effectiveMonthBodyHeight >=
+          (_normalMonthBodyHeight + _maxMonthBodyHeight) / 2;
+    } else {
+      expand = fromWeek
+          ? _collapsePreviewProgress < 0.55
+          : _collapsePreviewProgress <= 0.45;
     }
-    _dragAccumulated = 0;
+
+    if (fromWeek &&
+        (expand || stretched) &&
+        _listController.hasClients &&
+        _listController.offset != 0) {
+      _listController.jumpTo(0);
+    }
+    if (stretched) {
+      _applyDisplayMode(CalendarDisplayMode.month);
+      _animateFullScreenCalendar(
+        expand ? _maxMonthBodyHeight : _normalMonthBodyHeight,
+      );
+      return;
+    }
+    _animateCollapseSettle(
+      targetProgress: expand ? 0 : 1,
+      targetMode: expand ? CalendarDisplayMode.month : CalendarDisplayMode.week,
+      velocity: velocity,
+    );
   }
 
   bool _isListAtTop() {
@@ -748,196 +739,83 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     return _listController.position.pixels <= 0;
   }
 
-  void _handleCalendarPointerDown(PointerDownEvent event) {
-    _calendarPointerId = event.pointer;
-    _calendarPointerStartX = event.position.dx;
-    _calendarPointerStartY = event.position.dy;
-    _fullScreenDragStartBodyHeight = _effectiveMonthBodyHeight;
-  }
-
-  void _handleCalendarPointerMove(PointerMoveEvent event) {
-    if (widget.yearMode || _calendarPointerId != event.pointer) {
-      return;
-    }
-    if (widget.controller.displayMode != CalendarDisplayMode.month ||
-        !_canGestureToFullScreen) {
-      return;
-    }
-    final deltaX = event.position.dx - _calendarPointerStartX;
-    final deltaY = event.position.dy - _calendarPointerStartY;
-    if (!_isCalendarFullScreenDragging &&
-        !_isFullScreenExpanded &&
-        !_isDominantVerticalGesture(deltaX: deltaX, deltaY: deltaY)) {
-      return;
-    }
-    final shouldHandleFullScreen =
-        _isCalendarFullScreenDragging || _isFullScreenExpanded || deltaY > 0;
-    if (!shouldHandleFullScreen) {
-      return;
-    }
-    _stopSettleAnimation();
-    _stopFullScreenAnimation();
-    _isCalendarFullScreenDragging = true;
-    _updateFullScreenDrag(deltaY);
-  }
-
-  void _handleCalendarPointerEnd(PointerEvent event) {
-    if (_calendarPointerId != event.pointer) {
-      return;
-    }
-    _calendarPointerId = null;
-    if (!_isCalendarFullScreenDragging) {
-      return;
-    }
-    _finishFullScreenDrag(0);
-  }
-
-  void _handleCalendarPointerCancel(PointerCancelEvent event) {
-    if (_calendarPointerId != event.pointer) {
-      return;
-    }
-    _calendarPointerId = null;
-    if (!_isCalendarFullScreenDragging) {
-      return;
-    }
-    _finishFullScreenDrag(0);
-  }
-
   void _handleListPointerDown(PointerDownEvent event) {
-    if (widget.contentVerticalDragLocked) {
+    if (widget.yearMode ||
+        widget.contentVerticalDragLocked ||
+        _listPointerId != null) {
       return;
     }
-    _stopSettleAnimation();
-    _stopFullScreenAnimation();
     _listPointerId = event.pointer;
     _listPointerStartX = event.position.dx;
     _listPointerStartY = event.position.dy;
-    _fullScreenDragStartBodyHeight = _effectiveMonthBodyHeight;
-    _isCalendarAreaDragging = false;
-    _isListCollapseDragging = false;
-    _isListPullExpanding = false;
-    _isListFullScreenDragging = false;
-    _isCalendarFullScreenDragging = false;
-    if (widget.controller.displayMode == CalendarDisplayMode.month) {
-      _dragSourceMode = CalendarDisplayMode.month;
-      return;
-    }
-    if (widget.controller.displayMode == CalendarDisplayMode.week &&
-        _isListAtTop()) {
-      _dragSourceMode = CalendarDisplayMode.week;
-    }
+    _listVelocity = VelocityTracker.withKind(event.kind)
+      ..addPosition(event.timeStamp, event.position);
+    _isListDragging = false;
   }
 
   void _handleListPointerMove(PointerMoveEvent event) {
-    if (widget.contentVerticalDragLocked) {
-      _resetDragState();
+    if (_listPointerId != event.pointer ||
+        widget.yearMode ||
+        widget.contentVerticalDragLocked) {
       return;
     }
-    if (widget.yearMode || _listPointerId != event.pointer) {
-      return;
+    _listVelocity?.addPosition(event.timeStamp, event.position);
+    var delta = event.delta.dy;
+    if (!_isListDragging) {
+      final deltaX = event.position.dx - _listPointerStartX;
+      delta = event.position.dy - _listPointerStartY;
+      if (!_isDominantVerticalGesture(deltaX: deltaX, deltaY: delta)) return;
+      // A week-mode list owns its native drag until it is pulled from the top.
+      final fromWeek =
+          widget.controller.displayMode == CalendarDisplayMode.week;
+      if (fromWeek && (!_isListAtTop() || delta <= 0)) return;
+      _isListDragging = true;
+      _startVerticalDrag(fromCalendar: false);
+      if (fromWeek) return;
     }
-
-    final deltaX = event.position.dx - _listPointerStartX;
-    final deltaY = event.position.dy - _listPointerStartY;
-    if (widget.controller.displayMode == CalendarDisplayMode.month) {
-      if (!_isListFullScreenDragging &&
-          !_isFullScreenExpanded &&
-          !_isDominantVerticalGesture(deltaX: deltaX, deltaY: deltaY)) {
-        return;
-      }
-      if (_canGestureToFullScreen && _isListAtTop()) {
-        final shouldHandleFullScreen =
-            _isListFullScreenDragging || _isFullScreenExpanded || deltaY > 0;
-        if (shouldHandleFullScreen) {
-          _isListFullScreenDragging = true;
-          _updateFullScreenDrag(deltaY);
-          return;
-        }
-      }
-      if (!_isListCollapseDragging) {
-        if (deltaY >= 0) {
-          return;
-        }
-        _isListCollapseDragging = true;
-      }
-      final next = (-deltaY / _collapseTravel).clamp(0.0, 1.0);
-      if (next != _collapsePreviewProgress) {
-        setState(() {
-          _dragSourceMode = CalendarDisplayMode.month;
-          _collapsePreviewProgress = next;
-        });
-      }
-      return;
-    }
-
-    if (widget.controller.displayMode != CalendarDisplayMode.week) {
-      return;
-    }
-    if (!_isListPullExpanding) {
-      if (!_isListAtTop() ||
-          deltaY <= 0 ||
-          !_isDominantVerticalGesture(deltaX: deltaX, deltaY: deltaY)) {
-        return;
-      }
-      _isListPullExpanding = true;
-      _dragSourceMode = CalendarDisplayMode.week;
-      _listPointerStartY = event.position.dy;
-      return;
-    }
-
-    final expandDelta = event.position.dy - _listPointerStartY;
-    final next = (1 - (expandDelta / _collapseTravel)).clamp(0.0, 1.0);
-    if (next != _collapsePreviewProgress) {
-      setState(() {
-        _dragSourceMode = CalendarDisplayMode.week;
-        _collapsePreviewProgress = next;
-      });
-    }
+    _updateVerticalDrag(
+      DragUpdateDetails(
+        globalPosition: event.position,
+        localPosition: event.localPosition,
+        delta: Offset(0, delta),
+        primaryDelta: delta,
+      ),
+    );
   }
 
   void _handleListPointerEnd(PointerEvent event) {
-    if (_listPointerId != event.pointer) {
-      return;
-    }
-    _finishListPullExpand();
-  }
-
-  void _handleListPointerCancel(PointerCancelEvent event) {
-    if (_listPointerId != event.pointer) {
-      return;
-    }
-    _finishListPullExpand();
-  }
-
-  void _finishListPullExpand() {
-    if (widget.contentVerticalDragLocked) {
-      _resetDragState();
-      return;
-    }
+    if (_listPointerId != event.pointer) return;
     _listPointerId = null;
-    if (_isListFullScreenDragging) {
-      _finishFullScreenDrag(0);
-      return;
-    }
-    if (!_isListPullExpanding && !_isListCollapseDragging) {
-      if (widget.controller.displayMode == CalendarDisplayMode.week ||
-          widget.controller.displayMode == CalendarDisplayMode.month) {
-        _resetDragState();
+    var velocity = 0.0;
+    if (_isListDragging && event is PointerUpEvent) {
+      final measured = _listVelocity!.getVelocity().pixelsPerSecond.dy;
+      final physics = _contentDrag == null
+          ? null
+          : _listController.positions.singleOrNull?.physics;
+      if (measured.abs() >= (physics?.minFlingVelocity ?? kMinFlingVelocity)) {
+        final limit = physics?.maxFlingVelocity ?? kMaxFlingVelocity;
+        velocity = measured.clamp(-limit, limit);
       }
-      return;
     }
-    final velocity = _isListCollapseDragging ? -520.0 : 520.0;
-    _commitVerticalDrag(velocity);
+    _listVelocity = null;
+    if (_isListDragging) {
+      _isListDragging = false;
+      _endVerticalDrag(
+        DragEndDetails(
+          velocity: Velocity(pixelsPerSecond: Offset(0, velocity)),
+          primaryVelocity: velocity,
+        ),
+      );
+    }
   }
 
   void _resetDragState() {
+    _contentDrag?.cancel();
     _dragSourceMode = null;
     _isCalendarAreaDragging = false;
-    _calendarPointerId = null;
-    _isListCollapseDragging = false;
-    _isListPullExpanding = false;
-    _isListFullScreenDragging = false;
-    _isCalendarFullScreenDragging = false;
+    _listPointerId = null;
+    _listVelocity = null;
+    _isListDragging = false;
   }
 
   void _stopSettleAnimation() {
@@ -1075,52 +953,24 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     );
   }
 
-  void _updateFullScreenDrag(double totalDelta) {
-    final desiredHeight = _fullScreenDragStartBodyHeight + totalDelta;
-    final clampedHeight = desiredHeight.clamp(
-      _normalMonthBodyHeight,
-      _maxMonthBodyHeight,
-    );
-    final overflowUp = (_normalMonthBodyHeight - desiredHeight).clamp(
-      0.0,
-      double.infinity,
-    );
-    setState(() {
-      if (overflowUp > 0) {
-        _monthBodyHeightOverride = _normalMonthBodyHeight;
-        _collapsePreviewProgress = (overflowUp / _collapseTravel).clamp(
-          0.0,
-          1.0,
-        );
-      } else {
-        _monthBodyHeightOverride = clampedHeight;
-        _collapsePreviewProgress = 0;
-      }
-    });
-  }
-
-  void _finishFullScreenDrag(double velocity) {
-    if (_collapsePreviewProgress > 0.0001) {
-      _monthBodyHeightOverride = null;
-      _isListFullScreenDragging = false;
-      _isCalendarFullScreenDragging = false;
-      _commitVerticalDrag(velocity);
+  void _updateDragBodyHeight(double desiredHeight) {
+    final normalHeight = _normalMonthBodyHeight;
+    final collapseTravel = normalHeight - widget.calendarHeight;
+    final stretchedHeight =
+        desiredHeight > normalHeight && _isHorizontalCalendarPaging
+        ? desiredHeight.clamp(normalHeight, _maxMonthBodyHeight)
+        : null;
+    final collapse = desiredHeight < normalHeight
+        ? ((normalHeight - desiredHeight) / collapseTravel).clamp(0.0, 1.0)
+        : 0.0;
+    if (stretchedHeight == _monthBodyHeightOverride &&
+        collapse == _collapsePreviewProgress) {
       return;
     }
-    _settleFullScreenCalendar(velocity: velocity);
-  }
-
-  void _settleFullScreenCalendar({double velocity = 0}) {
-    final currentHeight = _effectiveMonthBodyHeight;
-    final midpoint = (_normalMonthBodyHeight + _maxMonthBodyHeight) / 2;
-    final targetHeight = velocity > 450
-        ? _maxMonthBodyHeight
-        : velocity < -450
-        ? _normalMonthBodyHeight
-        : (currentHeight >= midpoint
-              ? _maxMonthBodyHeight
-              : _normalMonthBodyHeight);
-    _animateFullScreenCalendar(targetHeight);
+    setState(() {
+      _monthBodyHeightOverride = stretchedHeight;
+      _collapsePreviewProgress = collapse;
+    });
   }
 
   void _animateFullScreenCalendar(
@@ -1158,8 +1008,11 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     }
 
     _fullScreenController.addListener(listener);
-    _fullScreenController.forward().whenCompleteOrCancel(() {
-      _fullScreenController.removeListener(listener);
+    final motion = _fullScreenController.forward();
+    motion.whenCompleteOrCancel(
+      () => _fullScreenController.removeListener(listener),
+    );
+    motion.then<void>((_) {
       if (!mounted) {
         return;
       }
@@ -1198,7 +1051,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
       progressVelocity,
     );
 
-    _settleController.animateWith(simulation).whenCompleteOrCancel(() {
+    _settleController.animateWith(simulation).then<void>((_) {
       if (!mounted) {
         return;
       }

@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../calendar/calendar_canvas_labels.dart';
 import '../../calendar/calendar_components.dart';
+import '../../calendar/calendar_retained_day_painter.dart';
 import '../../calendar/calendar_text_layout.dart';
 
 class CustomCalendarComponentBuilder extends CalendarComponentBuilder {
@@ -78,24 +81,60 @@ class MeizuCalendarComponentBuilder extends CalendarComponentBuilder {
   }
 }
 
-class _CustomDayPainter extends CustomPainter {
+class _CustomDayPainter extends CalendarRetainedDayPainter {
   const _CustomDayPainter(this.data, this.text);
 
   final CalendarDayCellData data;
   final CalendarCanvasText text;
 
+  Color get _dayColor => switch (data) {
+    _ when data.isSelected => const Color(0xFF128C4B),
+    _ when data.isToday => const Color(0xFFFF0000),
+    _ when !data.isCurrentMonth => const Color(0xFFE1E1E1),
+    _ when data.isWeekend => const Color(0xFF489DFF),
+    _ => const Color(0xFF333333),
+  };
+  TextPainter _dayLine(double width) => text.layout(
+    '${data.date.day}',
+    TextStyle(
+      color: _dayColor,
+      fontSize: 15,
+      fontWeight: FontWeight.bold,
+      height: 1,
+    ),
+    width,
+  );
+
+  TextPainter _lunarLine(double width) => text.layout(
+    data.lunarText,
+    TextStyle(
+      color: _dayColor == const Color(0xFF333333)
+          ? const Color(0xFFCFCFCF)
+          : _dayColor,
+      fontSize: 10,
+      height: 1,
+    ),
+    width - 4,
+    maxLines: 1,
+  );
+
   @override
-  void paint(Canvas canvas, Size size) {
-    final dayColor = switch (data) {
-      _ when data.isSelected => const Color(0xFF128C4B),
-      _ when data.isToday => const Color(0xFFFF0000),
-      _ when !data.isCurrentMonth => const Color(0xFFE1E1E1),
-      _ when data.isWeekend => const Color(0xFF489DFF),
-      _ => const Color(0xFF333333),
-    };
-    final lunarColor = dayColor == const Color(0xFF333333)
-        ? const Color(0xFFCFCFCF)
-        : dayColor;
+  bool get cacheStretchPixels => true;
+
+  @override
+  double contentHeight(double width) => math.max(
+    48,
+    math.max(10 + _dayLine(width).height, 33 + _lunarLine(width).height),
+  );
+
+  @override
+  Alignment get contentAlignment => Alignment.topCenter;
+
+  @override
+  double get footerHeight => data.showBottomDivider ? 6 : 0;
+
+  @override
+  void paintContent(Canvas canvas, Size size) {
     final fill = Paint();
     if (data.isSelected || data.isToday) {
       final radius = size.width.clamp(36.0, 42.0) / 2;
@@ -123,30 +162,18 @@ class _CustomDayPainter extends CustomPainter {
         badge,
       );
     }
-    final day = text.layout(
-      '${data.date.day}',
-      TextStyle(
-        color: dayColor,
-        fontSize: 15,
-        fontWeight: FontWeight.bold,
-        height: 1,
-      ),
-      size.width,
-    );
+    final day = _dayLine(size.width);
     day.paint(canvas, Offset((size.width - day.width) / 2, 10));
-    final lunar = text.layout(
-      data.lunarText,
-      TextStyle(color: lunarColor, fontSize: 10, height: 1),
-      size.width - 4,
-      maxLines: 1,
-    );
+    final lunar = _lunarLine(size.width);
     lunar.paint(canvas, Offset((size.width - lunar.width) / 2, 33));
-    if (data.showBottomDivider) {
-      canvas.drawRect(
-        Rect.fromLTWH(0, size.height - 5.3, size.width, .3),
-        fill..color = const Color(0xFFE5E5E5),
-      );
-    }
+  }
+
+  @override
+  void paintFooter(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Rect.fromLTWH(0, size.height - 5.3, size.width, .3),
+      Paint()..color = const Color(0xFFE5E5E5),
+    );
   }
 
   @override

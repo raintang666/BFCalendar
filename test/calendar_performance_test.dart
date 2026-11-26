@@ -1,4 +1,8 @@
+import 'dart:ui' as ui;
+
 import 'package:calendarview_flutter/calendarview_flutter.dart';
+import 'package:calendarview_flutter/src/calendar/calendar_retained_day_painter.dart';
+import 'package:calendarview_flutter/src/features/calendar_demo/demo_calendar_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -123,6 +127,13 @@ void main() {
               0,
               reason: 'Unchanged date grid repainted during $motion',
             );
+          } else if (motion == 'stretch') {
+            expect(
+              paints,
+              hasCustomCell ? 8 : 0,
+              reason:
+                  'Only the custom Widget should repaint as its height changes',
+            );
           } else if (motion == 'horizontal') {
             expect(
               paints,
@@ -144,6 +155,194 @@ void main() {
       );
     }
   }
+
+  testWidgets(
+    'stretched home artwork follows width, direction and calendar updates',
+    (tester) async {
+      final day = DateTime(2026, 2, 10);
+      final controller = CalendarController(
+        focusedDay: day,
+        minDate: DateTime(2026, 2),
+        maxDate: DateTime(2026, 2, 28),
+      );
+      final builder = _CountingBuilder(
+        hasCustomCell: false,
+        style: const CustomCalendarComponentBuilder(),
+      );
+
+      Future<void> show(
+        double width,
+        double height,
+        TextDirection direction,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Directionality(
+                textDirection: direction,
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: width,
+                    child: CalendarView(
+                      controller: controller,
+                      componentBuilder: builder,
+                      monthBodyHeightOverride: height,
+                      pageOrientation: CalendarPageOrientation.horizontal,
+                      onDaySelected: (_) {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await show(390, 320, TextDirection.ltr);
+      final initial = builder.paints;
+      expect(initial, greaterThan(0));
+      await show(390, 340, TextDirection.ltr);
+      expect(builder.paints, initial);
+      await show(370, 340, TextDirection.ltr);
+      final resized = builder.paints;
+      expect(resized, greaterThan(initial));
+      await show(370, 340, TextDirection.rtl);
+      final mirrored = builder.paints;
+      expect(mirrored, greaterThan(resized));
+      controller.setMarkers({
+        day: [const CalendarMarker(label: 'new', color: Colors.orange)],
+      });
+      await tester.pumpAndSettle();
+      expect(builder.paints, greaterThan(mirrored));
+      await tester.pumpWidget(const SizedBox.shrink());
+      controller.dispose();
+    },
+  );
+
+  testWidgets(
+    'home stretch reuses device-resolution pixels and releases them on memory pressure',
+    (tester) async {
+      tester.view.devicePixelRatio = 2;
+      tester.view.physicalSize = const Size(720, 1640);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final controller = CalendarController(
+        focusedDay: DateTime(2026, 2, 10),
+        minDate: DateTime(2026, 2),
+        maxDate: DateTime(2026, 2, 28),
+      );
+      final interaction = CalendarInteractiveController();
+      final created = <ui.Image>[];
+      final previous = ui.Image.onCreate;
+      ui.Image.onCreate = (image) {
+        previous?.call(image);
+        if (image.width >= 600) {
+          created.add(image);
+        }
+      };
+      addTearDown(() => ui.Image.onCreate = previous);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CalendarMonthYearView(
+              controller: controller,
+              interactionController: interaction,
+              componentBuilder: const CustomCalendarComponentBuilder(),
+              onDaySelected: (_) {},
+              contentBuilder: (_, scroll, physics) =>
+                  ListView(controller: scroll, physics: physics),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final gridWidth = tester
+          .getSize(find.byKey(const ValueKey('calendar-canvas-grid')).first)
+          .width;
+      expect(
+        created.length,
+        1,
+        reason: 'The first visible month is prepared before pointer input',
+      );
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(PageView)),
+      );
+      await gesture.moveBy(const Offset(0, 80));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 80));
+      await tester.pump();
+      expect(created.length, 1);
+      expect(created.single.width, gridWidth * 2);
+      expect(created.single.debugDisposed, isFalse);
+
+      tester.view.devicePixelRatio = 3;
+      tester.view.physicalSize = const Size(1080, 2460);
+      await gesture.moveBy(const Offset(0, 120));
+      await tester.pump();
+      expect(created.length, 2);
+      expect(created.first.debugDisposed, isTrue);
+      expect(created.last.width, gridWidth * 3);
+      await gesture.moveBy(const Offset(0, 120));
+      await tester.pump();
+      expect(created.length, 2);
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(interaction.isFullScreenExpanded, isTrue);
+      expect(created.last.debugDisposed, isFalse);
+      tester.binding.handleMemoryPressure();
+      expect(created.last.debugDisposed, isTrue);
+      await tester.pumpWidget(const SizedBox.shrink());
+      controller.dispose();
+      interaction.dispose();
+    },
+  );
+
+  testWidgets('dragging beyond full height avoids rebuilding the same grid', (
+    tester,
+  ) async {
+    final controller = CalendarController(focusedDay: DateTime(2026, 2, 10));
+    final interaction = CalendarInteractiveController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CalendarMonthYearView(
+            controller: controller,
+            interactionController: interaction,
+            onDaySelected: (_) {},
+            contentBuilder: (_, scroll, physics) =>
+                ListView(controller: scroll, physics: physics),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byType(PageView)),
+    );
+    await gesture.moveBy(const Offset(0, 40));
+    await tester.pump();
+    await gesture.moveBy(const Offset(0, 350));
+    await tester.pumpAndSettle();
+    final finder = find.byType(CalendarView);
+    final atLimit = tester.widget<CalendarView>(finder);
+    await gesture.moveBy(const Offset(0, 100));
+    await tester.pump();
+    expect(tester.widget<CalendarView>(finder), same(atLimit));
+    await gesture.moveBy(const Offset(0, -400));
+    await tester.pump();
+    expect(
+      tester.widget<CalendarView>(finder).monthBodyHeightOverride,
+      lessThan(atLimit.monthBodyHeightOverride!),
+    );
+    await gesture.up();
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+    interaction.dispose();
+  });
 
   testWidgets('paging reuses its controller through both date boundaries', (
     tester,
@@ -303,7 +502,11 @@ class _ThemeAwareBuilder extends DefaultCalendarComponentBuilder {
 }
 
 class _CountingBuilder extends DefaultCalendarComponentBuilder {
-  _CountingBuilder({required this.hasCustomCell});
+  _CountingBuilder({
+    required this.hasCustomCell,
+    this.style = const DefaultCalendarComponentBuilder(),
+  });
+  final CalendarComponentBuilder style;
   final bool hasCustomCell;
   int headers = 0;
   int weeks = 0;
@@ -325,11 +528,11 @@ class _CountingBuilder extends DefaultCalendarComponentBuilder {
   @override
   Widget buildDayCell(BuildContext context, CalendarDayCellData data) {
     cells++;
-    final child = super.buildDayCell(context, data) as CustomPaint;
+    final child = style.buildDayCell(context, data) as CustomPaint;
     return CustomPaint(
       painter: _CountingPainter(
         onPaint: () => paints++,
-        delegate: child.painter,
+        delegate: child.painter! as CalendarRetainedDayPainter,
       ),
       child: hasCustomCell && data.date.day == 10
           ? const Center(child: Text('10'))
@@ -338,15 +541,30 @@ class _CountingBuilder extends DefaultCalendarComponentBuilder {
   }
 }
 
-class _CountingPainter extends CustomPainter {
-  _CountingPainter({required this.onPaint, this.delegate});
+class _CountingPainter extends CalendarRetainedDayPainter {
+  _CountingPainter({required this.onPaint, required this.delegate});
   final VoidCallback onPaint;
-  final CustomPainter? delegate;
+  final CalendarRetainedDayPainter delegate;
 
   @override
-  void paint(Canvas canvas, Size size) {
+  double contentHeight(double width) => delegate.contentHeight(width);
+
+  @override
+  Alignment get contentAlignment => delegate.contentAlignment;
+
+  @override
+  double get footerHeight => delegate.footerHeight;
+
+  @override
+  void paintFooter(Canvas canvas, Size size) {
     onPaint();
-    delegate?.paint(canvas, size);
+    delegate.paintFooter(canvas, size);
+  }
+
+  @override
+  void paintContent(Canvas canvas, Size size) {
+    onPaint();
+    delegate.paintContent(canvas, size);
   }
 
   @override

@@ -467,7 +467,6 @@ class _CalendarViewState extends State<CalendarView> {
   double? _lastReportedHeight;
   DateTime? _transitionAnchorDate;
   String? _lastHorizontalPagerSignature;
-  String? _lastWarmUpSignature;
   int? _pendingHorizontalPageJump;
   late DateTime _verticalReferenceDate;
   int _verticalCurrentPage = _verticalInitialPage;
@@ -481,11 +480,6 @@ class _CalendarViewState extends State<CalendarView> {
     _weekBar = null;
   }
 
-  void _handleControllerChanged() {
-    _invalidateChrome();
-    _schedulePageWarmUp();
-  }
-
   CalendarComponentBuilder get _resolvedComponentBuilder {
     final override = widget.componentBuilder;
     if (override != null) {
@@ -497,18 +491,17 @@ class _CalendarViewState extends State<CalendarView> {
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(_handleControllerChanged);
+    widget.controller.addListener(_invalidateChrome);
     _pageController = PageController(initialPage: _horizontalCurrentPageIndex)
       ..addListener(_handlePageScroll);
     _verticalReferenceDate = widget.controller.focusedDay;
     _verticalPageController = PageController(initialPage: _verticalCurrentPage)
       ..addListener(_handleVerticalPageScroll);
-    _schedulePageWarmUp();
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_handleControllerChanged);
+    widget.controller.removeListener(_invalidateChrome);
     _pageController
       ..removeListener(_handlePageScroll)
       ..dispose();
@@ -522,10 +515,8 @@ class _CalendarViewState extends State<CalendarView> {
   void didUpdateWidget(covariant CalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_handleControllerChanged);
-      widget.controller.addListener(_handleControllerChanged);
-      _lastWarmUpSignature = null;
-      _schedulePageWarmUp();
+      oldWidget.controller.removeListener(_invalidateChrome);
+      widget.controller.addListener(_invalidateChrome);
     }
     if (oldWidget.controller != widget.controller ||
         oldWidget.componentBuilder != widget.componentBuilder ||
@@ -796,7 +787,8 @@ class _CalendarViewState extends State<CalendarView> {
   double _pageBodyHeight(DateTime date, double collapseProgress) {
     final monthBodyHeightOverride = widget.monthBodyHeightOverride;
     if (monthBodyHeightOverride != null &&
-        widget.controller.displayMode == CalendarDisplayMode.month) {
+        (widget.controller.displayMode == CalendarDisplayMode.month ||
+            widget.previewExpandFromWeek)) {
       return lerpDouble(
         monthBodyHeightOverride,
         widget.calendarHeight,
@@ -1161,59 +1153,6 @@ class _CalendarViewState extends State<CalendarView> {
     }
     widget.controller.jumpToDay(date);
   }
-
-  void _schedulePageWarmUp() {
-    final displayMode = widget.controller.displayMode;
-    final anchorDates = <DateTime>[
-      widget.controller.focusedDay,
-      if (widget.controller.resolvedPageAnchorForRelative(
-            -1,
-            referenceDay: widget.controller.focusedDay,
-            displayMode: displayMode,
-          )
-          case final previous?)
-        previous,
-      if (widget.controller.resolvedPageAnchorForRelative(
-            1,
-            referenceDay: widget.controller.focusedDay,
-            displayMode: displayMode,
-          )
-          case final next?)
-        next,
-    ];
-    final signature =
-        '$displayMode|${widget.controller.firstWeekday}|${widget.controller.monthViewShowMode}|'
-        '${anchorDates.map(CalendarDateUtils.formatIsoDate).join(",")}';
-    if (_lastWarmUpSignature == signature) {
-      return;
-    }
-    _lastWarmUpSignature = signature;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      if (displayMode == CalendarDisplayMode.month) {
-        for (final anchorDate in anchorDates) {
-          LunarService.prefetchDates(
-            CalendarDateUtils.visibleMonthDays(
-              DateTime(anchorDate.year, anchorDate.month, 1),
-              firstWeekday: widget.controller.firstWeekday,
-              monthViewShowMode: widget.controller.monthViewShowMode,
-            ),
-          );
-        }
-        return;
-      }
-      for (final anchorDate in anchorDates) {
-        LunarService.prefetchDates(
-          CalendarDateUtils.visibleWeekDays(
-            anchorDate,
-            firstWeekday: widget.controller.firstWeekday,
-          ),
-        );
-      }
-    });
-  }
 }
 
 class _CalendarPage extends StatelessWidget {
@@ -1297,6 +1236,7 @@ class _CalendarPage extends StatelessWidget {
                       onDaySelected: onDaySelected,
                       componentBuilder: componentBuilder,
                       rowHeight: monthRowHeight,
+                      retainRowArtwork: monthBodyHeightOverride != null,
                       handleDaySelection: handleDaySelection,
                       onRangeSelected: onRangeSelected,
                       onSelectOutOfRange: onSelectOutOfRange,
@@ -1334,6 +1274,7 @@ class _CalendarPage extends StatelessWidget {
 
 class _CalendarGrid extends StatefulWidget {
   const _CalendarGrid({
+    this.retainRowArtwork = false,
     required this.days,
     required this.lineCount,
     required this.hideOutsideMonth,
@@ -1349,6 +1290,7 @@ class _CalendarGrid extends StatefulWidget {
     required this.onMultiSelectOutOfSize,
   });
 
+  final bool retainRowArtwork;
   final List<DateTime> days;
   final int lineCount;
   final bool hideOutsideMonth;
@@ -1391,7 +1333,10 @@ class _CalendarGridState extends State<_CalendarGrid> {
   @override
   void didUpdateWidget(covariant _CalendarGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.rowHeight != widget.rowHeight) _grid = null;
+    if (oldWidget.rowHeight != widget.rowHeight ||
+        oldWidget.retainRowArtwork != widget.retainRowArtwork) {
+      _grid = null;
+    }
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_invalidateCells);
       widget.controller.addListener(_invalidateCells);
@@ -1448,6 +1393,8 @@ class _CalendarGridState extends State<_CalendarGrid> {
         (markerTotals ??= {})[index] = markers.length;
         snapshot = markers.take(CalendarCanvasGrid.maxAnnouncedMarkers);
       }
+      // The pagers also build neighboring grids. Populate their lunar dates
+      // here so jumps coalesced before layout never start a separate warm-up.
       return CalendarDayCellData(
         date: date,
         focusedMonth: widget.focusedMonth,
@@ -1502,6 +1449,7 @@ class _CalendarGridState extends State<_CalendarGrid> {
     return _grid ??= SizedBox(
       height: widget.lineCount * widget.rowHeight,
       child: CalendarCanvasGrid(
+        retainRowArtwork: widget.retainRowArtwork,
         cells: _cells,
         painters: _painters,
         dayWidgets: _dayWidgets,

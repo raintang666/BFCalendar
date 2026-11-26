@@ -1,0 +1,576 @@
+{
+  "method": {
+    "date": "2026-11-26",
+    "flutter": "3.44.9+ohos-1.0.0-beta",
+    "baselineCommit": "9e60dde1cc5648e7f2693d96f13003ec808f66d6",
+    "afterSourceSha256": {
+      "lib/src/calendar/calendar_canvas_grid.dart": "6c05a96a9f79663ddf9446900cd0e8a53f1234bbac96a20401fd966447476200",
+      "lib/src/calendar/calendar_components.dart": "a1e979355810e8ec5f00cbe31b3e31483ad516f683150f48b94489a79496ce29",
+      "lib/src/calendar/calendar_retained_day_painter.dart": "91dac47bcd504507e83165c5afe936c3332f02ec260bab8e57e2bc2211106545",
+      "lib/src/calendar/calendar_view.dart": "20db7f2604ddd22fecfead06841766852d16bd000c2fc55dbf24af10d4edfeae",
+      "lib/src/features/calendar_demo/demo_calendar_components.dart": "c5c4abf0f5bde206dd679544e23aa5c0370d8cdb2d6c7e4e9700d5743ee58899"
+    },
+    "benchmarkLockSha256": "d79a33564dc3fe7aad57b72939d34c9ce06adf79094ac425e7b38b020520be59",
+    "apkSha256": {
+      "before": "7aca8d8133c76fd441c8e1b0089839cb521873d475b096b286ee58e315ecce12",
+      "after": "50c4247528684ce8486784ca0b220eac4fa5fcb496374da58caf4f2b6e5e8bd2"
+    },
+    "modeGuard": "kProfileMode && !kDebugMode && !kReleaseMode",
+    "motion": "stretch, 400 logical pixels in 24 pointer moves",
+    "paintCalls": "Dart calls to date content painting, from just before pointer down until 700 ms after release. Includes initial recordings; excludes GPU picture replay and separate footer painting.",
+    "middlePaintCalls": "Counter delta between immediately before dispatching the 8th and 16th pointer moves. Eight input updates, independent of rendered frame count.",
+    "trialsPerStyle": 5,
+    "comparisonRound": {
+      "STK TL00": {
+        "before": 1,
+        "after": 2
+      },
+      "PLK110": {
+        "before": 2,
+        "after": 1
+      }
+    }
+  },
+  "runs": [
+    {
+      "device": "STK TL00",
+      "revision": "after",
+      "round": 2,
+      "mode": {
+        "kProfileMode": true,
+        "kDebugMode": false,
+        "kReleaseMode": false
+      },
+      "renderer": "OpenGLES",
+      "timings": [
+        {
+          "style": "default",
+          "motion": "stretch",
+          "frames": 199,
+          "refreshHz": 60.000003814697266,
+          "buildP50us": 2291,
+          "buildP95us": 6229,
+          "rasterP95us": 19618,
+          "overBudget": 31
+        },
+        {
+          "style": "home",
+          "motion": "stretch",
+          "frames": 196,
+          "refreshHz": 60.000003814697266,
+          "buildP50us": 2729,
+          "buildP95us": 7777,
+          "rasterP95us": 19388,
+          "overBudget": 45
+        },
+        {
+          "style": "one-widget",
+          "motion": "stretch",
+          "frames": 198,
+          "refreshHz": 60.000003814697266,
+          "buildP50us": 2692,
+          "buildP95us": 7910,
+          "rasterP95us": 18415,
+          "overBudget": 56
+        }
+      ],
+      "paintTrials": [
+        {
+          "style": "default",
+          "repeat": 1,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "default",
+          "repeat": 2,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "default",
+          "repeat": 3,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "default",
+          "repeat": 4,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "default",
+          "repeat": 5,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "home",
+          "repeat": 1,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "home",
+          "repeat": 2,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "home",
+          "repeat": 3,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "home",
+          "repeat": 4,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "home",
+          "repeat": 5,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "one-widget",
+          "repeat": 1,
+          "paintCalls": 126,
+          "middlePaintCalls": 8
+        },
+        {
+          "style": "one-widget",
+          "repeat": 2,
+          "paintCalls": 127,
+          "middlePaintCalls": 7
+        },
+        {
+          "style": "one-widget",
+          "repeat": 3,
+          "paintCalls": 126,
+          "middlePaintCalls": 6
+        },
+        {
+          "style": "one-widget",
+          "repeat": 4,
+          "paintCalls": 127,
+          "middlePaintCalls": 8
+        },
+        {
+          "style": "one-widget",
+          "repeat": 5,
+          "paintCalls": 127,
+          "middlePaintCalls": 7
+        }
+      ]
+    },
+    {
+      "device": "STK TL00",
+      "revision": "before",
+      "round": 1,
+      "mode": {
+        "kProfileMode": true,
+        "kDebugMode": false,
+        "kReleaseMode": false
+      },
+      "renderer": "OpenGLES",
+      "timings": [
+        {
+          "style": "default",
+          "motion": "stretch",
+          "frames": 202,
+          "refreshHz": 60.000003814697266,
+          "buildP50us": 2930,
+          "buildP95us": 7447,
+          "rasterP95us": 19445,
+          "overBudget": 38
+        },
+        {
+          "style": "home",
+          "motion": "stretch",
+          "frames": 200,
+          "refreshHz": 60.000003814697266,
+          "buildP50us": 3590,
+          "buildP95us": 8896,
+          "rasterP95us": 18343,
+          "overBudget": 24
+        },
+        {
+          "style": "one-widget",
+          "motion": "stretch",
+          "frames": 200,
+          "refreshHz": 60.000003814697266,
+          "buildP50us": 3281,
+          "buildP95us": 8877,
+          "rasterP95us": 19521,
+          "overBudget": 52
+        }
+      ],
+      "paintTrials": [
+        {
+          "style": "default",
+          "repeat": 1,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "default",
+          "repeat": 2,
+          "paintCalls": 1120,
+          "middlePaintCalls": 196
+        },
+        {
+          "style": "default",
+          "repeat": 3,
+          "paintCalls": 1120,
+          "middlePaintCalls": 196
+        },
+        {
+          "style": "default",
+          "repeat": 4,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "default",
+          "repeat": 5,
+          "paintCalls": 1120,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "home",
+          "repeat": 1,
+          "paintCalls": 1092,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "home",
+          "repeat": 2,
+          "paintCalls": 1120,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "home",
+          "repeat": 3,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "home",
+          "repeat": 4,
+          "paintCalls": 1120,
+          "middlePaintCalls": 196
+        },
+        {
+          "style": "home",
+          "repeat": 5,
+          "paintCalls": 1120,
+          "middlePaintCalls": 196
+        },
+        {
+          "style": "one-widget",
+          "repeat": 1,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "one-widget",
+          "repeat": 2,
+          "paintCalls": 1092,
+          "middlePaintCalls": 168
+        },
+        {
+          "style": "one-widget",
+          "repeat": 3,
+          "paintCalls": 1120,
+          "middlePaintCalls": 196
+        },
+        {
+          "style": "one-widget",
+          "repeat": 4,
+          "paintCalls": 1120,
+          "middlePaintCalls": 196
+        },
+        {
+          "style": "one-widget",
+          "repeat": 5,
+          "paintCalls": 1120,
+          "middlePaintCalls": 224
+        }
+      ]
+    },
+    {
+      "device": "PLK110",
+      "revision": "after",
+      "round": 1,
+      "mode": {
+        "kProfileMode": true,
+        "kDebugMode": false,
+        "kReleaseMode": false
+      },
+      "renderer": "Vulkan",
+      "timings": [
+        {
+          "style": "default",
+          "motion": "stretch",
+          "frames": 215,
+          "refreshHz": 120.00000762939453,
+          "buildP50us": 1459,
+          "buildP95us": 2072,
+          "rasterP95us": 2087,
+          "overBudget": 0
+        },
+        {
+          "style": "home",
+          "motion": "stretch",
+          "frames": 214,
+          "refreshHz": 120.00000762939453,
+          "buildP50us": 1733,
+          "buildP95us": 2148,
+          "rasterP95us": 2632,
+          "overBudget": 6
+        },
+        {
+          "style": "one-widget",
+          "motion": "stretch",
+          "frames": 214,
+          "refreshHz": 120.00000762939453,
+          "buildP50us": 1868,
+          "buildP95us": 2246,
+          "rasterP95us": 2320,
+          "overBudget": 0
+        }
+      ],
+      "paintTrials": [
+        {
+          "style": "default",
+          "repeat": 1,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "default",
+          "repeat": 2,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "default",
+          "repeat": 3,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "default",
+          "repeat": 4,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "default",
+          "repeat": 5,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "home",
+          "repeat": 1,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "home",
+          "repeat": 2,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "home",
+          "repeat": 3,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "home",
+          "repeat": 4,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "home",
+          "repeat": 5,
+          "paintCalls": 90,
+          "middlePaintCalls": 0
+        },
+        {
+          "style": "one-widget",
+          "repeat": 1,
+          "paintCalls": 128,
+          "middlePaintCalls": 8
+        },
+        {
+          "style": "one-widget",
+          "repeat": 2,
+          "paintCalls": 128,
+          "middlePaintCalls": 8
+        },
+        {
+          "style": "one-widget",
+          "repeat": 3,
+          "paintCalls": 128,
+          "middlePaintCalls": 8
+        },
+        {
+          "style": "one-widget",
+          "repeat": 4,
+          "paintCalls": 128,
+          "middlePaintCalls": 8
+        },
+        {
+          "style": "one-widget",
+          "repeat": 5,
+          "paintCalls": 127,
+          "middlePaintCalls": 8
+        }
+      ]
+    },
+    {
+      "device": "PLK110",
+      "revision": "before",
+      "round": 2,
+      "mode": {
+        "kProfileMode": true,
+        "kDebugMode": false,
+        "kReleaseMode": false
+      },
+      "renderer": "Vulkan",
+      "timings": [
+        {
+          "style": "default",
+          "motion": "stretch",
+          "frames": 216,
+          "refreshHz": 120.00000762939453,
+          "buildP50us": 1555,
+          "buildP95us": 2663,
+          "rasterP95us": 2339,
+          "overBudget": 0
+        },
+        {
+          "style": "home",
+          "motion": "stretch",
+          "frames": 214,
+          "refreshHz": 120.00000762939453,
+          "buildP50us": 2383,
+          "buildP95us": 3009,
+          "rasterP95us": 2705,
+          "overBudget": 0
+        },
+        {
+          "style": "one-widget",
+          "motion": "stretch",
+          "frames": 214,
+          "refreshHz": 120.00000762939453,
+          "buildP50us": 2261,
+          "buildP95us": 2965,
+          "rasterP95us": 2508,
+          "overBudget": 3
+        }
+      ],
+      "paintTrials": [
+        {
+          "style": "default",
+          "repeat": 1,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "default",
+          "repeat": 2,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "default",
+          "repeat": 3,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "default",
+          "repeat": 4,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "default",
+          "repeat": 5,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "home",
+          "repeat": 1,
+          "paintCalls": 1120,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "home",
+          "repeat": 2,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "home",
+          "repeat": 3,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "home",
+          "repeat": 4,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "home",
+          "repeat": 5,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "one-widget",
+          "repeat": 1,
+          "paintCalls": 1120,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "one-widget",
+          "repeat": 2,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "one-widget",
+          "repeat": 3,
+          "paintCalls": 1120,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "one-widget",
+          "repeat": 4,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        },
+        {
+          "style": "one-widget",
+          "repeat": 5,
+          "paintCalls": 1148,
+          "middlePaintCalls": 224
+        }
+      ]
+    }
+  ]
+}

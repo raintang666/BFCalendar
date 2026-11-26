@@ -452,9 +452,7 @@ class CalendarController extends ChangeNotifier {
     if (disabledDatePredicate != null && disabledDatePredicate(normalized)) {
       return true;
     }
-    return _disabledDates.any(
-      (item) => CalendarDateUtils.isSameDay(item, normalized),
-    );
+    return _disabledDates.contains(normalized);
   }
 
   /// 判断日期是否处于选中状态。

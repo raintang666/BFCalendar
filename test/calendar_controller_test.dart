@@ -294,6 +294,25 @@ void main() {
     expect(controller.focusedDay, DateTime(2024, 3, 28));
     expect(controller.selection.single, DateTime(2024, 3, 28));
   });
+
+  test(
+    'disabled date lookup uses the supplied calendar day in UTC and local time',
+    () {
+      final dates = {
+        DateTime.utc(2024, 2, 29, 23, 59),
+        DateTime(2024, 3, 2, 8),
+      };
+      final controller = CalendarController(disabledDates: dates)
+        ..setInterceptBlocked(false);
+      addTearDown(controller.dispose);
+      dates.clear();
+
+      expect(controller.isDisabled(DateTime(2024, 2, 29, 12)), isTrue);
+      expect(controller.isDisabled(DateTime.utc(2024, 3, 2, 23, 59)), isTrue);
+      expect(controller.selectDay(DateTime(2024, 3, 2, 7)), isFalse);
+      expect(controller.selectDay(DateTime.utc(2024, 3, 1, 23, 59)), isTrue);
+    },
+  );
 }
 
 class _LegacyMarker extends CalendarMarker {

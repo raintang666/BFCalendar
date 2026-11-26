@@ -2,6 +2,8 @@ import 'dart:collection';
 import 'dart:ui' as ui;
 
 import 'package:calendarview_flutter/calendarview_flutter.dart';
+import 'package:calendarview_flutter/src/calendar/calendar_retained_day_painter.dart';
+import 'package:calendarview_flutter/src/features/calendar_demo/demo_calendar_components.dart';
 import 'package:calendarview_flutter/src/features/colorful/colorful_calendar_components.dart';
 import 'package:calendarview_flutter/src/features/index/index_calendar_components.dart';
 import 'package:calendarview_flutter/src/features/multi_select/multi_select_calendar_components.dart';
@@ -217,6 +219,35 @@ void main() {
         ),
       );
       expect(selected, [DateTime(2026, 7, 10)]);
+    },
+  );
+
+  testWidgets(
+    'custom painter receives stretched size and live repaint signals',
+    (tester) async {
+      final controller = _controller();
+      final signal = ValueNotifier(0);
+      addTearDown(signal.dispose);
+      final sizes = <Size>[];
+      final builder = _LiveCellBuilder(signal, sizes.add);
+      await _pumpCalendar(
+        tester,
+        controller,
+        builder: builder,
+        bodyHeight: 400,
+      );
+      expect(sizes.last.height, 80);
+      await _pumpCalendar(
+        tester,
+        controller,
+        builder: builder,
+        bodyHeight: 450,
+      );
+      expect(sizes.last.height, 90);
+      sizes.clear();
+      signal.value++;
+      await tester.pump();
+      expect(sizes.single.height, 90);
     },
   );
 
@@ -447,35 +478,59 @@ void main() {
     controller.setSelectionMode(CalendarSelectionMode.range);
     controller.selectDay(DateTime(2026, 7, 9));
     controller.selectDay(DateTime(2026, 7, 11));
-    for (final (style, scale) in [
-      (const DefaultCalendarComponentBuilder(), 1.0),
-      (const DefaultCalendarComponentBuilder(), 2.0),
-      (const ColorfulCalendarComponentBuilder(), 1.0),
-      (const IndexCalendarComponentBuilder(), 1.0),
-      (const MultiSelectCalendarComponentBuilder(), 1.0),
-      (const ProgressCalendarComponentBuilder(), 1.0),
-      (const RangeCalendarComponentBuilder(), 1.0),
-      (const SingleSelectCalendarComponentBuilder(), 1.0),
-      (const SolarCalendarComponentBuilder(), 1.0),
+    for (final (style, scale, stretchHeight) in [
+      (const DefaultCalendarComponentBuilder(), 1.0, null),
+      (const DefaultCalendarComponentBuilder(), 2.0, null),
+      (const ColorfulCalendarComponentBuilder(), 1.0, null),
+      (const IndexCalendarComponentBuilder(), 1.0, null),
+      (const MultiSelectCalendarComponentBuilder(), 1.0, null),
+      (const ProgressCalendarComponentBuilder(), 1.0, null),
+      (const RangeCalendarComponentBuilder(), 1.0, null),
+      (const SingleSelectCalendarComponentBuilder(), 1.0, null),
+      (const SolarCalendarComponentBuilder(), 1.0, null),
+      (const DefaultCalendarComponentBuilder(), 2.0, 413.75),
+      (const CustomCalendarComponentBuilder(), 1.0, 413.75),
+      (const CustomCalendarComponentBuilder(), 2.0, 450.0),
+      (const CustomCalendarComponentBuilder(), 1.0, 450.0),
     ]) {
       final boundaryKey = GlobalKey();
+      final images = CalendarStretchImageCache();
+      addTearDown(images.clear);
+      final pixelRatio =
+          style is CustomCalendarComponentBuilder &&
+              stretchHeight == 450 &&
+              scale == 1
+          ? 3.0
+          : 1.0;
       Future<void> pump(CalendarComponentBuilder builder) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: MediaQuery(
-                data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+                data: MediaQueryData(
+                  devicePixelRatio: pixelRatio,
+                  textScaler: TextScaler.linear(scale),
+                ),
                 child: Align(
                   alignment: Alignment.topLeft,
                   child: RepaintBoundary(
                     key: boundaryKey,
                     child: SizedBox(
                       width: 375,
-                      child: CalendarView(
-                        controller: controller,
-                        componentBuilder: builder,
-                        pageOrientation: CalendarPageOrientation.horizontal,
-                        onDaySelected: (_) {},
+                      child: CalendarStretchMotion(
+                        images: images,
+                        // Integer row origins allow pixel comparison with the
+                        // direct painter, including the selected day and badge.
+                        active:
+                            style is CustomCalendarComponentBuilder &&
+                            stretchHeight == 450,
+                        child: CalendarView(
+                          controller: controller,
+                          componentBuilder: builder,
+                          monthBodyHeightOverride: stretchHeight,
+                          pageOrientation: CalendarPageOrientation.horizontal,
+                          onDaySelected: (_) {},
+                        ),
                       ),
                     ),
                   ),
@@ -491,12 +546,12 @@ void main() {
       final boundary =
           boundaryKey.currentContext!.findRenderObject()!
               as RenderRepaintBoundary;
-      final ui.Image reference = await boundary.toImage(pixelRatio: 1);
+      final ui.Image reference = await boundary.toImage(pixelRatio: pixelRatio);
       await pump(style);
       final actualBoundary =
           boundaryKey.currentContext!.findRenderObject()!
               as RenderRepaintBoundary;
-      final actual = await actualBoundary.toImage(pixelRatio: 1);
+      final actual = await actualBoundary.toImage(pixelRatio: pixelRatio);
       if (style is DefaultCalendarComponentBuilder) {
         await expectLater(
           actual,
@@ -637,6 +692,31 @@ class _BadgeBuilder extends DefaultCalendarComponentBuilder {
       ),
     );
   }
+}
+
+class _LiveCellBuilder extends DefaultCalendarComponentBuilder {
+  const _LiveCellBuilder(this.repaint, this.onPaint);
+  final Listenable repaint;
+  final ValueChanged<Size> onPaint;
+
+  @override
+  Widget buildDayCell(BuildContext context, CalendarDayCellData data) {
+    if (data.date.day == 9) {
+      return CustomPaint(painter: _LiveCell(repaint, onPaint));
+    }
+    return super.buildDayCell(context, data);
+  }
+}
+
+class _LiveCell extends CustomPainter {
+  _LiveCell(Listenable repaint, this.onPaint) : super(repaint: repaint);
+  final ValueChanged<Size> onPaint;
+
+  @override
+  void paint(Canvas canvas, Size size) => onPaint(size);
+
+  @override
+  bool shouldRepaint(_LiveCell oldDelegate) => false;
 }
 
 class _LegacyBuilder extends CalendarComponentBuilder {

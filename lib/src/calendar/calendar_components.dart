@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'calendar_canvas_labels.dart';
 import 'calendar_models.dart';
+import 'calendar_retained_day_painter.dart';
 import 'calendar_text_layout.dart';
 import 'date_utils_ext.dart';
 
@@ -232,7 +233,7 @@ class DefaultCalendarComponentBuilder extends CalendarComponentBuilder {
   }
 }
 
-class _DefaultCalendarDayPainter extends CustomPainter {
+class _DefaultCalendarDayPainter extends CalendarRetainedDayPainter {
   _DefaultCalendarDayPainter({
     required this.data,
     required this.textStyle,
@@ -248,7 +249,13 @@ class _DefaultCalendarDayPainter extends CustomPainter {
   final Locale? locale;
 
   @override
-  void paint(Canvas canvas, Size size) {
+  double contentHeight(double width) => 36.0.clamp(0.0, width);
+
+  @override
+  Alignment get contentAlignment => Alignment.center;
+
+  @override
+  void paintContent(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final diameter = 36.0.clamp(0.0, size.shortestSide);
     if (data.isSelected) {

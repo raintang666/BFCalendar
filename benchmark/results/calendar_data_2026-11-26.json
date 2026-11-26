@@ -1,0 +1,710 @@
+{
+  "date": "2026-11-26",
+  "deviceProfile": {
+    "device": "HUAWEI STK-TL00, Android 10, 60 Hz",
+    "flutter": "3.44.9+ohos-1.0.0-beta (adaf3a96ab)",
+    "dart": "3.12.2",
+    "renderer": "Default Impeller OpenGLES, verified for every measured launch",
+    "build": "ARM64 Android Profile. Same application ID and benchmark entry point for both versions. Baseline is the working tree before the disabled-date and lunar-navigation changes.",
+    "method": "Four installation blocks (before, after, after, before). For each, reinstall, start and discard one warm-up process, then launch two fresh processes. Before each launch force-stop the benchmark and wait four seconds; keep it in foreground after it prints its result until the next force-stop. Each process starts with an empty lunar cache. OS file caches may be warm. This tests the calendar with the home day painter, not the entire example app.",
+    "workload": "Cold July 2026 in onlyCurrentMonth; 12 July jumps (2027–2038) before awaiting endOfFrame; 24 July jumps (2039–2062) each followed by endOfFrame; then 42 disabled-date queries (21 hits spread across 10,000 entries and 21 misses), ten grids per batch, one warm-up batch and five timed batches. Lookup excludes construction.",
+    "aggregation": "Times are in microseconds except androidLaunchTotalMs (Android am start -W TotalTime in milliseconds). dartEntryToFirstRasterFinishUs uses the Dart entry wall timestamp and the first Flutter frame rasterFinishWallTime. firstRasterFinishToTimingCallbackUs measures the subsequent callback delivery. Median over four per-version process measurements, summing the 24 displayed-year intervals per process first. For disabled42LookupsUs pool the 20 batch times per version, divide by 10 grids, then take the median. coldFirstRasterNotificationUs is elapsed time from Dart main to Flutter first rasterized notification. firstBuildUs comes from FrameTiming. endOfFrame intervals include scheduler wait and post-frame work, and are not presentation times. Cache values count LunarMetadata entries.",
+    "median": {
+      "before": {
+        "dartEntryToFirstRasterFinishUs": 232213.0,
+        "firstRasterFinishToTimingCallbackUs": 12219.0,
+        "firstRasterUs": 32673.0,
+        "firstFrameSpanUs": 141159.5,
+        "androidLaunchTotalMs": 926.5,
+        "coldFirstRasterNotificationUs": 242755.0,
+        "firstBuildUs": 33783.0,
+        "coldCache": 98.0,
+        "burstToEndOfFrameUs": 134907.5,
+        "burstCache": 1274.0,
+        "finalCache": 3626.0,
+        "displayed24TotalUs": 726995.0,
+        "disabled42LookupsUs": 20247.8
+      },
+      "after": {
+        "dartEntryToFirstRasterFinishUs": 230002.0,
+        "firstRasterFinishToTimingCallbackUs": 10699.0,
+        "firstRasterUs": 29930.5,
+        "firstFrameSpanUs": 217245.0,
+        "androidLaunchTotalMs": 945.5,
+        "coldFirstRasterNotificationUs": 241611.5,
+        "firstBuildUs": 38509.5,
+        "coldCache": 92.0,
+        "burstToEndOfFrameUs": 77380.0,
+        "burstCache": 184.0,
+        "finalCache": 256.0,
+        "displayed24TotalUs": 590935.0,
+        "disabled42LookupsUs": 52.6
+      }
+    },
+    "runs": [
+      {
+        "version": "before",
+        "run": 1,
+        "androidLaunchTotalMs": 956,
+        "dartEntryToFirstRasterFinishUs": 238331,
+        "firstRasterFinishToTimingCallbackUs": 12647,
+        "coldFirstRasterNotificationUs": 251098,
+        "firstBuildUs": 34014,
+        "firstRasterUs": 33535,
+        "firstFrameSpanUs": 69565,
+        "coldCache": 98,
+        "burstToEndOfFrameUs": 110629,
+        "burstCache": 1274,
+        "yearlyJumpToEndOfFrameUs": [
+          46882,
+          30014,
+          29139,
+          33595,
+          33565,
+          34818,
+          30855,
+          33171,
+          34612,
+          32514,
+          32682,
+          32016,
+          18430,
+          32440,
+          34527,
+          31819,
+          18678,
+          31817,
+          33101,
+          33300,
+          32518,
+          15105,
+          19486,
+          34621
+        ],
+        "finalCache": 3626,
+        "disabled42LookupBatchUs": [
+          199920,
+          199261,
+          198114,
+          202375,
+          211298
+        ]
+      },
+      {
+        "version": "before",
+        "run": 2,
+        "androidLaunchTotalMs": 928,
+        "dartEntryToFirstRasterFinishUs": 223147,
+        "firstRasterFinishToTimingCallbackUs": 15412,
+        "coldFirstRasterNotificationUs": 238692,
+        "firstBuildUs": 33552,
+        "firstRasterUs": 28306,
+        "firstFrameSpanUs": 208517,
+        "coldCache": 98,
+        "burstToEndOfFrameUs": 159186,
+        "burstCache": 1274,
+        "yearlyJumpToEndOfFrameUs": [
+          43569,
+          24074,
+          30094,
+          17461,
+          32869,
+          19071,
+          31007,
+          33133,
+          18158,
+          32362,
+          32614,
+          32165,
+          18326,
+          32623,
+          34305,
+          32122,
+          34688,
+          32046,
+          33206,
+          33386,
+          32350,
+          15150,
+          19480,
+          35160
+        ],
+        "finalCache": 3626,
+        "disabled42LookupBatchUs": [
+          203016,
+          201390,
+          201209,
+          201588,
+          208715
+        ]
+      },
+      {
+        "version": "after",
+        "run": 3,
+        "androidLaunchTotalMs": 951,
+        "dartEntryToFirstRasterFinishUs": 237233,
+        "firstRasterFinishToTimingCallbackUs": 8716,
+        "coldFirstRasterNotificationUs": 246079,
+        "firstBuildUs": 38871,
+        "firstRasterUs": 28569,
+        "firstFrameSpanUs": 68260,
+        "coldCache": 92,
+        "burstToEndOfFrameUs": 28235,
+        "burstCache": 184,
+        "yearlyJumpToEndOfFrameUs": [
+          52732,
+          26271,
+          32950,
+          29656,
+          18679,
+          36104,
+          29621,
+          17578,
+          31951,
+          19083,
+          29434,
+          17760,
+          17894,
+          31940,
+          18588,
+          31304,
+          16998,
+          18468,
+          31223,
+          16774,
+          15589,
+          15010,
+          21311,
+          32193
+        ],
+        "finalCache": 256,
+        "disabled42LookupBatchUs": [
+          525,
+          2834,
+          563,
+          525,
+          525
+        ]
+      },
+      {
+        "version": "after",
+        "run": 4,
+        "androidLaunchTotalMs": 945,
+        "dartEntryToFirstRasterFinishUs": 230918,
+        "firstRasterFinishToTimingCallbackUs": 11440,
+        "coldFirstRasterNotificationUs": 242496,
+        "firstBuildUs": 38091,
+        "firstRasterUs": 30990,
+        "firstFrameSpanUs": 225819,
+        "coldCache": 92,
+        "burstToEndOfFrameUs": 76147,
+        "burstCache": 184,
+        "yearlyJumpToEndOfFrameUs": [
+          20249,
+          35528,
+          32922,
+          28132,
+          17919,
+          18923,
+          30699,
+          17803,
+          32315,
+          35689,
+          29290,
+          17692,
+          17694,
+          32329,
+          17926,
+          31813,
+          16996,
+          34850,
+          31427,
+          33159,
+          33013,
+          13435,
+          20302,
+          33778
+        ],
+        "finalCache": 256,
+        "disabled42LookupBatchUs": [
+          529,
+          2923,
+          571,
+          529,
+          527
+        ]
+      },
+      {
+        "version": "after",
+        "run": 5,
+        "androidLaunchTotalMs": 946,
+        "dartEntryToFirstRasterFinishUs": 228016,
+        "firstRasterFinishToTimingCallbackUs": 12582,
+        "coldFirstRasterNotificationUs": 240727,
+        "firstBuildUs": 40351,
+        "firstRasterUs": 28871,
+        "firstFrameSpanUs": 216092,
+        "coldCache": 92,
+        "burstToEndOfFrameUs": 78613,
+        "burstCache": 184,
+        "yearlyJumpToEndOfFrameUs": [
+          39038,
+          20847,
+          34136,
+          28485,
+          18222,
+          19199,
+          30006,
+          17733,
+          32170,
+          18949,
+          29252,
+          17879,
+          17838,
+          32039,
+          19101,
+          31013,
+          16838,
+          18382,
+          31269,
+          16619,
+          15763,
+          14965,
+          19830,
+          33186
+        ],
+        "finalCache": 256,
+        "disabled42LookupBatchUs": [
+          525,
+          2855,
+          525,
+          524,
+          525
+        ]
+      },
+      {
+        "version": "after",
+        "run": 6,
+        "androidLaunchTotalMs": 940,
+        "dartEntryToFirstRasterFinishUs": 229086,
+        "firstRasterFinishToTimingCallbackUs": 9958,
+        "coldFirstRasterNotificationUs": 239163,
+        "firstBuildUs": 38148,
+        "firstRasterUs": 31815,
+        "firstFrameSpanUs": 218398,
+        "coldCache": 92,
+        "burstToEndOfFrameUs": 81602,
+        "burstCache": 184,
+        "yearlyJumpToEndOfFrameUs": [
+          37048,
+          21863,
+          32894,
+          28123,
+          18163,
+          19272,
+          29963,
+          17794,
+          31998,
+          19094,
+          29211,
+          17774,
+          17889,
+          31978,
+          19199,
+          30939,
+          16879,
+          18319,
+          31370,
+          16728,
+          15813,
+          14695,
+          19906,
+          33186
+        ],
+        "finalCache": 256,
+        "disabled42LookupBatchUs": [
+          525,
+          2930,
+          545,
+          525,
+          524
+        ]
+      },
+      {
+        "version": "before",
+        "run": 7,
+        "androidLaunchTotalMs": 920,
+        "dartEntryToFirstRasterFinishUs": 226095,
+        "firstRasterFinishToTimingCallbackUs": 11791,
+        "coldFirstRasterNotificationUs": 238008,
+        "firstBuildUs": 32938,
+        "firstRasterUs": 31811,
+        "firstFrameSpanUs": 210552,
+        "coldCache": 98,
+        "burstToEndOfFrameUs": 161869,
+        "burstCache": 1274,
+        "yearlyJumpToEndOfFrameUs": [
+          42782,
+          24768,
+          28905,
+          18107,
+          32334,
+          20213,
+          30819,
+          33090,
+          34577,
+          31868,
+          32698,
+          31878,
+          18911,
+          32716,
+          34636,
+          31489,
+          34712,
+          31734,
+          33142,
+          33789,
+          31789,
+          15601,
+          19213,
+          34514
+        ],
+        "finalCache": 3626,
+        "disabled42LookupBatchUs": [
+          203294,
+          203817,
+          202108,
+          202294,
+          213058
+        ]
+      },
+      {
+        "version": "before",
+        "run": 8,
+        "androidLaunchTotalMs": 925,
+        "dartEntryToFirstRasterFinishUs": 241232,
+        "firstRasterFinishToTimingCallbackUs": 5474,
+        "coldFirstRasterNotificationUs": 246818,
+        "firstBuildUs": 34690,
+        "firstRasterUs": 36209,
+        "firstFrameSpanUs": 73802,
+        "coldCache": 98,
+        "burstToEndOfFrameUs": 109266,
+        "burstCache": 1274,
+        "yearlyJumpToEndOfFrameUs": [
+          46778,
+          33607,
+          29927,
+          33704,
+          32928,
+          35179,
+          31034,
+          33199,
+          34492,
+          32639,
+          32833,
+          31781,
+          18426,
+          32577,
+          34528,
+          31763,
+          18308,
+          32176,
+          33265,
+          33223,
+          32419,
+          15243,
+          19326,
+          34741
+        ],
+        "finalCache": 3626,
+        "disabled42LookupBatchUs": [
+          203682,
+          202447,
+          202509,
+          203219,
+          209552
+        ]
+      }
+    ]
+  },
+  "lunarConversionProbe": {
+    "method": "Fresh flutter test processes on macOS arm64. Each mounts a 390x844 horizontal onlyCurrentMonth calendar in MaterialApp Scaffold, min year 1900 and max 2100. No previous lunar calls, initial 2026-07-15. 12 successive July jumps (2027–2038) before one pump, then 24 July jumps (2039–2062) each followed by one frame. Stopwatch around pumpWidget / controller updates and pumps includes post-frame work. Counts increment at metadata entry and before Lunar.fromDate; the prefetchDates scope records explicit warmups separately from grid loads. Times are instrumented widget harness wall times, not device frame times. Five fresh processes per source, interleaved after first pair.",
+    "repeatsPerVersion": 5,
+    "countsPerRun": {
+      "before": [
+        {
+          "scenario": "coldMonth",
+          "gridCalls": 92,
+          "warmCalls": 112,
+          "gridConversions": 92,
+          "warmConversions": 6,
+          "warmBatches": 3,
+          "startCacheSize": 0,
+          "endCacheSize": 98
+        },
+        {
+          "scenario": "twelveJumpsInOneFrame",
+          "gridCalls": 92,
+          "warmCalls": 1309,
+          "gridConversions": 92,
+          "warmConversions": 1084,
+          "warmBatches": 36,
+          "startCacheSize": 98,
+          "endCacheSize": 1274
+        },
+        {
+          "scenario": "twentyFourDisplayedYears",
+          "gridCalls": 2208,
+          "warmCalls": 2646,
+          "gridConversions": 2208,
+          "warmConversions": 144,
+          "warmBatches": 72,
+          "startCacheSize": 1274,
+          "endCacheSize": 3626
+        }
+      ],
+      "after": [
+        {
+          "scenario": "coldMonth",
+          "gridCalls": 92,
+          "warmCalls": 0,
+          "gridConversions": 92,
+          "warmConversions": 0,
+          "warmBatches": 0,
+          "startCacheSize": 0,
+          "endCacheSize": 92
+        },
+        {
+          "scenario": "twelveJumpsInOneFrame",
+          "gridCalls": 92,
+          "warmCalls": 0,
+          "gridConversions": 92,
+          "warmConversions": 0,
+          "warmBatches": 0,
+          "startCacheSize": 92,
+          "endCacheSize": 184
+        },
+        {
+          "scenario": "twentyFourDisplayedYears",
+          "gridCalls": 2208,
+          "warmCalls": 0,
+          "gridConversions": 2208,
+          "warmConversions": 0,
+          "warmBatches": 0,
+          "startCacheSize": 184,
+          "endCacheSize": 256
+        }
+      ]
+    },
+    "capacityProbeMethod": "For each capacity 128/256/512 in a separate Flutter test process, mount July 2026, jump to July 2038, reset counters and alternate the same two months 12 times, one calendar frame per jump with both windows already visited. Test onlyCurrentMonth and allMonth separately; the widget stays mounted and holds one controller.",
+    "revisitByCapacity": {
+      "128": [
+        {
+          "mode": "onlyCurrentMonth",
+          "oneWindow": 92,
+          "twoWindowsCache": 128,
+          "revisitGridCalls": 1104,
+          "revisitConversions": 1104,
+          "endCache": 128
+        },
+        {
+          "mode": "allMonth",
+          "oneWindow": 98,
+          "twoWindowsCache": 128,
+          "revisitGridCalls": 1512,
+          "revisitConversions": 1218,
+          "endCache": 128
+        }
+      ],
+      "256": [
+        {
+          "mode": "onlyCurrentMonth",
+          "oneWindow": 92,
+          "twoWindowsCache": 184,
+          "revisitGridCalls": 1104,
+          "revisitConversions": 0,
+          "endCache": 184
+        },
+        {
+          "mode": "allMonth",
+          "oneWindow": 98,
+          "twoWindowsCache": 203,
+          "revisitGridCalls": 1512,
+          "revisitConversions": 0,
+          "endCache": 203
+        }
+      ],
+      "512": [
+        {
+          "mode": "onlyCurrentMonth",
+          "oneWindow": 92,
+          "twoWindowsCache": 184,
+          "revisitGridCalls": 1104,
+          "revisitConversions": 0,
+          "endCache": 184
+        },
+        {
+          "mode": "allMonth",
+          "oneWindow": 98,
+          "twoWindowsCache": 203,
+          "revisitGridCalls": 1512,
+          "revisitConversions": 0,
+          "endCache": 203
+        }
+      ]
+    }
+  },
+  "hostDisabledLookupProbe": {
+    "environment": "macOS arm64 flutter_tester JIT, Dart 3.12.2. Time per 42-query grid in microseconds. Excludes Set construction. Four warm-ups, then 11 interleaved timing rounds. Hardware/compiler differs from Android Profile.",
+    "samplesByNumberOfDisabledDates": {
+      "100": {
+        "before": [
+          60.21458,
+          59.41,
+          59.367079999999994,
+          59.575410000000005,
+          59.39791,
+          58.85458,
+          59.454170000000005,
+          58.99583,
+          58.91125,
+          58.080839999999995,
+          60.835829999999994
+        ],
+        "after": [
+          19.70680666666667,
+          20.203125,
+          19.751111666666667,
+          19.741390000000003,
+          19.410555000000002,
+          19.507151666666665,
+          19.451111666666666,
+          19.582776666666664,
+          19.297916666666666,
+          19.391526666666664,
+          19.516666666666666
+        ]
+      },
+      "1000": {
+        "before": [
+          316.6459,
+          303.2291,
+          316.93330000000003,
+          303.8917,
+          299.9,
+          309.4875,
+          307.7834,
+          297.6708,
+          303.0916,
+          292.5208,
+          308.1791
+        ],
+        "after": [
+          20.185903333333332,
+          20.149791666666665,
+          19.853473333333334,
+          20.003819999999997,
+          19.757291666666667,
+          19.694444999999998,
+          19.74659666666667,
+          19.712986666666666,
+          19.583055,
+          19.863333333333333,
+          19.524651666666667
+        ]
+      },
+      "10000": {
+        "before": [
+          2643.625,
+          2685.208,
+          2689.584,
+          2709.834,
+          2743.0,
+          2582.458,
+          2604.25,
+          2867.416,
+          2780.542,
+          2641.791,
+          2758.541
+        ],
+        "after": [
+          19.691388333333336,
+          19.917361666666665,
+          20.259513333333334,
+          19.949930000000002,
+          19.523611666666667,
+          19.767916666666668,
+          20.690416666666668,
+          19.440068333333333,
+          20.476458333333333,
+          20.23625,
+          19.71840333333333
+        ]
+      }
+    }
+  },
+  "sameApkColdCheck": {
+    "method": "Both original library snapshots compiled into one ARM64 Profile APK. The initial platform route selects the before or after implementation at runtime; the test page uses the same home painter. One unmeasured launch per version, then four fresh processes (before, after, after, before), with four seconds between force-stop and the next launch.",
+    "median": {
+      "before": {
+        "androidLaunchTotalMs": 965.0,
+        "dartEntryToFirstRasterFinishUs": 237382.0,
+        "firstBuildUs": 34221.0,
+        "firstRasterUs": 34244.5,
+        "firstFrameSpanUs": 148929.0,
+        "firstRasterFinishToTimingCallbackUs": 14274.5
+      },
+      "after": {
+        "androidLaunchTotalMs": 944.0,
+        "dartEntryToFirstRasterFinishUs": 226410.0,
+        "firstBuildUs": 38120.0,
+        "firstRasterUs": 28536.5,
+        "firstFrameSpanUs": 218395.0,
+        "firstRasterFinishToTimingCallbackUs": 12866.5
+      }
+    },
+    "runs": [
+      {
+        "version": "before",
+        "run": 1,
+        "androidLaunchTotalMs": 964,
+        "dartEntryToFirstRasterFinishUs": 239680,
+        "firstBuildUs": 34149,
+        "firstRasterUs": 36114,
+        "firstFrameSpanUs": 72893,
+        "firstRasterFinishToTimingCallbackUs": 17467
+      },
+      {
+        "version": "after",
+        "run": 2,
+        "androidLaunchTotalMs": 937,
+        "dartEntryToFirstRasterFinishUs": 224568,
+        "firstBuildUs": 38498,
+        "firstRasterUs": 27067,
+        "firstFrameSpanUs": 214790,
+        "firstRasterFinishToTimingCallbackUs": 13652
+      },
+      {
+        "version": "after",
+        "run": 3,
+        "androidLaunchTotalMs": 951,
+        "dartEntryToFirstRasterFinishUs": 228252,
+        "firstBuildUs": 37742,
+        "firstRasterUs": 30006,
+        "firstFrameSpanUs": 222000,
+        "firstRasterFinishToTimingCallbackUs": 12081
+      },
+      {
+        "version": "before",
+        "run": 4,
+        "androidLaunchTotalMs": 966,
+        "dartEntryToFirstRasterFinishUs": 235084,
+        "firstBuildUs": 34293,
+        "firstRasterUs": 32375,
+        "firstFrameSpanUs": 224965,
+        "firstRasterFinishToTimingCallbackUs": 11082
+      }
+    ]
+  }
+}

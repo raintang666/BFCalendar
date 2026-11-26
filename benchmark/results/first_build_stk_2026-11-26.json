@@ -1,0 +1,2187 @@
+{
+  "date": "2026-11-26",
+  "device": "HUAWEI STK-TL00, Android 10, 60 Hz",
+  "flutter": "3.44.9+ohos-1.0.0-beta, adaf3a96ab",
+  "dart": "3.12.2",
+  "renderer": "default Impeller OpenGLES (verified in every measured process)",
+  "method": "One Android ARM64 Profile APK containing three source snapshots, selected at runtime through the initial route. Same benchmark/lunar_navigation_benchmark.dart and home day painter for all. After installation discard one launch. Force-stop and wait four seconds before every launch. Every group of three samples includes each implementation, with all six order permutations used. Profile runs have no custom timing probes. Median of six per arm. firstBuildUs and firstRasterUs are Flutter FrameTiming; dartEntryToFirstRasterFinishUs is Dart main to rasterFinishWallTime, not input-to-display. Android launchMs is am start -W TotalTime. The navigation intervals include waiting until Flutter endOfFrame. Date cache sizes are numbers of daily metadata entries.",
+  "variants": {
+    "original": "Before the disabled-date and bounded lunar-cache changes, with post-frame prefetch.",
+    "current": "Previous working tree: Set.contains, 256-entry LRU, grid-driven lunar loading.",
+    "fixed": "This change: same 256-entry cache, one additional derived year index, same grid loading and paging."
+  },
+  "sha256": {
+    "original": "09555f6a4d852214d22ffdff44641eaf20bf0fd07f60dc31d52098525d4d00bb",
+    "current": "b80f9bee6b4ce7675955050f1c3e4fd19264b5419348f50a567187565492b677",
+    "fixed": "b0a5a01589d106b5bf38c7f5c924aa88956fc587b44dcf118e09db8fb89f9169"
+  },
+  "sourceBenchmark": "benchmark/lunar_navigation_benchmark.dart",
+  "median": {
+    "original": {
+      "firstBuildUs": 33536.0,
+      "firstRasterUs": 29268.5,
+      "dartEntryToFirstRasterFinishUs": 231219.0,
+      "burstToEndOfFrameUs": 160310.5,
+      "coldCache": 98.0,
+      "finalCache": 3626.0,
+      "launchMs": 941.5,
+      "displayed24Us": 656707.0,
+      "firstBuildRangeUs": [
+        33399,
+        45902
+      ]
+    },
+    "current": {
+      "firstBuildUs": 37847.5,
+      "firstRasterUs": 28275.0,
+      "dartEntryToFirstRasterFinishUs": 224870.0,
+      "burstToEndOfFrameUs": 77988.5,
+      "coldCache": 92.0,
+      "finalCache": 256.0,
+      "launchMs": 939.0,
+      "displayed24Us": 588370.5,
+      "firstBuildRangeUs": [
+        37511,
+        42225
+      ]
+    },
+    "fixed": {
+      "firstBuildUs": 34294.0,
+      "firstRasterUs": 27735.0,
+      "dartEntryToFirstRasterFinishUs": 221213.5,
+      "burstToEndOfFrameUs": 71878.0,
+      "coldCache": 92.0,
+      "finalCache": 256.0,
+      "launchMs": 935.0,
+      "displayed24Us": 428433.0,
+      "firstBuildRangeUs": [
+        33776,
+        34686
+      ]
+    }
+  },
+  "deviceRuns": [
+    {
+      "arm": "original",
+      "run": 1,
+      "launchMs": 929,
+      "variant": "original",
+      "dartEntryToFirstRasterFinishUs": 225531,
+      "firstRasterFinishToTimingCallbackUs": 11230,
+      "coldFirstRasterNotificationUs": 236889,
+      "firstBuildUs": 33482,
+      "firstRasterUs": 29348,
+      "firstFrameSpanUs": 220670,
+      "coldCache": 98,
+      "burstToEndOfFrameUs": 158757,
+      "burstCache": 1274,
+      "yearlyJumpToEndOfFrameUs": [
+        35881,
+        24118,
+        29844,
+        18736,
+        31830,
+        19336,
+        30740,
+        16750,
+        18015,
+        32288,
+        32801,
+        31883,
+        18601,
+        32393,
+        18103,
+        31817,
+        18228,
+        32245,
+        32934,
+        33283,
+        32234,
+        15448,
+        19493,
+        34624
+      ],
+      "finalCache": 3626,
+      "disabled42LookupBatchUs": [
+        204417,
+        203234,
+        202027,
+        202785,
+        204214
+      ]
+    },
+    {
+      "arm": "current",
+      "run": 2,
+      "launchMs": 941,
+      "variant": "current",
+      "dartEntryToFirstRasterFinishUs": 223373,
+      "firstRasterFinishToTimingCallbackUs": 13231,
+      "coldFirstRasterNotificationUs": 236763,
+      "firstBuildUs": 37764,
+      "firstRasterUs": 27473,
+      "firstFrameSpanUs": 213582,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 79046,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        40846,
+        20280,
+        34242,
+        29180,
+        17855,
+        35308,
+        30284,
+        17750,
+        32177,
+        18989,
+        29249,
+        17717,
+        17156,
+        17261,
+        34557,
+        30835,
+        18563,
+        32002,
+        16291,
+        16945,
+        15436,
+        16248,
+        18453,
+        33321
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        559,
+        613,
+        563,
+        562,
+        568
+      ]
+    },
+    {
+      "arm": "fixed",
+      "run": 3,
+      "launchMs": 926,
+      "variant": "fixed",
+      "dartEntryToFirstRasterFinishUs": 219303,
+      "firstRasterFinishToTimingCallbackUs": 13981,
+      "coldFirstRasterNotificationUs": 233418,
+      "firstBuildUs": 33988,
+      "firstRasterUs": 27104,
+      "firstFrameSpanUs": 215204,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 73131,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        36871,
+        25242,
+        13275,
+        18072,
+        30217,
+        17999,
+        15911,
+        16332,
+        16869,
+        17181,
+        14229,
+        17182,
+        16110,
+        17723,
+        16743,
+        16493,
+        16973,
+        16797,
+        16481,
+        15243,
+        16949,
+        14085,
+        19683,
+        16805
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        545,
+        3085,
+        525,
+        525,
+        572
+      ]
+    },
+    {
+      "arm": "current",
+      "run": 4,
+      "launchMs": 933,
+      "variant": "current",
+      "dartEntryToFirstRasterFinishUs": 229941,
+      "firstRasterFinishToTimingCallbackUs": 8244,
+      "coldFirstRasterNotificationUs": 238336,
+      "firstBuildUs": 37931,
+      "firstRasterUs": 33028,
+      "firstFrameSpanUs": 221886,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 78071,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        39595,
+        20082,
+        33070,
+        29354,
+        17734,
+        19177,
+        30056,
+        17816,
+        31909,
+        19114,
+        29245,
+        17659,
+        17163,
+        17310,
+        34420,
+        31333,
+        18195,
+        31912,
+        16409,
+        16825,
+        15421,
+        16367,
+        18443,
+        33351
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        578,
+        556,
+        546,
+        544,
+        554
+      ]
+    },
+    {
+      "arm": "fixed",
+      "run": 5,
+      "launchMs": 934,
+      "variant": "fixed",
+      "dartEntryToFirstRasterFinishUs": 222655,
+      "firstRasterFinishToTimingCallbackUs": 10538,
+      "coldFirstRasterNotificationUs": 233394,
+      "firstBuildUs": 34483,
+      "firstRasterUs": 27817,
+      "firstFrameSpanUs": 216669,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 70150,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        14054,
+        32254,
+        16568,
+        16911,
+        17628,
+        17026,
+        14762,
+        17193,
+        16066,
+        16994,
+        14710,
+        16661,
+        16286,
+        18244,
+        16210,
+        16478,
+        17130,
+        16783,
+        16337,
+        15278,
+        16902,
+        14159,
+        19717,
+        16763
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        542,
+        3066,
+        524,
+        523,
+        523
+      ]
+    },
+    {
+      "arm": "original",
+      "run": 6,
+      "launchMs": 938,
+      "variant": "original",
+      "dartEntryToFirstRasterFinishUs": 229511,
+      "firstRasterFinishToTimingCallbackUs": 11506,
+      "coldFirstRasterNotificationUs": 241148,
+      "firstBuildUs": 33399,
+      "firstRasterUs": 32405,
+      "firstFrameSpanUs": 219297,
+      "coldCache": 98,
+      "burstToEndOfFrameUs": 163653,
+      "burstCache": 1274,
+      "yearlyJumpToEndOfFrameUs": [
+        33592,
+        23742,
+        28736,
+        18215,
+        32243,
+        19728,
+        31189,
+        32651,
+        34543,
+        32361,
+        32732,
+        31868,
+        19362,
+        31807,
+        34433,
+        31790,
+        18340,
+        32233,
+        32860,
+        33347,
+        32519,
+        16200,
+        17891,
+        34073
+      ],
+      "finalCache": 3626,
+      "disabled42LookupBatchUs": [
+        203804,
+        202425,
+        202577,
+        203479,
+        203097
+      ]
+    },
+    {
+      "arm": "fixed",
+      "run": 7,
+      "launchMs": 936,
+      "variant": "fixed",
+      "dartEntryToFirstRasterFinishUs": 223721,
+      "firstRasterFinishToTimingCallbackUs": 10157,
+      "coldFirstRasterNotificationUs": 234023,
+      "firstBuildUs": 34686,
+      "firstRasterUs": 28604,
+      "firstFrameSpanUs": 217004,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 76809,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        35313,
+        24300,
+        14431,
+        18150,
+        14356,
+        17161,
+        15446,
+        16904,
+        16328,
+        17379,
+        14397,
+        16819,
+        16217,
+        17880,
+        16675,
+        16525,
+        17069,
+        16744,
+        16372,
+        15265,
+        17158,
+        13885,
+        19756,
+        16859
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        546,
+        3087,
+        570,
+        525,
+        525
+      ]
+    },
+    {
+      "arm": "original",
+      "run": 8,
+      "launchMs": 937,
+      "variant": "original",
+      "dartEntryToFirstRasterFinishUs": 225371,
+      "firstRasterFinishToTimingCallbackUs": 14101,
+      "coldFirstRasterNotificationUs": 239613,
+      "firstBuildUs": 33560,
+      "firstRasterUs": 27012,
+      "firstFrameSpanUs": 217601,
+      "coldCache": 98,
+      "burstToEndOfFrameUs": 159336,
+      "burstCache": 1274,
+      "yearlyJumpToEndOfFrameUs": [
+        37432,
+        23665,
+        28387,
+        18042,
+        32298,
+        19406,
+        30788,
+        16635,
+        18056,
+        32366,
+        32641,
+        15471,
+        18485,
+        32347,
+        18617,
+        31267,
+        18139,
+        32349,
+        32969,
+        33304,
+        32158,
+        15561,
+        19400,
+        35113
+      ],
+      "finalCache": 3626,
+      "disabled42LookupBatchUs": [
+        200709,
+        199768,
+        199745,
+        199966,
+        200364
+      ]
+    },
+    {
+      "arm": "current",
+      "run": 9,
+      "launchMs": 939,
+      "variant": "current",
+      "dartEntryToFirstRasterFinishUs": 222086,
+      "firstRasterFinishToTimingCallbackUs": 12376,
+      "coldFirstRasterNotificationUs": 234593,
+      "firstBuildUs": 38360,
+      "firstRasterUs": 26180,
+      "firstFrameSpanUs": 213013,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 85055,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        36521,
+        21688,
+        31455,
+        29774,
+        17968,
+        19355,
+        30173,
+        17632,
+        31954,
+        19032,
+        29354,
+        17675,
+        17051,
+        17490,
+        34277,
+        31085,
+        18625,
+        31675,
+        16432,
+        16889,
+        15485,
+        16293,
+        18298,
+        16775
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        541,
+        554,
+        543,
+        542,
+        551
+      ]
+    },
+    {
+      "arm": "fixed",
+      "run": 10,
+      "launchMs": 940,
+      "variant": "fixed",
+      "dartEntryToFirstRasterFinishUs": 219772,
+      "firstRasterFinishToTimingCallbackUs": 10635,
+      "coldFirstRasterNotificationUs": 230543,
+      "firstBuildUs": 34599,
+      "firstRasterUs": 27003,
+      "firstFrameSpanUs": 207122,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 70625,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        34689,
+        24766,
+        13056,
+        17371,
+        16885,
+        16748,
+        14742,
+        16427,
+        16522,
+        17469,
+        14272,
+        16733,
+        16695,
+        17523,
+        16722,
+        16362,
+        17042,
+        16824,
+        16753,
+        15004,
+        16891,
+        14108,
+        19678,
+        16757
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        542,
+        3067,
+        525,
+        523,
+        563
+      ]
+    },
+    {
+      "arm": "current",
+      "run": 11,
+      "launchMs": 939,
+      "variant": "current",
+      "dartEntryToFirstRasterFinishUs": 225542,
+      "firstRasterFinishToTimingCallbackUs": 11664,
+      "coldFirstRasterNotificationUs": 237356,
+      "firstBuildUs": 37511,
+      "firstRasterUs": 28412,
+      "firstFrameSpanUs": 221305,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 77906,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        36277,
+        20829,
+        32999,
+        29434,
+        17822,
+        35226,
+        30429,
+        17652,
+        32202,
+        18932,
+        29369,
+        17653,
+        17052,
+        17373,
+        34422,
+        31077,
+        18455,
+        31812,
+        16444,
+        16964,
+        15392,
+        16671,
+        18178,
+        33132
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        559,
+        581,
+        563,
+        576,
+        596
+      ]
+    },
+    {
+      "arm": "original",
+      "run": 12,
+      "launchMs": 945,
+      "variant": "original",
+      "dartEntryToFirstRasterFinishUs": 234485,
+      "firstRasterFinishToTimingCallbackUs": 15180,
+      "coldFirstRasterNotificationUs": 249816,
+      "firstBuildUs": 34459,
+      "firstRasterUs": 29189,
+      "firstFrameSpanUs": 230110,
+      "coldCache": 98,
+      "burstToEndOfFrameUs": 158048,
+      "burstCache": 1274,
+      "yearlyJumpToEndOfFrameUs": [
+        40192,
+        23911,
+        29612,
+        18861,
+        31612,
+        19560,
+        30591,
+        16727,
+        18020,
+        32303,
+        32795,
+        31855,
+        18641,
+        32279,
+        18290,
+        31453,
+        18723,
+        31763,
+        33110,
+        33380,
+        32052,
+        15632,
+        19973,
+        34168
+      ],
+      "finalCache": 3626,
+      "disabled42LookupBatchUs": [
+        200925,
+        200082,
+        199891,
+        199893,
+        200576
+      ]
+    },
+    {
+      "arm": "current",
+      "run": 13,
+      "launchMs": 954,
+      "variant": "current",
+      "dartEntryToFirstRasterFinishUs": 242417,
+      "firstRasterFinishToTimingCallbackUs": 6984,
+      "coldFirstRasterNotificationUs": 249537,
+      "firstBuildUs": 42225,
+      "firstRasterUs": 30074,
+      "firstFrameSpanUs": 74142,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 28871,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        71396,
+        21157,
+        31581,
+        29589,
+        19419,
+        34314,
+        30277,
+        17628,
+        32091,
+        18963,
+        31132,
+        17071,
+        34869,
+        32569,
+        33541,
+        31589,
+        17241,
+        34265,
+        31345,
+        16527,
+        15689,
+        14997,
+        19766,
+        33194
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        526,
+        2830,
+        525,
+        525,
+        524
+      ]
+    },
+    {
+      "arm": "original",
+      "run": 14,
+      "launchMs": 951,
+      "variant": "original",
+      "dartEntryToFirstRasterFinishUs": 232927,
+      "firstRasterFinishToTimingCallbackUs": 11665,
+      "coldFirstRasterNotificationUs": 244725,
+      "firstBuildUs": 33512,
+      "firstRasterUs": 34257,
+      "firstFrameSpanUs": 225288,
+      "coldCache": 98,
+      "burstToEndOfFrameUs": 169042,
+      "burstCache": 1274,
+      "yearlyJumpToEndOfFrameUs": [
+        42281,
+        38688,
+        28532,
+        32613,
+        32632,
+        19483,
+        30731,
+        16679,
+        34475,
+        32526,
+        32859,
+        31770,
+        18638,
+        32299,
+        18273,
+        31658,
+        18137,
+        32564,
+        32752,
+        33437,
+        32103,
+        15473,
+        19514,
+        34247
+      ],
+      "finalCache": 3626,
+      "disabled42LookupBatchUs": [
+        203892,
+        201913,
+        201666,
+        202776,
+        203254
+      ]
+    },
+    {
+      "arm": "fixed",
+      "run": 15,
+      "launchMs": 936,
+      "variant": "fixed",
+      "dartEntryToFirstRasterFinishUs": 225503,
+      "firstRasterFinishToTimingCallbackUs": 9188,
+      "coldFirstRasterNotificationUs": 234828,
+      "firstBuildUs": 34105,
+      "firstRasterUs": 28319,
+      "firstFrameSpanUs": 211532,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 12196,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        68464,
+        40798,
+        18976,
+        18873,
+        31131,
+        17580,
+        14697,
+        16335,
+        16515,
+        17539,
+        14426,
+        16519,
+        16370,
+        17768,
+        16944,
+        16302,
+        17014,
+        16796,
+        16421,
+        15190,
+        16932,
+        14183,
+        19836,
+        16710
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        545,
+        3101,
+        525,
+        523,
+        523
+      ]
+    },
+    {
+      "arm": "original",
+      "run": 16,
+      "launchMs": 985,
+      "variant": "original",
+      "dartEntryToFirstRasterFinishUs": 283021,
+      "firstRasterFinishToTimingCallbackUs": 14170,
+      "coldFirstRasterNotificationUs": 297326,
+      "firstBuildUs": 45902,
+      "firstRasterUs": 28361,
+      "firstFrameSpanUs": 271836,
+      "coldCache": 98,
+      "burstToEndOfFrameUs": 161285,
+      "burstCache": 1274,
+      "yearlyJumpToEndOfFrameUs": [
+        19613,
+        32938,
+        31195,
+        17288,
+        32447,
+        19439,
+        30863,
+        33182,
+        18036,
+        32315,
+        32808,
+        32038,
+        18372,
+        32372,
+        18082,
+        32091,
+        34593,
+        32163,
+        32989,
+        33968,
+        31558,
+        15486,
+        19460,
+        34615
+      ],
+      "finalCache": 3626,
+      "disabled42LookupBatchUs": [
+        204908,
+        215528,
+        224902,
+        225059,
+        205214
+      ]
+    },
+    {
+      "arm": "fixed",
+      "run": 17,
+      "launchMs": 923,
+      "variant": "fixed",
+      "dartEntryToFirstRasterFinishUs": 219711,
+      "firstRasterFinishToTimingCallbackUs": 12054,
+      "coldFirstRasterNotificationUs": 231901,
+      "firstBuildUs": 33776,
+      "firstRasterUs": 27653,
+      "firstFrameSpanUs": 216249,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 78276,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        32652,
+        25840,
+        12782,
+        17006,
+        31452,
+        18081,
+        15319,
+        16988,
+        16940,
+        17464,
+        13838,
+        16438,
+        16452,
+        17697,
+        16842,
+        16351,
+        17058,
+        16714,
+        16573,
+        15207,
+        16907,
+        14121,
+        19780,
+        16975
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        545,
+        3147,
+        525,
+        525,
+        525
+      ]
+    },
+    {
+      "arm": "current",
+      "run": 18,
+      "launchMs": 928,
+      "variant": "current",
+      "dartEntryToFirstRasterFinishUs": 224198,
+      "firstRasterFinishToTimingCallbackUs": 7814,
+      "coldFirstRasterNotificationUs": 232153,
+      "firstBuildUs": 37620,
+      "firstRasterUs": 28138,
+      "firstFrameSpanUs": 211551,
+      "coldCache": 92,
+      "burstToEndOfFrameUs": 19346,
+      "burstCache": 184,
+      "yearlyJumpToEndOfFrameUs": [
+        78771,
+        45854,
+        21986,
+        29692,
+        16333,
+        20216,
+        29014,
+        17764,
+        32241,
+        18925,
+        29569,
+        17547,
+        17919,
+        31886,
+        19025,
+        30901,
+        16935,
+        18319,
+        31264,
+        16646,
+        15769,
+        14845,
+        19814,
+        33282
+      ],
+      "finalCache": 256,
+      "disabled42LookupBatchUs": [
+        541,
+        2815,
+        525,
+        525,
+        525
+      ]
+    }
+  ],
+  "ablation": {
+    "method": "Separate cold-start-only APK, fresh process per run. Restore just one old source file in the current tree. warm restores calendar_view.dart (with post-frame prefetch); lru restores the old unbounded lunar_service.dart; lookup restores the old calendar_controller.dart predicate. Each version ran twice, in reverse order on the second pass. Rows with trace suffix had separate instrumentation and were excluded from the comparison.",
+    "runs": [
+      {
+        "arm": "current",
+        "run": 1,
+        "launchMs": 2801,
+        "coldCache": 92,
+        "firstBuildUs": 38182,
+        "firstRasterUs": 29760,
+        "firstSpanUs": 2050033,
+        "firstDartToRasterUs": 2064718,
+        "firstWallBuildStartUs": 1996619,
+        "postRasterToCallbackUs": 11460,
+        "firstFrameNumber": 1,
+        "variant": "current"
+      },
+      {
+        "arm": "original",
+        "run": 2,
+        "launchMs": 2775,
+        "coldCache": 98,
+        "firstBuildUs": 34374,
+        "firstRasterUs": 28970,
+        "firstSpanUs": 2043905,
+        "firstDartToRasterUs": 2058513,
+        "firstWallBuildStartUs": 1995023,
+        "postRasterToCallbackUs": 15022,
+        "firstFrameNumber": 1,
+        "variant": "original"
+      },
+      {
+        "arm": "warm",
+        "run": 3,
+        "launchMs": 2792,
+        "coldCache": 98,
+        "firstBuildUs": 31754,
+        "firstRasterUs": 27440,
+        "firstSpanUs": 2056627,
+        "firstDartToRasterUs": 2073016,
+        "firstWallBuildStartUs": 2013646,
+        "postRasterToCallbackUs": 9876,
+        "firstFrameNumber": 1,
+        "variant": "warm"
+      },
+      {
+        "arm": "lru",
+        "run": 4,
+        "launchMs": 2775,
+        "coldCache": 92,
+        "firstBuildUs": 36608,
+        "firstRasterUs": 28181,
+        "firstSpanUs": 2045527,
+        "firstDartToRasterUs": 2060219,
+        "firstWallBuildStartUs": 1995279,
+        "postRasterToCallbackUs": 14375,
+        "firstFrameNumber": 1,
+        "variant": "lru"
+      },
+      {
+        "arm": "lookup",
+        "run": 5,
+        "launchMs": 2785,
+        "coldCache": 92,
+        "firstBuildUs": 36572,
+        "firstRasterUs": 27339,
+        "firstSpanUs": 2053344,
+        "firstDartToRasterUs": 2069473,
+        "firstWallBuildStartUs": 2005410,
+        "postRasterToCallbackUs": 11025,
+        "firstFrameNumber": 1,
+        "variant": "lookup"
+      },
+      {
+        "arm": "lookup",
+        "run": 10,
+        "launchMs": 2810,
+        "coldCache": 92,
+        "firstBuildUs": 36661,
+        "firstRasterUs": 29060,
+        "firstSpanUs": 2096309,
+        "firstDartToRasterUs": 2110893,
+        "firstWallBuildStartUs": 2045032,
+        "postRasterToCallbackUs": 11483,
+        "firstFrameNumber": 1,
+        "variant": "lookup"
+      },
+      {
+        "arm": "lru",
+        "run": 11,
+        "launchMs": 2769,
+        "coldCache": 92,
+        "firstBuildUs": 40404,
+        "firstRasterUs": 32981,
+        "firstSpanUs": 2057965,
+        "firstDartToRasterUs": 2062473,
+        "firstWallBuildStartUs": 1988936,
+        "postRasterToCallbackUs": 9927,
+        "firstFrameNumber": 1,
+        "variant": "lru"
+      },
+      {
+        "arm": "warm",
+        "run": 12,
+        "launchMs": 2761,
+        "coldCache": 98,
+        "firstBuildUs": 33398,
+        "firstRasterUs": 27231,
+        "firstSpanUs": 2038962,
+        "firstDartToRasterUs": 2051530,
+        "firstWallBuildStartUs": 1990753,
+        "postRasterToCallbackUs": 8937,
+        "firstFrameNumber": 1,
+        "variant": "warm"
+      },
+      {
+        "arm": "original",
+        "run": 13,
+        "launchMs": 2947,
+        "coldCache": 98,
+        "firstBuildUs": 31404,
+        "firstRasterUs": 28204,
+        "firstSpanUs": 2110094,
+        "firstDartToRasterUs": 2116453,
+        "firstWallBuildStartUs": 2056706,
+        "postRasterToCallbackUs": 12482,
+        "firstFrameNumber": 1,
+        "variant": "original"
+      },
+      {
+        "arm": "current",
+        "run": 14,
+        "launchMs": 2764,
+        "coldCache": 92,
+        "firstBuildUs": 36653,
+        "firstRasterUs": 27668,
+        "firstSpanUs": 2043502,
+        "firstDartToRasterUs": 2059631,
+        "firstWallBuildStartUs": 1995163,
+        "postRasterToCallbackUs": 11285,
+        "firstFrameNumber": 1,
+        "variant": "current"
+      }
+    ]
+  },
+  "probeMethod": "Separate instrumented Android Profile APKs; absolute Dart wall timestamps made relative to engine buildStart using rasterFinishWallTime. Each event has [name, wall microseconds from Dart main, cumulative lunar lookup microseconds, cumulative full Lunar.fromDate calls]. Each visible grid interval must lie fully inside the first reported engine build. Times are elapsed durations on the UI thread, including nested work. The first two framework frame records capture early window dimensions. Probes are excluded from the headline timings.",
+  "originalVsCurrentProbe": {
+    "median": {
+      "currenttrace": {
+        "visibleGridElapsedUs": 5213.0,
+        "visibleLunarLookupUs": 4166.0,
+        "visibleFullLunarCalls": 62.0,
+        "totalFullLunarCalls": 92.0
+      },
+      "originaltrace": {
+        "visibleGridElapsedUs": 1167.0,
+        "visibleLunarLookupUs": 165.5,
+        "visibleFullLunarCalls": 0.0,
+        "totalFullLunarCalls": 98.0
+      }
+    },
+    "runs": [
+      {
+        "arm": "currenttrace",
+        "run": 1,
+        "launchMs": 2802,
+        "coldCache": 92,
+        "firstBuildUs": 39398,
+        "firstRasterUs": 28401,
+        "firstSpanUs": 72662,
+        "firstDartToRasterUs": 2085866,
+        "firstWallBuildStartUs": 2017869,
+        "postRasterToCallbackUs": 8908,
+        "firstFrameNumber": 2,
+        "variant": "currenttrace",
+        "us": {
+          "lunar": 7397,
+          "disabled": 235,
+          "allCells": 9046
+        },
+        "calls": {
+          "miss": 92,
+          "lunar": 92,
+          "disabled": 92,
+          "allCells": 3
+        },
+        "eventsFromMainUs": [
+          [
+            "gridStart",
+            11174,
+            0,
+            0
+          ],
+          [
+            "gridEnd",
+            15012,
+            3192,
+            30
+          ],
+          [
+            "gridStart",
+            2018880,
+            3192,
+            30
+          ],
+          [
+            "gridEnd",
+            2021496,
+            5272,
+            61
+          ],
+          [
+            "gridStart",
+            2021767,
+            5272,
+            61
+          ],
+          [
+            "gridEnd",
+            2024411,
+            7397,
+            92
+          ]
+        ],
+        "phases": {
+          "engineFrameNumber": 2,
+          "engineBuildUs": 39398,
+          "enginePhasesUsFromBuildStart": {
+            "vsyncStart": -4665,
+            "buildStart": 0,
+            "buildFinish": 39398,
+            "rasterStart": 39596,
+            "rasterFinish": 67997
+          },
+          "attachUsFromBuildStart": [
+            [
+              -2013992,
+              -2008774
+            ]
+          ],
+          "frameworkFramesUsFromBuildStart": [
+            {
+              "warmUp": true,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -2007329,
+                -2007282
+              ],
+              "handleDrawFrame": [
+                -2007162,
+                -2001197
+              ],
+              "drawFrame": [
+                -2007150,
+                -2001669
+              ]
+            },
+            {
+              "warmUp": false,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -1999925,
+                -1999907
+              ],
+              "handleDrawFrame": [
+                -1999896,
+                -1999666
+              ],
+              "drawFrame": [
+                -1999887,
+                -1999676
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "arm": "originaltrace",
+        "run": 2,
+        "launchMs": 2775,
+        "coldCache": 98,
+        "firstBuildUs": 35042,
+        "firstRasterUs": 26614,
+        "firstSpanUs": 2046784,
+        "firstDartToRasterUs": 2061453,
+        "firstWallBuildStartUs": 1999669,
+        "postRasterToCallbackUs": 12031,
+        "firstFrameNumber": 1,
+        "variant": "originaltrace",
+        "us": {
+          "lunar": 8125,
+          "disabled": 257,
+          "allCells": 5159,
+          "prefetch": 4704
+        },
+        "calls": {
+          "miss": 98,
+          "lunar": 204,
+          "disabled": 92,
+          "allCells": 3,
+          "prefetch": 3
+        },
+        "eventsFromMainUs": [
+          [
+            "gridStart",
+            12089,
+            0,
+            0
+          ],
+          [
+            "gridEnd",
+            16103,
+            3320,
+            30
+          ],
+          [
+            "prefetchStart",
+            17581,
+            3320,
+            30
+          ],
+          [
+            "prefetchEnd",
+            19725,
+            5431,
+            62
+          ],
+          [
+            "prefetchStart",
+            19781,
+            5431,
+            62
+          ],
+          [
+            "prefetchEnd",
+            19962,
+            5592,
+            63
+          ],
+          [
+            "prefetchStart",
+            20024,
+            5592,
+            63
+          ],
+          [
+            "prefetchEnd",
+            22413,
+            7957,
+            98
+          ],
+          [
+            "gridStart",
+            2000659,
+            7957,
+            98
+          ],
+          [
+            "gridEnd",
+            2001252,
+            8044,
+            98
+          ],
+          [
+            "gridStart",
+            2001428,
+            8044,
+            98
+          ],
+          [
+            "gridEnd",
+            2002034,
+            8125,
+            98
+          ]
+        ],
+        "phases": {
+          "engineFrameNumber": 1,
+          "engineBuildUs": 35042,
+          "enginePhasesUsFromBuildStart": {
+            "vsyncStart": -1985000,
+            "buildStart": 0,
+            "buildFinish": 35042,
+            "rasterStart": 35170,
+            "rasterFinish": 61784
+          },
+          "attachUsFromBuildStart": [
+            [
+              -1995756,
+              -1989825
+            ]
+          ],
+          "frameworkFramesUsFromBuildStart": [
+            {
+              "warmUp": true,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -1988220,
+                -1988157
+              ],
+              "handleDrawFrame": [
+                -1988058,
+                -1977203
+              ],
+              "drawFrame": [
+                -1988032,
+                -1982558
+              ]
+            },
+            {
+              "warmUp": false,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                1125.0,
+                2320.0
+              ],
+              "handleBeginFrame": [
+                82,
+                101
+              ],
+              "handleDrawFrame": [
+                112,
+                35140
+              ],
+              "drawFrame": [
+                121,
+                35126
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "arm": "originaltrace",
+        "run": 5,
+        "launchMs": 2810,
+        "coldCache": 98,
+        "firstBuildUs": 35971,
+        "firstRasterUs": 28005,
+        "firstSpanUs": 88748,
+        "firstDartToRasterUs": 2100415,
+        "firstWallBuildStartUs": 2036287,
+        "postRasterToCallbackUs": 4088,
+        "firstFrameNumber": 2,
+        "variant": "originaltrace",
+        "us": {
+          "lunar": 8394,
+          "disabled": 256,
+          "allCells": 5069,
+          "prefetch": 4993
+        },
+        "calls": {
+          "miss": 98,
+          "lunar": 204,
+          "disabled": 92,
+          "allCells": 3,
+          "prefetch": 3
+        },
+        "eventsFromMainUs": [
+          [
+            "gridStart",
+            11449,
+            0,
+            0
+          ],
+          [
+            "gridEnd",
+            15430,
+            3303,
+            30
+          ],
+          [
+            "prefetchStart",
+            17092,
+            3303,
+            30
+          ],
+          [
+            "prefetchEnd",
+            19387,
+            5561,
+            62
+          ],
+          [
+            "prefetchStart",
+            19448,
+            5561,
+            62
+          ],
+          [
+            "prefetchEnd",
+            19632,
+            5733,
+            63
+          ],
+          [
+            "prefetchStart",
+            19697,
+            5733,
+            63
+          ],
+          [
+            "prefetchEnd",
+            22226,
+            8231,
+            98
+          ],
+          [
+            "gridStart",
+            2037309,
+            8231,
+            98
+          ],
+          [
+            "gridEnd",
+            2037886,
+            8314,
+            98
+          ],
+          [
+            "gridStart",
+            2038069,
+            8314,
+            98
+          ],
+          [
+            "gridEnd",
+            2038627,
+            8394,
+            98
+          ]
+        ],
+        "phases": {
+          "engineFrameNumber": 2,
+          "engineBuildUs": 35971,
+          "enginePhasesUsFromBuildStart": {
+            "vsyncStart": -24620,
+            "buildStart": 0,
+            "buildFinish": 35971,
+            "rasterStart": 36123,
+            "rasterFinish": 64128
+          },
+          "attachUsFromBuildStart": [
+            [
+              -2032328,
+              -2027114
+            ]
+          ],
+          "frameworkFramesUsFromBuildStart": [
+            {
+              "warmUp": true,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -2025423,
+                -2025363
+              ],
+              "handleDrawFrame": [
+                -2025278,
+                -2014010
+              ],
+              "drawFrame": [
+                -2025258,
+                -2019685
+              ]
+            },
+            {
+              "warmUp": false,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -2012818,
+                -2012805
+              ],
+              "handleDrawFrame": [
+                -2012797,
+                -2012615
+              ],
+              "drawFrame": [
+                -2012788,
+                -2012623
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "arm": "currenttrace",
+        "run": 6,
+        "launchMs": 2774,
+        "coldCache": 92,
+        "firstBuildUs": 38470,
+        "firstRasterUs": 31882,
+        "firstSpanUs": 2050669,
+        "firstDartToRasterUs": 2058332,
+        "firstWallBuildStartUs": 1987821,
+        "postRasterToCallbackUs": 10881,
+        "firstFrameNumber": 1,
+        "variant": "currenttrace",
+        "us": {
+          "lunar": 7285,
+          "disabled": 244,
+          "allCells": 8957
+        },
+        "calls": {
+          "miss": 92,
+          "lunar": 92,
+          "disabled": 92,
+          "allCells": 3
+        },
+        "eventsFromMainUs": [
+          [
+            "gridStart",
+            11827,
+            0,
+            0
+          ],
+          [
+            "gridEnd",
+            15676,
+            3158,
+            30
+          ],
+          [
+            "gridStart",
+            1988802,
+            3158,
+            30
+          ],
+          [
+            "gridEnd",
+            1991354,
+            5189,
+            61
+          ],
+          [
+            "gridStart",
+            1991621,
+            5189,
+            61
+          ],
+          [
+            "gridEnd",
+            1994235,
+            7285,
+            92
+          ]
+        ],
+        "phases": {
+          "engineFrameNumber": 1,
+          "engineBuildUs": 38470,
+          "enginePhasesUsFromBuildStart": {
+            "vsyncStart": -1980158,
+            "buildStart": 0,
+            "buildFinish": 38470,
+            "rasterStart": 38629,
+            "rasterFinish": 70511
+          },
+          "attachUsFromBuildStart": [
+            [
+              -1983999,
+              -1978262
+            ]
+          ],
+          "frameworkFramesUsFromBuildStart": [
+            {
+              "warmUp": true,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -1976635,
+                -1976587
+              ],
+              "handleDrawFrame": [
+                -1976477,
+                -1970451
+              ],
+              "drawFrame": [
+                -1976466,
+                -1970926
+              ]
+            },
+            {
+              "warmUp": false,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                1125.0,
+                2320.0
+              ],
+              "handleBeginFrame": [
+                79,
+                96
+              ],
+              "handleDrawFrame": [
+                107,
+                38564
+              ],
+              "drawFrame": [
+                117,
+                38551
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "currentVsFixedProbe": {
+    "median": {
+      "currenttrace": {
+        "visibleGridElapsedUs": 5110.5,
+        "visibleLunarLookupUs": 4075.0,
+        "visibleFullLunarCalls": 62.0,
+        "totalFullLunarCalls": 92.0
+      },
+      "fixedtrace": {
+        "visibleGridElapsedUs": 1591.5,
+        "visibleLunarLookupUs": 589.0,
+        "visibleFullLunarCalls": 4.0,
+        "totalFullLunarCalls": 6.0
+      }
+    },
+    "runs": [
+      {
+        "arm": "currenttrace",
+        "run": 1,
+        "launchMs": 2767,
+        "coldCache": 92,
+        "firstBuildUs": 36108,
+        "firstRasterUs": 27396,
+        "firstSpanUs": 2044899,
+        "firstDartToRasterUs": 2054698,
+        "firstWallBuildStartUs": 1991056,
+        "postRasterToCallbackUs": 10904,
+        "firstFrameNumber": 1,
+        "variant": "currenttrace",
+        "us": {
+          "lunar": 7168,
+          "disabled": 239,
+          "allCells": 8878
+        },
+        "calls": {
+          "miss": 92,
+          "lunar": 92,
+          "disabled": 92,
+          "allCells": 3
+        },
+        "eventsFromMainUs": [
+          [
+            "gridStart",
+            10661,
+            0,
+            0
+          ],
+          [
+            "gridEnd",
+            14457,
+            3068,
+            30
+          ],
+          [
+            "gridStart",
+            1992005,
+            3068,
+            30
+          ],
+          [
+            "gridEnd",
+            1994575,
+            5119,
+            61
+          ],
+          [
+            "gridStart",
+            1994834,
+            5119,
+            61
+          ],
+          [
+            "gridEnd",
+            1997402,
+            7168,
+            92
+          ]
+        ],
+        "phases": {
+          "engineFrameNumber": 1,
+          "engineBuildUs": 36108,
+          "enginePhasesUsFromBuildStart": {
+            "vsyncStart": -1981257,
+            "buildStart": 0,
+            "buildFinish": 36108,
+            "rasterStart": 36246,
+            "rasterFinish": 63642
+          },
+          "attachUsFromBuildStart": [
+            [
+              -1987722,
+              -1982467
+            ]
+          ],
+          "frameworkFramesUsFromBuildStart": [
+            {
+              "warmUp": true,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -1980997,
+                -1980948
+              ],
+              "handleDrawFrame": [
+                -1980862,
+                -1975198
+              ],
+              "drawFrame": [
+                -1980850,
+                -1975630
+              ]
+            },
+            {
+              "warmUp": false,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                1125.0,
+                2320.0
+              ],
+              "handleBeginFrame": [
+                80,
+                97
+              ],
+              "handleDrawFrame": [
+                107,
+                36199
+              ],
+              "drawFrame": [
+                117,
+                36185
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "arm": "fixedtrace",
+        "run": 2,
+        "launchMs": 2854,
+        "coldCache": 92,
+        "firstBuildUs": 32299,
+        "firstRasterUs": 25721,
+        "firstSpanUs": 2068840,
+        "firstDartToRasterUs": 2080475,
+        "firstWallBuildStartUs": 2022320,
+        "postRasterToCallbackUs": 9809,
+        "firstFrameNumber": 1,
+        "variant": "fixedtrace",
+        "us": {
+          "lunar": 2188,
+          "disabled": 221,
+          "allCells": 3732
+        },
+        "calls": {
+          "lunar": 92,
+          "disabled": 92,
+          "miss": 6,
+          "allCells": 3
+        },
+        "eventsFromMainUs": [
+          [
+            "gridStart",
+            11692,
+            0,
+            0
+          ],
+          [
+            "gridEnd",
+            13865,
+            1551,
+            2
+          ],
+          [
+            "gridStart",
+            2023287,
+            1551,
+            2
+          ],
+          [
+            "gridEnd",
+            2024174,
+            1943,
+            4
+          ],
+          [
+            "gridStart",
+            2024375,
+            1943,
+            4
+          ],
+          [
+            "gridEnd",
+            2025096,
+            2188,
+            6
+          ]
+        ],
+        "phases": {
+          "engineFrameNumber": 1,
+          "engineBuildUs": 32299,
+          "enginePhasesUsFromBuildStart": {
+            "vsyncStart": -2010685,
+            "buildStart": 0,
+            "buildFinish": 32299,
+            "rasterStart": 32434,
+            "rasterFinish": 58155
+          },
+          "attachUsFromBuildStart": [
+            [
+              -2018644,
+              -2012954
+            ]
+          ],
+          "frameworkFramesUsFromBuildStart": [
+            {
+              "warmUp": true,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -2011223,
+                -2011171
+              ],
+              "handleDrawFrame": [
+                -2011077,
+                -2007071
+              ],
+              "drawFrame": [
+                -2011065,
+                -2007503
+              ]
+            },
+            {
+              "warmUp": false,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                1125.0,
+                2320.0
+              ],
+              "handleBeginFrame": [
+                78,
+                95
+              ],
+              "handleDrawFrame": [
+                112,
+                32390
+              ],
+              "drawFrame": [
+                121,
+                32376
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "arm": "fixedtrace",
+        "run": 3,
+        "launchMs": 2837,
+        "coldCache": 92,
+        "firstBuildUs": 32858,
+        "firstRasterUs": 32623,
+        "firstSpanUs": 91607,
+        "firstDartToRasterUs": 2136690,
+        "firstWallBuildStartUs": 2071054,
+        "postRasterToCallbackUs": 4290,
+        "firstFrameNumber": 2,
+        "variant": "fixedtrace",
+        "us": {
+          "lunar": 2067,
+          "disabled": 220,
+          "allCells": 3647
+        },
+        "calls": {
+          "lunar": 92,
+          "disabled": 92,
+          "miss": 6,
+          "allCells": 3
+        },
+        "eventsFromMainUs": [
+          [
+            "gridStart",
+            11100,
+            0,
+            0
+          ],
+          [
+            "gridEnd",
+            13224,
+            1526,
+            2
+          ],
+          [
+            "gridStart",
+            2072053,
+            1526,
+            2
+          ],
+          [
+            "gridEnd",
+            2072901,
+            1821,
+            4
+          ],
+          [
+            "gridStart",
+            2073097,
+            1821,
+            4
+          ],
+          [
+            "gridEnd",
+            2073824,
+            2067,
+            6
+          ]
+        ],
+        "phases": {
+          "engineFrameNumber": 2,
+          "engineBuildUs": 32858,
+          "enginePhasesUsFromBuildStart": {
+            "vsyncStart": -25971,
+            "buildStart": 0,
+            "buildFinish": 32858,
+            "rasterStart": 33013,
+            "rasterFinish": 65636
+          },
+          "attachUsFromBuildStart": [
+            [
+              -2067422,
+              -2062003
+            ]
+          ],
+          "frameworkFramesUsFromBuildStart": [
+            {
+              "warmUp": true,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -2060520,
+                -2060480
+              ],
+              "handleDrawFrame": [
+                -2060393,
+                -2056397
+              ],
+              "drawFrame": [
+                -2060382,
+                -2056860
+              ]
+            },
+            {
+              "warmUp": false,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -2055024,
+                -2055006
+              ],
+              "handleDrawFrame": [
+                -2054994,
+                -2054796
+              ],
+              "drawFrame": [
+                -2054985,
+                -2054807
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "arm": "currenttrace",
+        "run": 4,
+        "launchMs": 2772,
+        "coldCache": 92,
+        "firstBuildUs": 37432,
+        "firstRasterUs": 29088,
+        "firstSpanUs": 2046721,
+        "firstDartToRasterUs": 2053876,
+        "firstWallBuildStartUs": 1987200,
+        "postRasterToCallbackUs": 8628,
+        "firstFrameNumber": 1,
+        "variant": "currenttrace",
+        "us": {
+          "lunar": 7184,
+          "disabled": 227,
+          "allCells": 8801
+        },
+        "calls": {
+          "miss": 92,
+          "lunar": 92,
+          "disabled": 92,
+          "allCells": 3
+        },
+        "eventsFromMainUs": [
+          [
+            "gridStart",
+            10987,
+            0,
+            0
+          ],
+          [
+            "gridEnd",
+            14759,
+            3134,
+            30
+          ],
+          [
+            "gridStart",
+            1988186,
+            3134,
+            30
+          ],
+          [
+            "gridEnd",
+            1990669,
+            5100,
+            61
+          ],
+          [
+            "gridStart",
+            1990904,
+            5100,
+            61
+          ],
+          [
+            "gridEnd",
+            1993504,
+            7184,
+            92
+          ]
+        ],
+        "phases": {
+          "engineFrameNumber": 1,
+          "engineBuildUs": 37432,
+          "enginePhasesUsFromBuildStart": {
+            "vsyncStart": -1980045,
+            "buildStart": 0,
+            "buildFinish": 37432,
+            "rasterStart": 37588,
+            "rasterFinish": 66676
+          },
+          "attachUsFromBuildStart": [
+            [
+              -1983654,
+              -1978298
+            ]
+          ],
+          "frameworkFramesUsFromBuildStart": [
+            {
+              "warmUp": true,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                0.0,
+                0.0
+              ],
+              "handleBeginFrame": [
+                -1976791,
+                -1976744
+              ],
+              "handleDrawFrame": [
+                -1976648,
+                -1970909
+              ],
+              "drawFrame": [
+                -1976636,
+                -1971381
+              ]
+            },
+            {
+              "warmUp": false,
+              "sendFramesToEngineOnDrawEntry": true,
+              "physicalSize": [
+                1125.0,
+                2320.0
+              ],
+              "handleBeginFrame": [
+                80,
+                98
+              ],
+              "handleDrawFrame": [
+                109,
+                37524
+              ],
+              "drawFrame": [
+                119,
+                37510
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "calendarParity": {
+    "method": "AOT comparison to the previous implementation using lunar 1.7.8. Every civil date in 1900 through 2100 inclusive, plus 20 selected years between -1000 and 2500. Local midnight normalization; TZ=America/Los_Angeles. Compared day label, solar term and thrown error.",
+    "dates": 80718,
+    "matchingExceptions": 20,
+    "mismatches": 0
+  }
+}
