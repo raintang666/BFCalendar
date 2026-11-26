@@ -1,3 +1,7 @@
+## 0.3.0
+
+- This version uses the same calendar implementation and public API as 0.2.1.
+
 ## 0.2.1
 
 - Add a runnable example that demonstrates month paging and date selection.

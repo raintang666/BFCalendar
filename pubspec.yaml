@@ -1,6 +1,6 @@
 name: calendarview_flutter
 description: A customizable Flutter calendar view with single selection, range selection, multi-selection, year view, and pluggable calendar cell builders.
-version: 0.2.1
+version: 0.3.0
 homepage: https://github.com/raintang666/BFCalendar
 repository: https://github.com/raintang666/BFCalendar
 issue_tracker: https://github.com/raintang666/BFCalendar/issues
