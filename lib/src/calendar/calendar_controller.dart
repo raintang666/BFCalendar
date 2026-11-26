@@ -15,6 +15,7 @@ class CalendarController extends ChangeNotifier {
     int minSelectRange = -1,
     int maxSelectRange = -1,
     int maxMultiSelectSize = -1,
+    this.enableMonthOverscroll = true,
     Map<DateTime, List<CalendarMarker>> markers = const {},
     Set<DateTime> disabledDates = const {},
     CalendarDatePredicate? disabledDatePredicate,
@@ -43,6 +44,10 @@ class CalendarController extends ChangeNotifier {
   }
 
   DateTime _focusedDay;
+
+  /// 月视图到达下拉边界后，允许拉开日期行距并在松手时回弹。默认开启。
+  final bool enableMonthOverscroll;
+
   CalendarDisplayMode _displayMode = CalendarDisplayMode.month;
   CalendarSelectionMode _selectionMode = CalendarSelectionMode.single;
   int _firstWeekday = DateTime.sunday;

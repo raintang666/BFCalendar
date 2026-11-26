@@ -58,16 +58,20 @@ class CalendarStretchMotion extends InheritedWidget {
     super.key,
     required this.active,
     required this.images,
+    this.maxMonthBodyHeight,
     required super.child,
   });
 
   final bool active;
   final CalendarStretchImageCache images;
+  final double? maxMonthBodyHeight;
 
   static CalendarStretchMotion? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<CalendarStretchMotion>();
 
   @override
   bool updateShouldNotify(CalendarStretchMotion oldWidget) =>
-      active != oldWidget.active || images != oldWidget.images;
+      active != oldWidget.active ||
+      images != oldWidget.images ||
+      maxMonthBodyHeight != oldWidget.maxMonthBodyHeight;
 }

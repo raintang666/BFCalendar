@@ -9,8 +9,38 @@ import 'calendar_canvas_labels.dart';
 import 'calendar_components.dart';
 import 'calendar_controller.dart';
 import 'calendar_models.dart';
+import 'calendar_month_overscroll.dart';
 import 'date_utils_ext.dart';
 import 'lunar_service.dart';
+
+bool _atTopOfScrollView(BuildContext context) {
+  final scroll = Scrollable.maybeOf(context, axis: Axis.vertical)?.position;
+  if (scroll == null) return true;
+  return scroll.axisDirection == AxisDirection.up
+      ? scroll.extentAfter == 0
+      : scroll.extentBefore == 0;
+}
+
+// The rows supply the leading-edge effect. Retain platform scrolling at the
+// other end of a continuous month list, including iOS trailing overscroll.
+class _MonthListScrollPhysics extends ScrollPhysics {
+  const _MonthListScrollPhysics({super.parent});
+
+  @override
+  _MonthListScrollPhysics applyTo(ScrollPhysics? ancestor) =>
+      _MonthListScrollPhysics(parent: buildParent(ancestor));
+
+  @override
+  double applyBoundaryConditions(ScrollMetrics position, double value) {
+    if (value < position.minScrollExtent && value < position.pixels) {
+      return value -
+          (position.pixels < position.minScrollExtent
+              ? position.pixels
+              : position.minScrollExtent);
+    }
+    return super.applyBoundaryConditions(position, value);
+  }
+}
 
 class _DirectionalPagePhysics extends ScrollPhysics {
   const _DirectionalPagePhysics({
@@ -302,6 +332,12 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
   }
 
   bool _onListNotification(ViewportNotificationMixin notification) {
+    if (widget.controller.enableMonthOverscroll &&
+        notification is OverscrollIndicatorNotification &&
+        notification.depth == 0 &&
+        notification.leading) {
+      notification.disallowIndicator();
+    }
     if (notification.depth == 0 &&
         widget.onFocusedMonthChanged != null &&
         !_monthCheckScheduled) {
@@ -390,6 +426,9 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
               onDaySelected: widget.onDaySelected,
               componentBuilder: _resolvedComponentBuilder,
               collapseProgress: 0,
+              canStartOverscroll: month == _rangeStartMonth
+                  ? _atTopOfScrollView
+                  : null,
               showMonthBody: true,
               rowHeight: widget.calendarHeight,
               bodyHeight: bodyHeight,
@@ -425,6 +464,9 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
             onNotification: _onListNotification,
             child: CustomScrollView(
               center: _centerMonthKey,
+              physics: widget.controller.enableMonthOverscroll
+                  ? const _MonthListScrollPhysics()
+                  : null,
               slivers: [
                 SliverList.builder(
                   itemCount: previousCount,
@@ -708,9 +750,17 @@ class _CalendarViewState extends State<CalendarView> {
       referenceDay: visibleDate,
       displayMode: CalendarDisplayMode.month,
     );
-    return NotificationListener<ScrollEndNotification>(
+    return NotificationListener<ViewportNotificationMixin>(
       onNotification: (notification) {
-        _handleVerticalPageScrollEnd();
+        if (notification is ScrollEndNotification) {
+          _handleVerticalPageScrollEnd();
+        } else if (widget.controller.enableMonthOverscroll &&
+            !canGoPrevious &&
+            notification is OverscrollIndicatorNotification &&
+            notification.depth == 0 &&
+            notification.leading) {
+          notification.disallowIndicator();
+        }
         return false;
       },
       child: Stack(
@@ -730,6 +780,10 @@ class _CalendarViewState extends State<CalendarView> {
               final pageDate = _verticalPageDateForIndex(index);
               return _buildCalendarPage(
                 pageDate: pageDate,
+                canStartOverscroll:
+                    !canGoPrevious && index == _verticalCurrentPage
+                    ? (_) => _verticalPageOffset.abs() < 0.0001
+                    : null,
                 collapseProgress: collapseProgress,
                 shouldShowMonthBody: shouldShowMonthBody,
                 bodyHeight: bodyHeight,
@@ -750,6 +804,7 @@ class _CalendarViewState extends State<CalendarView> {
 
   Widget _buildCalendarPage({
     required DateTime pageDate,
+    bool Function(BuildContext)? canStartOverscroll = _atTopOfScrollView,
     required double collapseProgress,
     required bool shouldShowMonthBody,
     required double bodyHeight,
@@ -759,6 +814,7 @@ class _CalendarViewState extends State<CalendarView> {
         '${widget.controller.displayMode.name}-${CalendarDateUtils.formatIsoDate(pageDate)}',
       ),
       anchorDate: pageDate,
+      canStartOverscroll: canStartOverscroll,
       controller: widget.controller,
       onDaySelected: widget.onDaySelected,
       componentBuilder: _resolvedComponentBuilder,
@@ -1163,6 +1219,7 @@ class _CalendarPage extends StatelessWidget {
     required this.onDaySelected,
     required this.componentBuilder,
     required this.collapseProgress,
+    required this.canStartOverscroll,
     required this.showMonthBody,
     required this.rowHeight,
     required this.bodyHeight,
@@ -1179,6 +1236,7 @@ class _CalendarPage extends StatelessWidget {
   final ValueChanged<DateTime> onDaySelected;
   final CalendarComponentBuilder componentBuilder;
   final double collapseProgress;
+  final bool Function(BuildContext)? canStartOverscroll;
   final bool showMonthBody;
   final double rowHeight;
   final double bodyHeight;
@@ -1208,66 +1266,85 @@ class _CalendarPage extends StatelessWidget {
     );
     final monthBodyHeight =
         monthBodyHeightOverride ?? (monthLineCount * rowHeight);
-    final monthRowHeight = monthBodyHeight / monthLineCount;
     final selectedLine = CalendarDateUtils.weekIndexInMonth(
       anchorDate,
       firstWeekday: controller.firstWeekday,
     ).clamp(0, monthLineCount - 1);
-    final monthTranslation = selectedLine * monthRowHeight * collapseProgress;
-
-    return ClipRect(
-      child: showMonthBody
-          ? OverflowBox(
-              alignment: Alignment.topCenter,
-              minHeight: monthBodyHeight,
-              maxHeight: monthBodyHeight,
-              child: Transform.translate(
-                offset: Offset(0, -monthTranslation),
-                child: SizedBox(
-                  height: monthBodyHeight,
-                  child: Padding(
-                    padding: componentBuilder.contentPadding,
-                    child: _CalendarGrid(
-                      days: monthDays,
-                      lineCount: monthLineCount,
-                      hideOutsideMonth: controller.onlyCurrentMonth,
-                      focusedMonth: focusedMonth,
-                      controller: controller,
-                      onDaySelected: onDaySelected,
-                      componentBuilder: componentBuilder,
-                      rowHeight: monthRowHeight,
-                      retainRowArtwork: monthBodyHeightOverride != null,
-                      handleDaySelection: handleDaySelection,
-                      onRangeSelected: onRangeSelected,
-                      onSelectOutOfRange: onSelectOutOfRange,
-                      onMultiSelected: onMultiSelected,
-                      onMultiSelectOutOfSize: onMultiSelectOutOfSize,
-                    ),
-                  ),
-                ),
-              ),
-            )
-          : SizedBox(
-              height: bodyHeight,
-              child: Padding(
-                padding: componentBuilder.contentPadding,
-                child: _CalendarGrid(
-                  days: weekDays,
-                  lineCount: 1,
-                  hideOutsideMonth: false,
-                  focusedMonth: focusedMonth,
-                  controller: controller,
-                  onDaySelected: onDaySelected,
-                  componentBuilder: componentBuilder,
-                  rowHeight: rowHeight,
-                  handleDaySelection: handleDaySelection,
-                  onRangeSelected: onRangeSelected,
-                  onSelectOutOfRange: onSelectOutOfRange,
-                  onMultiSelected: onMultiSelected,
-                  onMultiSelectOutOfSize: onMultiSelectOutOfSize,
-                ),
+    Widget buildMonth(double overscroll) {
+      final height = monthBodyHeight + overscroll;
+      final monthRowHeight = height / monthLineCount;
+      final monthTranslation = selectedLine * monthRowHeight * collapseProgress;
+      return OverflowBox(
+        alignment: Alignment.topCenter,
+        minHeight: height,
+        maxHeight: height,
+        child: Transform.translate(
+          offset: Offset(0, -monthTranslation),
+          child: SizedBox(
+            height: height,
+            child: Padding(
+              padding: componentBuilder.contentPadding,
+              child: _CalendarGrid(
+                days: monthDays,
+                lineCount: monthLineCount,
+                hideOutsideMonth: controller.onlyCurrentMonth,
+                focusedMonth: focusedMonth,
+                controller: controller,
+                onDaySelected: onDaySelected,
+                componentBuilder: componentBuilder,
+                rowHeight: monthRowHeight,
+                retainRowArtwork:
+                    monthBodyHeightOverride != null || overscroll > 0,
+                handleDaySelection: handleDaySelection,
+                onRangeSelected: onRangeSelected,
+                onSelectOutOfRange: onSelectOutOfRange,
+                onMultiSelected: onMultiSelected,
+                onMultiSelectOutOfSize: onMultiSelectOutOfSize,
               ),
             ),
+          ),
+        ),
+      );
+    }
+
+    if (showMonthBody) {
+      final boundary = canStartOverscroll;
+      return ClipRect(
+        child: controller.enableMonthOverscroll && boundary != null
+            ? CalendarMonthOverscroll(
+                monthBodyHeight: monthBodyHeight,
+                canStart:
+                    collapseProgress == 0 &&
+                        controller.displayMode == CalendarDisplayMode.month
+                    ? boundary
+                    : null,
+                builder: buildMonth,
+              )
+            : buildMonth(0),
+      );
+    }
+    return ClipRect(
+      child: SizedBox(
+        height: bodyHeight,
+        child: Padding(
+          padding: componentBuilder.contentPadding,
+          child: _CalendarGrid(
+            days: weekDays,
+            lineCount: 1,
+            hideOutsideMonth: false,
+            focusedMonth: focusedMonth,
+            controller: controller,
+            onDaySelected: onDaySelected,
+            componentBuilder: componentBuilder,
+            rowHeight: rowHeight,
+            handleDaySelection: handleDaySelection,
+            onRangeSelected: onRangeSelected,
+            onSelectOutOfRange: onSelectOutOfRange,
+            onMultiSelected: onMultiSelected,
+            onMultiSelectOutOfSize: onMultiSelectOutOfSize,
+          ),
+        ),
+      ),
     );
   }
 }

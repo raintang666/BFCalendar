@@ -49,6 +49,14 @@ CalendarView(
 )
 ```
 
+### Enable or disable month overscroll
+
+```dart
+final controller = CalendarController(
+  enableMonthOverscroll: true, // true to enable (default), false to disable
+);
+```
+
 ## CalendarController
 
 Constructor parameters:
@@ -61,6 +69,7 @@ Constructor parameters:
 | `minSelectRange` | `int` | Minimum range-selection length. `-1` means unlimited |
 | `maxSelectRange` | `int` | Maximum range-selection length. `-1` means unlimited |
 | `maxMultiSelectSize` | `int` | Maximum multi-select count. `-1` means unlimited |
+| `enableMonthOverscroll` | `bool` | Enable or disable month overscroll. Defaults to `true` |
 | `markers` | `Map<DateTime, List<CalendarMarker>>` | Date marker data |
 | `disabledDates` | `Set<DateTime>` | Fixed disabled dates |
 | `disabledDatePredicate` | `CalendarDatePredicate?` | Dynamic disabled-date predicate |

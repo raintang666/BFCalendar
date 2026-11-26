@@ -3,6 +3,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('month rows use only drag beyond the expanded viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final controller = CalendarController(
+      focusedDay: DateTime(2026, 2, 10),
+      minDate: DateTime(2026, 2),
+      maxDate: DateTime(2026, 2, 28),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CalendarInteractiveView(
+          controller: controller,
+          onDaySelected: (_) {},
+          contentBuilder: (_, __, ___) => const SizedBox.expand(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final grid = find.byKey(const ValueKey('calendar-canvas-grid'));
+    final calendar = find.byType(CalendarView);
+    final headerHeight =
+        tester.getSize(calendar).height - tester.getSize(grid).height;
+    final drag = await tester.startGesture(
+      tester.getTopLeft(grid) + const Offset(80, 25),
+    );
+    await drag.moveBy(const Offset(0, 100));
+    await tester.pump();
+    expect(
+      tester.getSize(grid).height,
+      closeTo(tester.getSize(calendar).height - headerHeight, .01),
+    );
+    await drag.moveBy(const Offset(0, 570));
+    await tester.pump();
+    final resting = 844 - headerHeight;
+    expect(tester.getSize(calendar).height, 844);
+    expect(tester.getSize(grid).height, greaterThan(resting));
+    await drag.up();
+    await tester.pumpAndSettle();
+    expect(tester.getSize(grid).height, closeTo(resting, .01));
+    expect(controller.displayMode, CalendarDisplayMode.month);
+  });
+
   testWidgets(
     'fullscreen calendar hides month header and fills available height',
     (tester) async {

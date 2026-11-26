@@ -594,6 +594,11 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
                         : null,
                     child: CalendarStretchMotion(
                       images: _stretchImages,
+                      maxMonthBodyHeight:
+                          widget.controller.enableMonthOverscroll &&
+                              _isHorizontalCalendarPaging
+                          ? _maxMonthBodyHeight
+                          : null,
                       active:
                           (_dragSourceMode != null &&
                               _monthBodyHeightOverride != null) ||

@@ -79,6 +79,46 @@ Offset _cellCenter(WidgetTester tester, int index, {double rowHeight = 62}) {
 }
 
 void main() {
+  for (final enabled in [false, true]) {
+    testWidgets('standalone month pull with overscroll enabled=$enabled', (
+      tester,
+    ) async {
+      final controller = CalendarController(
+        focusedDay: DateTime(2026, 7, 9),
+        minDate: DateTime(2026, 7),
+        maxDate: DateTime(2026, 7, 31),
+        enableMonthOverscroll: enabled,
+      )..setInterceptBlocked(false);
+      final taps = <DateTime>[];
+      await _pumpCalendar(
+        tester,
+        controller,
+        builder: const _OverrideBuilder(),
+        onDaySelected: taps.add,
+      );
+      final cell = find.text('CUSTOM-9');
+      final origin = tester.getCenter(cell);
+      final viewport = tester.getRect(find.byType(CalendarView));
+      final drag = await tester.startGesture(origin);
+      await drag.moveBy(const Offset(0, 130));
+      await tester.pump();
+      final pulled = tester.getCenter(cell).dy;
+      expect(pulled, enabled ? greaterThan(origin.dy) : origin.dy);
+      expect(tester.getRect(find.byType(CalendarView)), viewport);
+      await drag.cancel();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
+      if (enabled) {
+        expect(tester.getCenter(cell).dy, inExclusiveRange(origin.dy, pulled));
+      }
+      await tester.pumpAndSettle();
+      expect(tester.getCenter(cell), origin);
+      expect(taps, isEmpty);
+      await tester.tap(cell);
+      expect(taps, [DateTime(2026, 7, 9)]);
+    });
+  }
+
   testWidgets('existing default builder overrides survive Canvas style swaps', (
     tester,
   ) async {

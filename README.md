@@ -49,6 +49,14 @@ CalendarView(
 )
 ```
 
+### 开启/关闭越界回弹
+
+```dart
+final controller = CalendarController(
+  enableMonthOverscroll: true, // true 开启（默认），false 关闭
+);
+```
+
 ## CalendarController
 
 构造参数：
@@ -61,6 +69,7 @@ CalendarView(
 | `minSelectRange` | `int` | 范围选择最小天数，`-1` 表示不限制 |
 | `maxSelectRange` | `int` | 范围选择最大天数，`-1` 表示不限制 |
 | `maxMultiSelectSize` | `int` | 多选最大数量，`-1` 表示不限制 |
+| `enableMonthOverscroll` | `bool` | 开启或关闭月视图越界回弹，默认 `true` |
 | `markers` | `Map<DateTime, List<CalendarMarker>>` | 日期标记数据 |
 | `disabledDates` | `Set<DateTime>` | 固定禁用日期 |
 | `disabledDatePredicate` | `CalendarDatePredicate?` | 动态禁用日期判断 |

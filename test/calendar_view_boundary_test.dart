@@ -5,6 +5,90 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final monthList in [false, true]) {
+    testWidgets(
+      'pulling the earliest month rebounds in vertical list=$monthList',
+      (tester) async {
+        final controller = CalendarController(
+          focusedDay: DateTime(2026, 7, 9),
+          minDate: DateTime(2026, 7, 3),
+          maxDate: DateTime(2026, 10, 31),
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              platform: monthList ? TargetPlatform.iOS : TargetPlatform.android,
+            ),
+            home: Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: 390,
+                height: 500,
+                child: monthList
+                    ? CalendarMonthListView(
+                        controller: controller,
+                        calendarHeight: 62,
+                        weekBarHeight: 46,
+                        onDaySelected: (_) {},
+                      )
+                    : CalendarView(
+                        controller: controller,
+                        pageOrientation: CalendarPageOrientation.vertical,
+                        onDaySelected: (_) {},
+                      ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final visible = find
+            .byKey(const ValueKey('calendar-canvas-grid'))
+            .hitTestable()
+            .first;
+        final firstMonth = tester.element(visible);
+        final surface = find.byElementPredicate((e) => e == firstMonth);
+        final resting = tester.getSize(surface).height;
+        final start = tester.getTopLeft(surface) + const Offset(60, 70);
+        final drag = await tester.startGesture(start);
+        await drag.moveBy(const Offset(0, 100));
+        await tester.pump();
+        expect(tester.getSize(surface).height, greaterThan(resting));
+        if (monthList) {
+          final position = tester
+              .state<ScrollableState>(find.byType(Scrollable))
+              .position;
+          expect(position.pixels, position.minScrollExtent);
+        }
+        await drag.up();
+        await tester.pumpAndSettle();
+        expect(tester.getSize(surface).height, resting);
+        expect(controller.focusedDay, DateTime(2026, 7, 9));
+        await tester.flingFrom(start, const Offset(0, -220), 900);
+        await tester.pumpAndSettle();
+        if (monthList) {
+          expect(
+            tester
+                .state<ScrollableState>(find.byType(Scrollable))
+                .position
+                .pixels,
+            greaterThan(0),
+          );
+        } else {
+          expect(controller.focusedDay.month, 8);
+          final nextMonth = tester.element(visible);
+          final nextSurface = find.byElementPredicate((e) => e == nextMonth);
+          final nextHeight = tester.getSize(nextSurface).height;
+          final back = await tester.startGesture(start);
+          await back.moveBy(const Offset(0, 60));
+          await tester.pump();
+          expect(tester.getSize(nextSurface).height, nextHeight);
+          await back.up();
+          await tester.pumpAndSettle();
+        }
+      },
+    );
+  }
+
   testWidgets('swiping to another month follows the selected day of month', (
     tester,
   ) async {
