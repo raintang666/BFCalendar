@@ -49,14 +49,6 @@ CalendarView(
 )
 ```
 
-### 开启/关闭越界回弹
-
-```dart
-final controller = CalendarController(
-  enableMonthOverscroll: true, // true 开启（默认），false 关闭
-);
-```
-
 ## CalendarController
 
 构造参数：

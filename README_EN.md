@@ -49,14 +49,6 @@ CalendarView(
 )
 ```
 
-### Enable or disable month overscroll
-
-```dart
-final controller = CalendarController(
-  enableMonthOverscroll: true, // true to enable (default), false to disable
-);
-```
-
 ## CalendarController
 
 Constructor parameters:
