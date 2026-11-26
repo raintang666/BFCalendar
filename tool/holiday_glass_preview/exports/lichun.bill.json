@@ -1,0 +1,160 @@
+{
+  "version": 2,
+  "duration": 12,
+  "width": 584,
+  "height": 440,
+  "background": "#15201B",
+  "still": 2.4,
+  "lightColors": {
+    "#15201B": "#F0F7EE",
+    "#F6E4A6": "#F2D993",
+    "#6BBD86": "#86BD94",
+    "#B3D598": "#A7C88C",
+    "#ECE8AC": "#DCC56E",
+    "#416949": "#496A4D",
+    "#6D9E63": "#4E8154",
+    "#ADCC81": "#6D9D4C",
+    "#3C8655": "#37734A",
+    "#6B8B43": "#667E3A",
+    "#98C875": "#75A765",
+    "#C7D487": "#AEBC66",
+    "#D4E9AC": "#ADB961",
+    "#E5E8A6": "#C6BB64",
+    "#E2F6B8": "#DBF2B1",
+    "#BBE093": "#B3BF6C",
+    "#E2EBB1": "#9DB660",
+    "#D3E4AB": "#689365"
+  },
+  "commands": [
+    ["let","seconds",["%","time",12]],
+    ["let","progress",["/","seconds",12]],
+    ["let","tau",["*",2,"pi"]],
+    ["let","phase",["*","tau","progress"]],
+    ["let","growthClock",["min","seconds",["*",1.75,["-",12,"seconds"]]]],
+    ["layer",[
+      ["glow",462,34,230,"#F6E4A6",0.2,"normal"],
+      ["glow",105,160,250,"#6BBD86",0.12,"normal"],
+      ["glow",294,30,250,"#B3D598",0.1,"normal"],
+      ["repeat","beam",4,[
+        ["let","x",["+",430,["+",["*",35,"beam"],["*",9,["sin",["+","phase","beam"]]]]]],
+        ["repeat","scan",30,[
+          ["let","y",["-",["*",10,"scan"],25]],
+          ["let","u",["clamp",["/",["-","y",-30],315]]],
+          ["rect",["-","x",["*",170,"u"]],"y",["lerp",21,75,"u"],10.45,"#ECE8AC",["*",0.043,["-",1,"u"]],"normal"]
+        ]]
+      ]],
+      ["repeat","branch",3,[
+        ["let","delay",["index","branch",0,0.18,0.55]],
+        ["let","branchSide",["index","branch",-1,1,-0.5]],
+        ["let","branchAge",["-","growthClock","delay"]],
+        ["let","stemGrowth",["-",1,["pow",["-",1,["clamp",["/","branchAge",2.3]]],5]]],
+        ["let","stemAngle",["*",0.026,["sin",["+","phase","branchSide"]]]],
+        ["let","cs",["cos","stemAngle"]],
+        ["let","sn",["sin","stemAngle"]],
+        ["let","bX0",["index","branch",47,570,88]],
+        ["let","bX1",["index","branch",153,-153,114]],
+        ["let","bX2",["index","branch",-129,168,51]],
+        ["let","bX3",["index","branch",118,-148,-33]],
+        ["let","bY0",["index","branch",287,281,285]],
+        ["let","bY1",["index","branch",-156,-180,-108]],
+        ["let","bY2",["index","branch",-189,-84,60]],
+        ["let","bY3",["index","branch",97,54,-53]],
+        ["let","xC1",["-",["*","cs","bX1"],["*","sn","bY1"]]],
+        ["let","yC1",["+",["*","sn","bX1"],["*","cs","bY1"]]],
+        ["let","xC2",["-",["*","cs","bX2"],["*","sn","bY2"]]],
+        ["let","yC2",["+",["*","sn","bX2"],["*","cs","bY2"]]],
+        ["let","xC3",["-",["*","cs","bX3"],["*","sn","bY3"]]],
+        ["let","yC3",["+",["*","sn","bX3"],["*","cs","bY3"]]],
+        ["if",[">","stemGrowth",0.005],[
+          ["repeat","segment",38,[
+            ["let","a",["*","stemGrowth",["/","segment",38]]],
+            ["let","b",["*","stemGrowth",["/",["+","segment",1],38]]],
+            ["let","firstY",["+","bY0",["*","a",["+","yC1",["*","a",["+","yC2",["*","a","yC3"]]]]]]],
+            ["let","secondY",["+","bY0",["*","b",["+","yC1",["*","b",["+","yC2",["*","b","yC3"]]]]]]],
+            ["let","light",["clamp",["/",["-","secondY",270],-225]]],
+            ["line",["+","bX0",["*","a",["+","xC1",["*","a",["+","xC2",["*","a","xC3"]]]]]],"firstY",["+","bX0",["*","b",["+","xC1",["*","b",["+","xC2",["*","b","xC3"]]]]]],"secondY",2.15,["mix",["mix","#416949","#6D9E63",["clamp",["*",2,"light"]]],"#ADCC81",["clamp",["/",["-","light",0.5],0.5]]],["lerp",0.045,0.85,"light"],"normal"]
+          ]],
+          ["repeat","leaf",12,[
+            ["let","leafId",["index","leaf",0,0,1,2,2,3,4,4,5,6,6,7]],
+            ["let","sideLeaf",["index","leaf",0,1,0,0,1,0,0,1,0,0,1,0]],
+            ["let","tip",["==","leafId",7]],
+            ["let","u",["lerp",["+",0.24,["*",0.115,"leafId"]],"stemGrowth","tip"]],
+            ["let","age",["-","branchAge",["lerp",["+",0.25,["*","u",1.4]],1.65,"tip"]]],
+            ["let","leafGrowth",["-",1,["pow",["-",1,["clamp",["/","age",["lerp",1.2,1.25,"tip"]]]],5]]],
+            ["if",["and",["<=","u","stemGrowth"],[">","leafGrowth",0]],[
+              ["let","leafX",["+","bX0",["*","u",["+","xC1",["*","u",["+","xC2",["*","u","xC3"]]]]]]],
+              ["let","leafY",["+","bY0",["*","u",["+","yC1",["*","u",["+","yC2",["*","u","yC3"]]]]]]],
+              ["let","leafFamily",["%","leafId",3]],
+              ["let","sway",["+",0.72,["*",0.07,["sin",["+","phase","leafId"]]]]],
+              ["let","spread",["*",["-",["*",2,["%","leafId",2]],1],"sway"]],
+              ["let","pointAngle",["index","branch",["index","leafId",0.4412,0.3927,0.3895,0.4245,0.4943,0.5963,0.727,0],["index","leafId",-0.4256,-0.3864,-0.4003,-0.4638,-0.5716,-0.7138,-0.8742,0],["index","leafId",0.9895,1.0173,1.0142,0.9817,0.9214,0.8357,0.7289,0]]],
+              ["let","leafAngle",["+","stemAngle",["lerp",["+","pointAngle",["*","spread",["lerp",1,-0.78,"sideLeaf"]]],["*",0.25,"branchSide"],"tip"]]],
+              ["let","leafLength",["lerp",["*",["+",22,["*",5,"leafFamily"]],["lerp",1,0.76,"sideLeaf"]],27,"tip"]],
+              ["let","leafWidth",["lerp",["lerp",["+",9,["*",2,"leafFamily"]],8,"sideLeaf"],9,"tip"]],
+              ["let","leafAlpha",["lerp",0.92,0.72,"sideLeaf"]],
+              ["let","warm",["and",["==","tip",0],["and",["==","sideLeaf",0],["==","leafFamily",0]]]],
+              ["if",["and",["==","sideLeaf",0],["<","leafGrowth",0.96]],[["glow","leafX","leafY",15,"#BBE093",["*",0.12,["-",1,"leafGrowth"]],"normal"]]],
+              ["if",[">","leafGrowth",0.003],[["let","cosA",["cos","leafAngle"]],["let","sinA",["sin","leafAngle"]],["let","w",["*","leafGrowth","leafWidth"]],["let","l",["*","leafGrowth","leafLength"]],["let","wx",["*","w","cosA"]],["let","wy",["*","w","sinA"]],["let","lx",["*",-1,["*","l","sinA"]]],["let","ly",["*","l","cosA"]],["let","stroke",["*",0.1,"l"]],["repeat","row",13,[["let","v",["index","row",-0.9615,-0.8846,-0.8077,-0.7308,-0.6538,-0.5769,-0.5,-0.4231,-0.3462,-0.2692,-0.1923,-0.1154,-0.0385]],["let","uLeft",["index","row",-0.0818,-0.2613,-0.3993,-0.5034,-0.5721,-0.6134,-0.6248,-0.6094,-0.5667,-0.4957,-0.3943,-0.2602,-0.0844]],["let","uRight",["index","row",0.0712,0.2295,0.3513,0.4421,0.5046,0.5441,0.5581,0.55,0.5186,0.461,0.3755,0.2558,0.0868]],["let","rowX",["+","leafX",["*","v","lx"]]],["let","rowY",["+","leafY",["*","v","ly"]]],["let","hue",["-",1,["*",2,["abs",["+","v",0.5]]]]],["line",["+","rowX",["*","uLeft","wx"]],["+","rowY",["*","uLeft","wy"]],["+","rowX",["*","uRight","wx"]],["+","rowY",["*","uRight","wy"]],"stroke",["mix",["mix",["pick","warm","#3C8655","#6B8B43"],["pick","warm","#98C875","#C7D487"],"hue"],["pick","warm","#D4E9AC","#E5E8A6"],["clamp",["/",["-","v",-0.56],-0.44]]],"leafAlpha","normal"]]],["line",["-","leafX",["*",0.045,"lx"]],["-","leafY",["*",0.045,"ly"]],["-","leafX",["*",0.9,"lx"]],["-","leafY",["*",0.9,"ly"]],["*",0.65,"leafGrowth"],"#E2F6B8",["*",0.5,"leafAlpha"],"normal"],["repeat","vein",6,[["let","mark",["+",0.28,["*",0.14,["floor",["/","vein",2]]]]],["let","side",["-",["*",2,["%","vein",2]],1]],["let","span",["*",["*",0.52,"side"],["sin",["*","pi","mark"]]]],["let","veinX",["-","leafX",["*","mark","lx"]]],["let","veinY",["-","leafY",["*","mark","ly"]]],["line","veinX","veinY",["+","veinX",["+",["*",-0.14,"lx"],["*","span","wx"]]],["+","veinY",["+",["*",-0.14,"ly"],["*","span","wy"]]],["*",0.45,"leafGrowth"],"#E2F6B8",["*",0.26,"leafAlpha"],"normal"]]]]]
+            ]]
+          ]]
+        ]]
+      ]],
+      ["repeat","drift",12,[
+        ["let","seed",["floor",["/","drift",2]]],
+        ["let","offset",["*",0.5,["%","drift",2]]],
+        ["let","depth",["fract",["*",["sin",["+",["*",["+","seed",740],127.1],311.7]],43758.5453]]],
+        ["let","path",["fract",["+",["fract",["*",["sin",["+",["*",["+","seed",700],127.1],311.7]],43758.5453]],["+","offset",["*",0.5,"progress"]]]]],
+        ["let","leafX",["-",["*",684,"path"],50]],
+        ["let","leafY",["+",25,["+",["*",157,["fract",["*",["sin",["+",["*",["+","seed",720],127.1],311.7]],43758.5453]]],["*",12,["sin",["+","phase",["*",1.7,"seed"]]]]]]],
+        ["let","leafAngle",["+",-0.8,["*",0.65,["sin",["+","phase","seed"]]]]],
+        ["let","leafLength",["+",9,["*",13,"depth"]]],
+        ["let","leafWidth",["*",0.33,"leafLength"]],
+        ["let","leafAlpha",["*",["sin",["*","pi","path"]],["+",0.25,["*",0.32,"depth"]]]],
+        ["let","leafGrowth",1],
+        ["let","warm",["==",["%","seed",4],0]],
+        ["if",[">","leafGrowth",0.003],[
+          ["let","cosA",["cos","leafAngle"]],
+          ["let","sinA",["sin","leafAngle"]],
+          ["let","w",["*","leafGrowth","leafWidth"]],
+          ["let","l",["*","leafGrowth","leafLength"]],
+          ["let","wx",["*","w","cosA"]],
+          ["let","wy",["*","w","sinA"]],
+          ["let","lx",["*",-1,["*","l","sinA"]]],
+          ["let","ly",["*","l","cosA"]],
+          ["let","stroke",["*",0.1,"l"]],
+          ["repeat","row",13,[
+            ["let","v",["index","row",-0.9615,-0.8846,-0.8077,-0.7308,-0.6538,-0.5769,-0.5,-0.4231,-0.3462,-0.2692,-0.1923,-0.1154,-0.0385]],
+            ["let","uLeft",["index","row",-0.0818,-0.2613,-0.3993,-0.5034,-0.5721,-0.6134,-0.6248,-0.6094,-0.5667,-0.4957,-0.3943,-0.2602,-0.0844]],
+            ["let","uRight",["index","row",0.0712,0.2295,0.3513,0.4421,0.5046,0.5441,0.5581,0.55,0.5186,0.461,0.3755,0.2558,0.0868]],
+            ["let","rowX",["+","leafX",["*","v","lx"]]],
+            ["let","rowY",["+","leafY",["*","v","ly"]]],
+            ["let","hue",["-",1,["*",2,["abs",["+","v",0.5]]]]],
+            ["line",["+","rowX",["*","uLeft","wx"]],["+","rowY",["*","uLeft","wy"]],["+","rowX",["*","uRight","wx"]],["+","rowY",["*","uRight","wy"]],"stroke",["mix",["mix",["pick","warm","#3C8655","#6B8B43"],["pick","warm","#98C875","#C7D487"],"hue"],["pick","warm","#D4E9AC","#E5E8A6"],["clamp",["/",["-","v",-0.56],-0.44]]],"leafAlpha","normal"]
+          ]],
+          ["line",["-","leafX",["*",0.045,"lx"]],["-","leafY",["*",0.045,"ly"]],["-","leafX",["*",0.9,"lx"]],["-","leafY",["*",0.9,"ly"]],["*",0.65,"leafGrowth"],"#E2F6B8",["*",0.5,"leafAlpha"],"normal"],
+          ["repeat","vein",6,[
+            ["let","mark",["+",0.28,["*",0.14,["floor",["/","vein",2]]]]],
+            ["let","side",["-",["*",2,["%","vein",2]],1]],
+            ["let","span",["*",["*",0.52,"side"],["sin",["*","pi","mark"]]]],
+            ["let","veinX",["-","leafX",["*","mark","lx"]]],
+            ["let","veinY",["-","leafY",["*","mark","ly"]]],
+            ["line","veinX","veinY",["+","veinX",["+",["*",-0.14,"lx"],["*","span","wx"]]],["+","veinY",["+",["*",-0.14,"ly"],["*","span","wy"]]],["*",0.45,"leafGrowth"],"#E2F6B8",["*",0.26,"leafAlpha"],"normal"]
+          ]]
+        ]]
+      ]],
+      ["repeat","dot",18,[
+        ["let","seed",["floor",["/","dot",3]]],
+        ["let","offset",["/",["%","dot",3],3]],
+        ["let","u",["fract",["+",["fract",["*",["sin",["+",["*",["+","seed",850],127.1],311.7]],43758.5453]],["+","offset",["/","progress",3]]]]],
+        ["let","x",["*","width","u"]],
+        ["let","y",["+",20,["+",["*",200,["fract",["*",["sin",["+",["*",["+","seed",870],127.1],311.7]],43758.5453]]],["*",9,["sin",["+","phase","seed"]]]]]],
+        ["let","a",["*",["sin",["*","pi","u"]],["+",0.1,["*",0.2,["fract",["*",["sin",["+",["*",["+","seed",890],127.1],311.7]],43758.5453]]]]]],
+        ["if",["==",["%","seed",3],0],[
+          ["glow","x","y",5,"#E2EBB1",["*",0.36,"a"],"normal"]
+        ]],
+        ["circle","x","y",["+",0.65,["fract",["*",["sin",["+",["*",["+","seed",910],127.1],311.7]],43758.5453]]],"#D3E4AB","a","normal"]
+      ]],
+      ["fade",0,0,0,"height",[[0,1],[0.3,1],[0.42,0.78],[0.54,0.5],[0.66,0.26],[0.78,0.1],[0.9,0.03],[1,0]]]
+    ]]
+  ]
+}
