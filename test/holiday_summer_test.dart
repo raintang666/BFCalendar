@@ -237,7 +237,11 @@ void main() {
         await tester.pumpAndSettle();
         expect(frames.value.seconds, example.still);
         expect(tester.binding.hasScheduledFrame, isFalse);
-        final normal = example.date.add(const Duration(days: 1));
+        final normal = DateTime(
+          example.date.year,
+          example.date.month,
+          example.date.day + 1,
+        );
         calendar.controller.selectDay(normal);
         calendar.onDaySelected(normal);
         await tester.pumpAndSettle();

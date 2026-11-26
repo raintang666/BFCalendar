@@ -10,6 +10,18 @@ class CalendarDateUtils {
     return DateTime(date.year, date.month, date.day);
   }
 
+  /// 按本地日历日移动，跨夏令时也保留目标年月日。
+  static DateTime addDays(DateTime date, int days) {
+    return DateTime(date.year, date.month, date.day + days);
+  }
+
+  /// 按年月日计算有符号的日数差，避免本地时区的时钟调整影响结果。
+  static int daysBetween(DateTime start, DateTime end) {
+    final first = DateTime.utc(start.year, start.month, start.day);
+    final last = DateTime.utc(end.year, end.month, end.day);
+    return last.difference(first).inDays;
+  }
+
   /// 判断两个日期是否是同一天。
   static bool isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
@@ -47,7 +59,6 @@ class CalendarDateUtils {
   }) {
     final first = firstDayOfMonth(month);
     final offset = (first.weekday - firstWeekday + 7) % 7;
-    final gridStart = first.subtract(Duration(days: offset));
     final itemCount = switch (monthViewShowMode) {
       MonthViewShowMode.allMonth => 42,
       MonthViewShowMode.onlyCurrentMonth || MonthViewShowMode.fitMonth =>
@@ -60,7 +71,7 @@ class CalendarDateUtils {
     };
     return List<DateTime>.generate(
       itemCount,
-      (index) => stripTime(gridStart.add(Duration(days: index))),
+      (index) => addDays(first, index - offset),
     );
   }
 
@@ -73,22 +84,16 @@ class CalendarDateUtils {
     final weekday = normalized.weekday % 7;
     final startWeekday = firstWeekday % 7;
     final offset = (weekday - startWeekday + 7) % 7;
-    final start = normalized.subtract(Duration(days: offset));
     return List<DateTime>.generate(
       7,
-      (index) => stripTime(start.add(Duration(days: index))),
+      (index) => addDays(normalized, index - offset),
     );
   }
 
   /// 获取两个日期之间的所有日期，包含起止日期。
   static List<DateTime> eachDay(DateTime start, DateTime end) {
-    final normalizedStart = stripTime(start);
-    final normalizedEnd = stripTime(end);
-    final days = normalizedEnd.difference(normalizedStart).inDays;
-    return List<DateTime>.generate(
-      days + 1,
-      (index) => normalizedStart.add(Duration(days: index)),
-    );
+    final days = daysBetween(start, end);
+    return List<DateTime>.generate(days + 1, (index) => addDays(start, index));
   }
 
   /// 计算指定月份在月视图中需要展示的行数。

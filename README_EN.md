@@ -280,7 +280,7 @@ Continuously scrollable month list view.
 | `calendarHeight` | Row height |
 | `weekBarHeight` | Week bar height |
 | `componentBuilder` | Custom calendar UI |
-| `onFocusedMonthChanged` | Focused-month change callback |
+| `onFocusedMonthChanged` | Called once when a different month reaches the top of the list, with the first day of that month |
 
 ## CalendarYearModeStyle
 

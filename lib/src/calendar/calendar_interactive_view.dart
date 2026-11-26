@@ -513,6 +513,15 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
     }
   }
 
+  void _handleListMonthChanged(DateTime month) {
+    final controller = widget.controller;
+    if (!CalendarDateUtils.isSameMonth(month, controller.focusedDay)) {
+      final min = controller.minDate;
+      controller.jumpToDay(min != null && month.isBefore(min) ? min : month);
+    }
+    widget.onFocusedDayChanged?.call(controller.focusedDay);
+  }
+
   @override
   Widget build(BuildContext context) {
     _clearFullScreenIfUnavailable();
@@ -540,7 +549,7 @@ class _CalendarInteractiveViewState extends State<CalendarInteractiveView>
                 calendarHeight: widget.calendarHeight,
                 weekBarHeight: widget.weekBarHeight,
                 componentBuilder: widget.componentBuilder,
-                onFocusedMonthChanged: widget.onFocusedDayChanged,
+                onFocusedMonthChanged: _handleListMonthChanged,
               );
             }
             return CustomMultiChildLayout(

@@ -167,6 +167,74 @@ void main() {
     expect(find.text('feed'), findsNothing);
   });
 
+  testWidgets('vertical fullscreen reports the leading month once per change', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 340));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final selected = DateTime(2026, 2, 8);
+    final controller = CalendarController(
+      focusedDay: selected,
+      minDate: DateTime(2026, 1, 12),
+      maxDate: DateTime(2026, 12, 31),
+    );
+    final interaction = CalendarInteractiveController(
+      pageOrientation: CalendarPageOrientation.vertical,
+    );
+    final changes = <DateTime>[];
+    final focusAtNotification = <DateTime>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CalendarInteractiveView(
+            controller: controller,
+            interactionController: interaction,
+            calendarHeight: 40,
+            onDaySelected: (_) {},
+            onFocusedDayChanged: (day) {
+              changes.add(day);
+              focusAtNotification.add(controller.focusedDay);
+            },
+            contentBuilder: (_, __, ___) => const SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+    interaction.toggleFullScreen();
+    await tester.pumpAndSettle();
+    final scrollable = find.descendant(
+      of: find.byType(CalendarMonthListView),
+      matching: find.byType(Scrollable),
+    );
+    final position = tester.state<ScrollableState>(scrollable).position;
+    Future<void> scrollTo(double pixels) async {
+      position.jumpTo(pixels);
+      await tester.pumpAndSettle();
+    }
+
+    // February has four 40-pixel rows and a 28-pixel label; March has five rows.
+    await scrollTo(187);
+    expect(changes, isEmpty);
+    await scrollTo(188);
+    await scrollTo(300);
+    expect(changes, [DateTime(2026, 3)]);
+    await scrollTo(416);
+    await scrollTo(-10);
+    await scrollTo(-20);
+    await scrollTo(0);
+    expect(changes, [
+      DateTime(2026, 3),
+      DateTime(2026, 4),
+      DateTime(2026, 1, 12),
+      DateTime(2026, 2),
+    ]);
+    expect(focusAtNotification, changes);
+    expect(controller.selection.single, selected);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+    interaction.dispose();
+  });
+
   testWidgets('vertical month pager keeps pinned month label hidden at rest', (
     tester,
   ) async {

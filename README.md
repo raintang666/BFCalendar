@@ -280,7 +280,7 @@ CalendarView(
 | `calendarHeight` | 单行高度 |
 | `weekBarHeight` | 星期栏高度 |
 | `componentBuilder` | 自定义日历 UI |
-| `onFocusedMonthChanged` | 聚焦月份变化 |
+| `onFocusedMonthChanged` | 滚动时，列表顶部进入新月份后回调一次，参数为该月第一天 |
 
 ## CalendarYearModeStyle
 

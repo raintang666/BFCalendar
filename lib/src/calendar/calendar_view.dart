@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/rendering.dart'
+    show RenderSliverMultiBoxAdaptor, RenderSliverToBoxAdapter, RenderViewport;
 import 'package:flutter/widgets.dart';
 
 import 'calendar_canvas_grid.dart';
@@ -211,7 +213,7 @@ class CalendarMonthListView extends StatefulWidget {
   /// 自定义日历样式构建器。
   final CalendarComponentBuilder? componentBuilder;
 
-  /// 当前聚焦月份变化回调。
+  /// 列表顶部的月份变化时回调，参数为该月第一天。
   final ValueChanged<DateTime>? onFocusedMonthChanged;
 
   @override
@@ -223,7 +225,9 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
   static const double _inlineMonthLabelHeight = 28;
   late DateTime _rangeStartMonth;
   late DateTime _rangeEndMonth;
-  late DateTime _focusedMonth;
+  late DateTime _anchorMonth;
+  late DateTime _lastReportedMonth;
+  bool _monthCheckScheduled = false;
 
   CalendarComponentBuilder get _resolvedComponentBuilder {
     final override = widget.componentBuilder;
@@ -236,7 +240,7 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
   @override
   void initState() {
     super.initState();
-    _focusedMonth = DateTime(
+    _anchorMonth = DateTime(
       widget.controller.focusedDay.year,
       widget.controller.focusedDay.month,
       1,
@@ -248,7 +252,7 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
   void didUpdateWidget(covariant CalendarMonthListView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      _focusedMonth = DateTime(
+      _anchorMonth = DateTime(
         widget.controller.focusedDay.year,
         widget.controller.focusedDay.month,
         1,
@@ -258,10 +262,62 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
   }
 
   void _initMonthRange() {
+    _lastReportedMonth = _anchorMonth;
     final minDate = widget.controller.minDate ?? DateTime(1, 1, 1);
     final maxDate = widget.controller.maxDate ?? DateTime(9999, 12, 31);
     _rangeStartMonth = DateTime(minDate.year, minDate.month, 1);
     _rangeEndMonth = DateTime(maxDate.year, maxDate.month, 1);
+  }
+
+  // The center sliver is the scroll origin. The lists on either side have
+  // opposite index directions and their months can have different heights.
+  DateTime? _monthAtViewportStart() {
+    final center = _centerMonthKey.currentContext?.findRenderObject();
+    if (center is! RenderSliverToBoxAdapter) return null;
+    final viewport = center.parent! as RenderViewport;
+    final pixels = viewport.offset.pixels;
+    final beforeCenter = pixels < 0;
+    if (!beforeCenter && pixels < center.geometry!.scrollExtent) {
+      return _anchorMonth;
+    }
+    final list = beforeCenter
+        ? viewport.childBefore(center)
+        : viewport.childAfter(center);
+    if (list is! RenderSliverMultiBoxAdaptor) return null;
+    for (
+      var child = list.firstChild;
+      child != null;
+      child = list.childAfter(child)
+    ) {
+      final top = child.localToGlobal(Offset.zero, ancestor: viewport).dy;
+      if (top <= 0 && top + child.size.height > 0) {
+        final distance = list.indexOf(child) + 1;
+        return DateTime(
+          _anchorMonth.year,
+          _anchorMonth.month + (beforeCenter ? -distance : distance),
+        );
+      }
+    }
+    return null;
+  }
+
+  bool _onListNotification(ViewportNotificationMixin notification) {
+    if (notification.depth == 0 &&
+        widget.onFocusedMonthChanged != null &&
+        !_monthCheckScheduled) {
+      _monthCheckScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _monthCheckScheduled = false;
+        if (!mounted) return;
+        final month = _monthAtViewportStart();
+        if (month != null && month != _lastReportedMonth) {
+          _lastReportedMonth = month;
+          widget.onFocusedMonthChanged?.call(month);
+        }
+      });
+      WidgetsBinding.instance.ensureVisualUpdate();
+    }
+    return false;
   }
 
   DateTime _monthForIndex(int index) {
@@ -352,8 +408,8 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
 
   @override
   Widget build(BuildContext context) {
-    final previousCount = _monthDelta(_rangeStartMonth, _focusedMonth);
-    final nextCount = _monthDelta(_focusedMonth, _rangeEndMonth);
+    final previousCount = _monthDelta(_rangeStartMonth, _anchorMonth);
+    final nextCount = _monthDelta(_anchorMonth, _rangeEndMonth);
     return Column(
       key: const ValueKey('calendar-vertical-fullscreen-list'),
       children: [
@@ -365,32 +421,35 @@ class _CalendarMonthListViewState extends State<CalendarMonthListView> {
           ),
         ),
         Expanded(
-          child: CustomScrollView(
-            center: _centerMonthKey,
-            slivers: [
-              SliverList.builder(
-                itemCount: previousCount,
-                itemBuilder: (context, index) {
-                  final month = _monthForIndex(previousCount - index - 1);
-                  return _buildMonthListItem(month);
-                },
-              ),
-              SliverToBoxAdapter(
-                key: _centerMonthKey,
-                child: _buildMonthListItem(_focusedMonth),
-              ),
-              SliverList.builder(
-                itemCount: nextCount,
-                itemBuilder: (context, index) {
-                  final month = DateTime(
-                    _focusedMonth.year,
-                    _focusedMonth.month + index + 1,
-                    1,
-                  );
-                  return _buildMonthListItem(month);
-                },
-              ),
-            ],
+          child: NotificationListener<ViewportNotificationMixin>(
+            onNotification: _onListNotification,
+            child: CustomScrollView(
+              center: _centerMonthKey,
+              slivers: [
+                SliverList.builder(
+                  itemCount: previousCount,
+                  itemBuilder: (context, index) {
+                    final month = _monthForIndex(previousCount - index - 1);
+                    return _buildMonthListItem(month);
+                  },
+                ),
+                SliverToBoxAdapter(
+                  key: _centerMonthKey,
+                  child: _buildMonthListItem(_anchorMonth),
+                ),
+                SliverList.builder(
+                  itemCount: nextCount,
+                  itemBuilder: (context, index) {
+                    final month = DateTime(
+                      _anchorMonth.year,
+                      _anchorMonth.month + index + 1,
+                      1,
+                    );
+                    return _buildMonthListItem(month);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -1402,8 +1461,8 @@ class _CalendarGridState extends State<_CalendarGrid> {
         isSelected: controller.isSelected(date),
         isRangeStart: controller.isRangeStart(date),
         isRangeEnd: controller.isRangeEnd(date),
-        isSelectedPrevious: _isSelectedAdjacent(date, const Duration(days: -1)),
-        isSelectedNext: _isSelectedAdjacent(date, const Duration(days: 1)),
+        isSelectedPrevious: _isSelectedAdjacent(date, -1),
+        isSelectedNext: _isSelectedAdjacent(date, 1),
         isOutOfSelectableRange:
             controller.rangeSelectionLimitViolation(date) != null,
         isDisabled: controller.isDisabled(date),
@@ -1453,12 +1512,14 @@ class _CalendarGridState extends State<_CalendarGrid> {
     );
   }
 
-  bool _isSelectedAdjacent(DateTime date, Duration offset) {
+  bool _isSelectedAdjacent(DateTime date, int dayOffset) {
     if (widget.controller.selectionMode == CalendarSelectionMode.range &&
         widget.controller.rangeSelection.end == null) {
       return false;
     }
-    return widget.controller.isSelected(date.add(offset));
+    return widget.controller.isSelected(
+      CalendarDateUtils.addDays(date, dayOffset),
+    );
   }
 
   void _handleDayTap(DateTime date) {

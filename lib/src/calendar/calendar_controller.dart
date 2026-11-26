@@ -580,7 +580,7 @@ class CalendarController extends ChangeNotifier {
     final effectiveMax = _normalizeSelectRangeLimit(
       maxRange ?? _maxSelectRange,
     );
-    final distance = normalized.difference(start).inDays.abs() + 1;
+    final distance = CalendarDateUtils.daysBetween(start, normalized).abs() + 1;
     if (effectiveMin > 0 && distance < effectiveMin) {
       return CalendarRangeLimitViolation.belowMinRange;
     }
@@ -659,7 +659,7 @@ class CalendarController extends ChangeNotifier {
         fallback: anchor,
       );
     }
-    final targetWeekAnchor = anchor.add(Duration(days: 7 * relative));
+    final targetWeekAnchor = CalendarDateUtils.addDays(anchor, 7 * relative);
     if (!canShowWeek(targetWeekAnchor)) {
       return null;
     }
@@ -754,7 +754,7 @@ class CalendarController extends ChangeNotifier {
     if (start == null || end == null) {
       return true;
     }
-    final distance = end.difference(start).inDays.abs() + 1;
+    final distance = CalendarDateUtils.daysBetween(start, end).abs() + 1;
     if (_minSelectRange > 0 && distance < _minSelectRange) {
       return false;
     }
